@@ -246,6 +246,12 @@ namespace gtsam {
     /** Add a delta config to current config and returns a new config */
     Values retract(const VectorValues& delta) const;
 
+    /**
+     * Retract, but only for Keys appearing in \c mask. In-place.
+     * \param mask Mask on Keys where to apply retract.
+     */
+    void retractMasked(const VectorValues& delta, const KeySet& mask);
+
     /** Get a delta config about a linearization point c0 (*this) */
     VectorValues localCoordinates(const Values& cp) const;
 

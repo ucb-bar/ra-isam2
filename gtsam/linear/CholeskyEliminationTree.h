@@ -23,6 +23,9 @@
 #include <gtsam/base/SparseSymmetricBlockMatrix.h>
 #include <gtsam/linear/JacobianMatrix.h>
 
+#include <boost/optional.hpp>
+#include <boost/shared_ptr.hpp>
+
 namespace gtsam {
 
 class GTSAM_EXPORT CholeskyEliminationTree {
@@ -38,7 +41,7 @@ public:
     typedef std::pair<size_t, size_t> RowHeightPair;
     typedef std::shared_ptr<Node> sharedNode;
     typedef std::shared_ptr<Clique> sharedClique;
-    typedef std::shared_ptr<NonlinearFactor> sharedFactor;
+    typedef boost::shared_ptr<NonlinearFactor> sharedFactor;
 
 private:
 
@@ -72,7 +75,7 @@ public:
     void markAffectedKeys(const NonlinearFactorGraph& nonlinearFactors,
                           const FactorIndices& newFactorIndices,
                           const KeySet& relinKeys, 
-                          const std::optional<FastList<Key>>& extraKeys,
+                          const boost::optional<FastList<Key>>& extraKeys,
                           KeySet* affectedKeys);
 
     // Mark all ancestors of directly changed keys and disconnect child from parent 

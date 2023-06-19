@@ -50,7 +50,7 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
 void CholeskyEliminationTree::markAffectedKeys(const NonlinearFactorGraph& nonlinearFactors,
                                                const FactorIndices& newFactorIndices,
                                                const KeySet& relinKeys, 
-                                               const std::optional<FastList<Key>>& extraKeys,
+                                               const boost::optional<FastList<Key>>& extraKeys,
                                                KeySet* affectedKeys) {
     // cout << "[CholeskyEliminationTree] markAffectedKeys()" << endl;
     affectedKeys->clear();

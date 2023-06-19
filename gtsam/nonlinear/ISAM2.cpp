@@ -489,6 +489,7 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
       update.findFluid(roots_, relinKeys, &result.markedKeys, result.details());
       // 6. Update linearization point for marked variables:
       // \Theta_{J}:=\Theta_{J}+\Delta_{J}.
+      // Roger 6/18/2023: We currently need this to update theta
       theta_.retractMasked(delta_, relinKeys);
 
       
