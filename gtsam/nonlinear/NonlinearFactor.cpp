@@ -171,6 +171,24 @@ boost::shared_ptr<GaussianFactor> NoiseModelFactor::linearize(
     return GaussianFactor::shared_ptr(new JacobianFactor(terms, b));
 }
 
+void NoiseModelFactor::linearizeToMatrix(const Values& theta, 
+                                         std::vector<Matrix>* A, 
+                                         Vector* b) const {
+    // Only linearize if the factor is active
+    if (!active(theta))
+        return;
+
+    // Call evaluate error to get Jacobians and RHS vector b
+    // A = std::vector<Matrix>(size());
+    A->resize(size());
+    *b = -unwhitenedError(theta, *A);
+    check(noiseModel_, b->size());
+
+    // Whiten the corresponding system now
+    if (noiseModel_)
+        noiseModel_->WhitenSystem(*A, *b);
+}
+
 /* ************************************************************************* */
 
 } // \namespace gtsam

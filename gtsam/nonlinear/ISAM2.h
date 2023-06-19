@@ -21,6 +21,7 @@
 #pragma once
 
 #include <gtsam/linear/GaussianBayesTree.h>
+#include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/nonlinear/ISAM2Clique.h>
 #include <gtsam/nonlinear/ISAM2Params.h>
 #include <gtsam/nonlinear/ISAM2Result.h>
@@ -50,6 +51,8 @@ class GTSAM_EXPORT ISAM2 : public BayesTree<ISAM2Clique> {
   /** VariableIndex lets us look up factors by involved variable and keeps track
    * of dimensions */
   VariableIndex variableIndex_;
+
+  CholeskyEliminationTree eTree_;
 
   /** The linear delta from the last linear solution, an update to the estimate
    * in theta

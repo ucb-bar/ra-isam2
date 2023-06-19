@@ -109,6 +109,10 @@ public:
   virtual boost::shared_ptr<GaussianFactor>
   linearize(const Values& c) const = 0;
 
+  virtual void linearizeToMatrix(const Values& theta, 
+                         std::vector<Matrix>* A, 
+                         Vector* b) const {}
+
   /**
    * Creates a shared_ptr clone of the factor - needs to be specialized to allow
    * for subclasses
@@ -251,6 +255,10 @@ public:
    * Hence \f$ b = z - h(x) = - \mathtt{error\_vector}(x) \f$
    */
   boost::shared_ptr<GaussianFactor> linearize(const Values& x) const override;
+
+  void linearizeToMatrix(const Values& theta, 
+                         std::vector<Matrix>* A, 
+                         Vector* b) const override;
 
   /**
    * Creates a shared_ptr clone of the

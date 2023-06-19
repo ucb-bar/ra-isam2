@@ -40,6 +40,9 @@ endif()
 
 include(cmake/HandleGeneralOptions.cmake)   # CMake build options
 
+# Roger fix
+include_directories(${CMAKE_INSTALL_PREFIX})
+
 # Libraries:
 include(cmake/HandleBoost.cmake)            # Boost
 include(cmake/HandleCCache.cmake)           # ccache
