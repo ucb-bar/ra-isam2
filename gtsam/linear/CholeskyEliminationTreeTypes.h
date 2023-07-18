@@ -10,6 +10,7 @@
 #include <set>
 #include <unordered_map>
 #include <gtsam/base/Matrix.h>
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
 namespace gtsam {
     

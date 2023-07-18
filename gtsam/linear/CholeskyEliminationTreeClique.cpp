@@ -23,13 +23,13 @@ CholeskyEliminationTree::Clique::Clique(CholeskyEliminationTree* etree_in)
 
 void CholeskyEliminationTree::Clique::addNode(sharedNode node) {
   nodes.push_back(node);
-  node->clique = shared_from_this();
+  node->setClique(shared_from_this());
 }
 
 sharedClique CholeskyEliminationTree::Clique::markClique(
     const RemappedKey lowestKey, RemappedKeySet* markedKeys) {
 
-  sharedClique oldParent = parent;
+  sharedClique oldParent = parent();
   detachParent();
 
   if(nodes.size() > 1) {
@@ -62,7 +62,7 @@ sharedClique CholeskyEliminationTree::Clique::markClique(
     else {
       marked_ = true;
       assert(nodes[i]->key == lowestKey);
-      assert(nodes[i]->clique == get_ptr());
+      assert(nodes[i]->clique() == get_ptr());
       nodes.resize(1);
 
       // This cannot be a split clique, as clique generated from the previous 
@@ -85,18 +85,23 @@ void CholeskyEliminationTree::Clique::reorderClique() {
   assert(0);
 }
 
+sharedClique CholeskyEliminationTree::Clique::parent() {
+  sharedClique p = parent_.lock();
+  return p;
+}
+
 void CholeskyEliminationTree::Clique::findParent() {
   assert(!blockIndices.empty());
   if(blockIndices.size() == 1) {
     // Last row is going to be the root of all cliques
     // This will solve the multiple roots problem
     assert(nodes.front()->key == 0);
-    parent = nullptr;
+    parent_.reset();
     return;
   }
 
   RemappedKey parentKey = get<BLOCK_INDEX_KEY>(blockIndices.at(cliqueSize()));
-  setParent(etree->nodes_[parentKey]->clique);
+  setParent(etree->nodes_[parentKey]->clique());
 
   cout << "block indices: ";
   for(auto [key, r, h] : blockIndices) {
@@ -104,15 +109,15 @@ void CholeskyEliminationTree::Clique::findParent() {
   }
   cout << endl;
 
-  cout << "found parent " << *parent << " " << parent << endl;
+  cout << "found parent " << *parent() << " " << parent() << endl;
 }
 
 void CholeskyEliminationTree::Clique::detachParent() {
-    if(parent != nullptr) {
-        assert(parent->children.find(get_ptr()) != parent->children.end());
-        parent->children.erase(get_ptr());
-        parent = nullptr;
-    }
+  if(parent() != nullptr) {
+    assert(parent()->children.find(get_ptr()) != parent()->children.end());
+    parent()->children.erase(get_ptr());
+    parent_.reset();
+  }
 }
 
 void CholeskyEliminationTree::Clique::setParent(sharedClique newParent) {
@@ -120,10 +125,10 @@ void CholeskyEliminationTree::Clique::setParent(sharedClique newParent) {
     detachParent();
 
     // Set new parent
-    parent = newParent;
-    if(parent != nullptr) {
-        assert(parent->children.find(get_ptr()) == parent->children.end());
-        parent->children.insert(get_ptr());
+    parent_ = newParent;
+    if(parent() != nullptr) {
+        assert(parent()->children.find(get_ptr()) == parent()->children.end());
+        parent()->children.insert(get_ptr());
     }
 }
 
@@ -184,7 +189,7 @@ size_t CholeskyEliminationTree::Clique::width() const {
 void CholeskyEliminationTree::Clique::mergeClique(sharedClique otherClique) {
     // Assert the clique is standalone because we generally only merge with lone nodes
     // during symbolic elimination
-    assert(parent == otherClique);
+    assert(parent() == otherClique);
     assert(otherClique->nodes.size() == 1);   
     assert(otherClique->nodes.front()->key != 0);
     assert(otherClique->children.find(get_ptr()) != otherClique->children.end());   
@@ -209,8 +214,8 @@ void CholeskyEliminationTree::Clique::mergeClique(sharedClique otherClique) {
     }
 
     // clique1 parent must now be set to clique2 parent
-    assert(otherClique->parent == nullptr);
-    setParent(otherClique->parent);
+    assert(otherClique->parent() == nullptr);
+    setParent(otherClique->parent());
 
     // After reassigning parent, no node shoud point to this clique
     otherClique->detachParent();
@@ -378,8 +383,8 @@ void CholeskyEliminationTree::Clique::checkEditOrReconstruct(
   for(size_t i = cliqueSize(); i < blockIndices.size(); i++) { 
     // Start from subdiagonal keys
     RemappedKey key = get<BLOCK_INDEX_KEY>(blockIndices[i]);
-    assert(etree->nodes_[key]->clique->marked());
-    if(key != 0 && etree->nodes_[key]->clique->status == mode) {
+    assert(etree->nodes_[key]->clique()->marked());
+    if(key != 0 && etree->nodes_[key]->clique()->status == mode) {
       // ignore last row
       destCols->push_back(key);
     }
@@ -439,7 +444,7 @@ void CholeskyEliminationTree::Clique::resetAfterBacksolve() {
   // Reset node member variables
   for(sharedNode node : nodes) {
     node->status = UNMARKED;
-    node->changedLambdaStructure.clear();
+    // node->changedLambdaStructure.clear();
   }
 
   // Reset member variables
@@ -455,8 +460,8 @@ void CholeskyEliminationTree::Clique::printClique(ostream& os) {
     }
     os << endl;
     os << "   Parent: ";
-    if(parent != nullptr) {
-        for(sharedNode node : parent->nodes) {
+    if(parent() != nullptr) {
+        for(sharedNode node : parent()->nodes) {
             os << node->key << " ";
         }
     }
@@ -494,6 +499,20 @@ bool CholeskyEliminationTree::Clique::ownsColumns() const {
   }
   
   return gatherSources.front().ownsData();
+}
+
+void CholeskyEliminationTree::Clique::checkInvariant() const {
+  for(sharedNode node : nodes) {
+    assert(node->clique() == shared_from_this());
+  }
+
+  for(int i = 1; i < nodes.size(); i++) {
+    assert(etree->orderingLess_(nodes[i - 1]->key, nodes[i]->key));
+  }
+
+  for(sharedClique child : children) {
+    assert(etree->orderingLess_(child->backKey(), frontKey()));
+  }
 }
 
 }   // namespace gtsam

@@ -29,6 +29,7 @@ private:
 public:
   typedef std::shared_ptr<Node> sharedNode;
   typedef std::shared_ptr<Clique> sharedClique;
+  typedef std::weak_ptr<Clique> weakClique;
   typedef std::shared_ptr<FactorWrapper> sharedFactorWrapper;
   typedef NonlinearFactor::shared_ptr sharedFactor;
   typedef GaussianFactor::shared_ptr sharedLinearFactor;
@@ -41,6 +42,9 @@ public:
 
 private:
     std::vector<sharedNode> nodes_;
+    // The clique that owns each node. May be shared between nodes. We need this to 
+    // avoid circular references and also make sure something owns the sharedClique's
+    std::vector<sharedClique> cliques_;   
     sharedClique root_;
 
     // Transform random key indices into ordered key indices starting at 1
@@ -163,6 +167,10 @@ private:
   size_t colWidth(const RemappedKey key) const;
 
   bool checkSortedNoDuplicates(const std::vector<Key>& v) const;
+
+  void checkInvariant_afterSymbolic() const;
+  void checkInvariant_afterCholesky() const;
+  void checkInvariant_afterBackSolve() const;
 
   // Public testing functions
 public:

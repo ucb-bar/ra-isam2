@@ -33,7 +33,7 @@ public:
   // Ordered list of nodes belonging to this clique
   std::vector<sharedNode> nodes;
 
-  sharedClique parent = nullptr;
+  weakClique parent_;
   std::set<sharedClique> children;
 
   // bool hasReconstructAncestor = false;
@@ -87,6 +87,8 @@ public:
   // Reorder the clique's blocks. Assume the clique's columns are in the same source
   // and we own that source
   void reorderClique();
+
+  sharedClique parent();
 
   // Find new parent clique as the lowest nonzero index in any column of the clique
   // not including the diagonal
@@ -164,6 +166,9 @@ public:
 
   // Check if we own our columns
   bool ownsColumns() const;
+
+  void checkInvariant() const;
+
 };
 
 } // namespace gtsam

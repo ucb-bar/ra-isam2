@@ -35,7 +35,9 @@ CholeskyEliminationTree::CholeskyEliminationTree() : orderingLess_(this) {
   // Add new node for the last row. Technically should be connected to everything
   RemappedKey key = addRemapKey(-1);
   assert(key == 0);
+  cout << "constructor 0" << endl;
   addNewNode(key, 1); 
+  cout << "constructor 1" << endl;
 }
 
 void CholeskyEliminationTree::addVariables(const Values& newTheta) {
@@ -85,20 +87,20 @@ void CholeskyEliminationTree::markAffectedKeys(
       }
     }
 
-    auto it = relinNode->lambdaStructure.begin();
-    auto itSelf = relinNode->lambdaStructure.find(relinKey);
-    auto itEnd = relinNode->lambdaStructure.end();
+    // auto it = relinNode->lambdaStructure.begin();
+    // auto itSelf = relinNode->lambdaStructure.find(relinKey);
+    // auto itEnd = relinNode->lambdaStructure.end();
 
-    // All keys that interact with this key but are lower than this key
-    while(it != itSelf) {
-      nodes_[*it]->changedLambdaStructure.insert(relinKey);
-      it++;
-    }
-    // All keys that interact with this key but are higher
-    while(it != itEnd) {
-      relinNode->changedLambdaStructure.insert(*it);
-      it++;
-    }
+    // // All keys that interact with this key but are lower than this key
+    // while(it != itSelf) {
+    //   nodes_[*it]->changedLambdaStructure.insert(relinKey);
+    //   it++;
+    // }
+    // // All keys that interact with this key but are higher
+    // while(it != itEnd) {
+    //   relinNode->changedLambdaStructure.insert(*it);
+    //   it++;
+    // }
 
     for(sharedFactorWrapper factorWrapper : relinNode->factors) {
       factorWrapper->markAffectedKeys(affectedKeys);
@@ -113,12 +115,9 @@ void CholeskyEliminationTree::markAffectedKeys(
 
     factors_.push_back(factorWrapper);
 
-    for(const auto&[k1, col1, width1] : factorWrapper->blockIndices()) {
-      sharedNode node1 = nodes_[k1];
-      node1->factors.push_back(factorWrapper);
-      for(const auto&[k2, col2, width2] : factorWrapper->blockIndices()) {
-        node1->lambdaStructure.insert(k2);
-      }
+    for(RemappedKey k : factorWrapper->remappedKeys()) {
+      sharedNode node = nodes_[k];
+      node->addFactor(factorWrapper);
     }
 
     factorWrapper->markAffectedKeys(affectedKeys);
@@ -181,7 +180,7 @@ void CholeskyEliminationTree::markAncestors(
 
 void CholeskyEliminationTree::markKey(const RemappedKey key, RemappedKeySet* markedKeys) {
   // Not sure why this is needed
-  if(nodes_[key]->clique->marked()) {
+  if(nodes_[key]->clique()->marked()) {
     // Node is already processed
     return;
   }
@@ -189,7 +188,7 @@ void CholeskyEliminationTree::markKey(const RemappedKey key, RemappedKeySet* mar
   cout << "[CholeskyEliminationTree] markKey() " << key << endl;
   sharedNode node = nodes_[key];
 
-  sharedClique curClique = node->clique;
+  sharedClique curClique = node->clique();
   RemappedKey curKey = key;
   do {
     if(curClique->orderingVersion != orderingVersion_) {
@@ -243,13 +242,14 @@ void CholeskyEliminationTree::symbolicElimination(const RemappedKeySet& markedKe
   allocateStack();
   cout << "[CholeskyEliminationTree] symbolicElimination() 4" << endl;
 
+  checkInvariant_afterSymbolic();
 }
 
 void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
   cout << "[CholeskyEliminationTree] symbolicEliminateKey: " << key << endl;
 
   sharedNode node = nodes_[key];
-  sharedClique clique = node->clique;
+  sharedClique clique = node->clique();
 
   assert(clique->orderingVersion == orderingVersion_);
   assert(clique->nodes.size() == 1);
@@ -257,9 +257,15 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
 
   // Add keys induced by raw factors but only keys that are higher than this key
   vector<RemappedKey> colStructure;
-  colStructure.insert(colStructure.end(),
-                      node->lambdaStructure.find(node->key),
-                      node->lambdaStructure.end());
+  for(const auto& [otherKey, count] : node->lambdaStructure) {
+    if(!orderingLess_(otherKey, node->key)) {
+      colStructure.push_back(otherKey);
+    }
+  }
+  std::sort(colStructure.begin(), colStructure.end(), orderingLess_);
+  // colStructure.insert(colStructure.end(),
+  //                     node->lambdaStructure.find(node->key),
+  //                     node->lambdaStructure.end());
 
   // Merge column structure from children cliques
   for(sharedClique childClique : clique->children) {
@@ -286,6 +292,8 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
       childClique->mergeClique(clique);
       // assert(0); // BUG here, cliques not merging properly, also it shouldn't matter for correctness
       // Need to update clique pointer to current clique, which is the child clique
+      assert(clique.unique());
+      clique.reset();
       clique = childClique;
       mergeFlag = true;
     }
@@ -300,7 +308,7 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
   clique->findParent();
 
   // Set root after merging
-  if(clique->parent == nullptr) {
+  if(clique->parent() == nullptr) {
     assert(clique->nodes.size() == 1);
     assert(clique->nodes.front()->key == 0);
 
@@ -391,9 +399,9 @@ void CholeskyEliminationTree::allocateStack() {
           for(size_t i = clique->cliqueSize(); i < clique->blockIndices.size(); i++) {
             // For any marked clique, if any of its decendants is unmarked, set to EDIT
             const auto&[key, row, height] = clique->blockIndices[i];
-            assert(nodes_[key]->clique->marked());
+            assert(nodes_[key]->clique()->marked());
             cout << "set clique " << *clique << " to EDIT" << endl;
-            nodes_[key]->clique->status = EDIT;
+            nodes_[key]->clique()->status = EDIT;
           }
         }
       }
@@ -489,7 +497,7 @@ void CholeskyEliminationTree::choleskyElimination(const Values& theta) {
   while(!stack.empty()) {
     auto& curPair = stack.back();
     sharedClique clique = curPair.first;
-    sharedClique parent = clique->parent;
+    sharedClique parent = clique->parent();
     bool& expanded = curPair.second;
     if(!expanded) {
       expanded = true;
@@ -872,11 +880,11 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
 void CholeskyEliminationTree::mergeWorkspaceClique(sharedClique clique) {
   if(clique->isLastRow()) { 
     assert(clique == root_);
-    assert(!clique->parent);
+    assert(!clique->parent());
     return; 
   }
 
-  sharedClique parent = clique->parent;
+  sharedClique parent = clique->parent();
 
   // Interpret the workspace matrices as a CliqueColumns, then merge them
   auto childMatrixData = workspace_.get_ptrs(clique->workspaceIndex)[0];
@@ -959,7 +967,7 @@ void CholeskyEliminationTree::backsolve(VectorValues* delta_ptr, double tol) {
 
   deallocateStack();
 
-  // checkInvariant_afterBackSolve();
+  checkInvariant_afterBackSolve();
 }
 
 void CholeskyEliminationTree::backsolveClique(sharedClique clique, 
@@ -1070,17 +1078,49 @@ Key CholeskyEliminationTree::unmapKey(const RemappedKey remappedKey) {
 void CholeskyEliminationTree::addNewNode(const RemappedKey key, const size_t width) {
   sharedNode newNode = make_shared<Node>(this, key, width);
   nodes_.push_back(newNode);
+  cliques_.push_back(nullptr);
+
   // We cannot make sharedNode part of the constructor
   // Because at construct time, Clique is not pointed to by shared_ptr
   // Maybe there is a cleaner way?
   sharedClique newClique = make_shared<Clique>(this);
   newClique->addNode(newNode);
 
+  assert(newNode->clique() == newClique);
 }
 
 size_t CholeskyEliminationTree::colWidth(const RemappedKey key) const {
   return nodes_.at(key)->width;
 }
+
+void CholeskyEliminationTree::checkInvariant_afterSymbolic() const {
+  for(sharedClique clique : cliques_) {
+    clique->checkInvariant();
+    cout << "Clique " << *clique << " addr: " << clique << endl;
+  }
+}
+
+void CholeskyEliminationTree::checkInvariant_afterBackSolve() const {
+  for(const sharedClique& clique : cliques_) {
+    cout << "clique " << *clique << " use count = " << clique.use_count() << endl;
+
+    if(clique->isLastRow()) {
+      assert(clique->parent() == nullptr);
+      assert(clique == root_);
+      assert(clique.use_count() == 2);  // one from cliques_ and one from root_
+    }
+    else {
+      // nodes.size() from cliques_ and one of clique->children
+      assert(clique.use_count() == clique->cliqueSize() + 1);  
+    }
+    clique->checkInvariant();
+  }
+  for(const sharedNode& node : nodes_) {
+    // One in nodes_ and one in clique->nodes
+    assert(node.use_count() == 2);
+  }
+}
+
 
 template<typename MATRIX>
 void scatterMatrix(const MATRIX& src, 

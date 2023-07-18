@@ -15,12 +15,11 @@ namespace gtsam {
 class CholeskyEliminationTree::Node {
 private:
   CholeskyEliminationTree* etree = nullptr;
+  // weakClique clique_;
 
 public:
   RemappedKey key;
   size_t width = 0;
-
-  sharedClique clique = nullptr;
 
   // This is needed because within the same clique, it is possible that some columns are NEW
   // while the clique itself is EDIT. We don't want to subtract from the NEW columns
@@ -30,8 +29,11 @@ public:
 
   // Column structure of the lambda matrix for this column
   // Only affected by raw factor connections
-  std::set<RemappedKey, OrderingLess> lambdaStructure;
-  std::set<RemappedKey, OrderingLess> changedLambdaStructure;
+  // For each nonzero entry, also keep track of the number of occurrences 
+  // in case of removing factors
+  std::map<RemappedKey, size_t> lambdaStructure;
+  // std::set<RemappedKey, OrderingLess> lambdaStructure;
+  // std::set<RemappedKey, OrderingLess> changedLambdaStructure;
 
   // // Column structure of the cholesky factor
   // std::vector<Key> colStructure;
@@ -40,9 +42,20 @@ public:
   std::vector<sharedFactorWrapper> factors;
 
   Node(CholeskyEliminationTree* etree, const Key key_in, const size_t width_in) 
-    : etree(etree), key(key_in), width(width_in),
+    : etree(etree), key(key_in), width(width_in) {} /*,
       lambdaStructure(etree->orderingLess_),
-      changedLambdaStructure(etree->orderingLess_) {}
+      changedLambdaStructure(etree->orderingLess_) {}*/
+
+  sharedClique clique() {
+    assert(etree->cliques_[key]);
+    return etree->cliques_[key];
+  }
+
+  void setClique(sharedClique c) {
+    etree->cliques_[key] = c;
+  }
+
+  void addFactor(sharedFactorWrapper factor);
 };
 
 }
