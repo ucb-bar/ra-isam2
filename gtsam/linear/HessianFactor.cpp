@@ -472,6 +472,13 @@ boost::shared_ptr<GaussianConditional> HessianFactor::eliminateCholesky(const Or
     // Do dense elimination
     size_t nFrontals = keys.size();
     assert(nFrontals <= size());
+
+    cout << "Clique: ";
+    for(auto k : keys) {
+      cout << k << " ";
+    }
+    cout << endl;
+
     info_.choleskyPartial(nFrontals);
 
     // TODO(frank): pre-allocate GaussianConditional and write into it

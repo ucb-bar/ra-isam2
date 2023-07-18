@@ -21,10 +21,12 @@ public:
   size_t width = 0;
 
   sharedClique clique = nullptr;
-  enum Status {UNMARKED, EDIT, RECONSTRUCT, NEW};
-  Status status = NEW; 
 
-  bool backsolve = true;
+  // This is needed because within the same clique, it is possible that some columns are NEW
+  // while the clique itself is EDIT. We don't want to subtract from the NEW columns
+  MarkedStatus status = NEW; 
+
+  bool backsolve = false;
 
   // Column structure of the lambda matrix for this column
   // Only affected by raw factor connections

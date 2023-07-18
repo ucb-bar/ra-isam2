@@ -439,9 +439,9 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 
   // 1. Add any new factors \Factors:=\Factors\cup\Factors'.
   // Also compute keys that are updated
-  KeySet observedKeys;
-  KeySet affectedKeys;
-  KeySet markedKeys;
+  RemappedKeySet observedKeys;
+  RemappedKeySet affectedKeys;
+  RemappedKeySet markedKeys;
 
   update.pushBackFactors(newFactors, &nonlinearFactors_, &linearFactors_,
                          &variableIndex_, &result.newFactorsIndices,
@@ -533,6 +533,7 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
       last_variable_count = theta_.size();
       reorder_flag = true;
   }
+  reorder_flag = false;
   if(reorder_flag) {
       // cout << "reordering" << endl;
       reorder_flag = false;
@@ -548,8 +549,7 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   const ISAM2GaussNewtonParams& gaussNewtonParams =
       boost::get<ISAM2GaussNewtonParams>(params_.optimizationParams);
 
-  eTree_.backwardSolve(&delta_, gaussNewtonParams.wildfireThreshold);
-  // eTree_.backwardSolve(&delta_, 0);
+  eTree_.backsolve(&delta_, gaussNewtonParams.wildfireThreshold);
   
   // string fname = "/root/igo-gtsam/build/matrix.out";
   // ofstream fout;

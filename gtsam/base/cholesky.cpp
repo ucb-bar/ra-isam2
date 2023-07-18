@@ -22,6 +22,7 @@
 
 #include <boost/format.hpp>
 #include <cmath>
+#include <iostream>
 
 using namespace std;
 
@@ -120,6 +121,11 @@ bool choleskyPartial(Matrix& ABC, size_t nFrontal, size_t topleft) {
   auto B = ABC.block(topleft, topleft + nFrontal, nFrontal, n - nFrontal);
   auto C = ABC.block(topleft + nFrontal, topleft + nFrontal, n - nFrontal, n - nFrontal);
 
+  // DEBUG
+  ABC.triangularView<Eigen::StrictlyLower>().setZero();
+  auto AB = ABC.block(topleft, topleft, nFrontal, n);
+  cout << "Before eliminate, m = \n" << AB.transpose() << endl;
+
   // Compute Cholesky factorization A = R'*R, overwrites A.
   gttic(LLT);
   Eigen::LLT<Matrix, Eigen::Upper> llt(A);
@@ -141,6 +147,10 @@ bool choleskyPartial(Matrix& ABC, size_t nFrontal, size_t topleft) {
   if (nFrontal < n)
     C.selfadjointView<Eigen::Upper>().rankUpdate(B.transpose(), -1.0);
   gttoc(compute_L);
+
+  // DEBUG
+  ABC.triangularView<Eigen::StrictlyLower>().setZero();
+  cout << "After eliminate, m = \n" << AB.transpose() << endl;
 
   // Check last diagonal element - Eigen does not check it
   if (nFrontal >= 2) {

@@ -17,8 +17,12 @@ namespace gtsam {
 class CholeskyEliminationTree::FactorWrapper {
 public:
 
-  // factorBlockIndices store the list of (key, col, width) of the block row
-  BlockIndexVector factorBlockIndices;
+  typedef Eigen::Block<const Matrix> constBlock;
+
+  CholeskyEliminationTree* etree = nullptr;
+
+  // blockIndices_ store the list of (key, col, width) of the block row
+  BlockIndexVector blockIndices_;
 
   // Dimension is not supported as the factor can be a Hessian factor 
   // and cannot easily get dim
@@ -33,90 +37,238 @@ public:
   // should not be added back in
   // REMOVED factors is the final state of REMOVING factors. We keep the factors for
   // now to retain flexibility
-  enum Status {UNLINEARIZED, LINEARIZED, RELINEARIZE, LINEAR, REMOVING, REMOVED};
+  // enum Status {UNLINEARIZED, LINEARIZED, RELINEARIZE, LINEAR, REMOVING, REMOVED};
 
-  Status linearizeStatus = UNLINEARIZED;
+  FactorStatus status_ = UNLINEARIZED;
 
   // A nonlinear factor linearizes to a linear augmented block row matrix
   // If a factor is already linear, then we instantiate directly as an augmented matrix
-  sharedFactor nonlinearFactor = nullptr;
+  sharedFactor nonlinearFactor_ = nullptr;
 
   // ColMajorMatrix cachedLinearFactor;
   sharedLinearFactor cachedLinearFactor = nullptr;
 
+  RemappedKeyVector remappedKeys_;
+
+  RemappedKey lowestKey_;
+
   // Construct a wrapper around a factor
   // If nonlinearFactor_in == nullptr, then we are constructing a linear factor
-  FactorWrapper(const BlockIndexVector& blockIndices_in,
-                sharedFactor nonlinearFactor_in, 
-                const sharedLinearFactor& cachedLinearFactor_in)
-    : factorBlockIndices(blockIndices_in), 
-      nonlinearFactor(nonlinearFactor_in), 
-      cachedLinearFactor(cachedLinearFactor_in) {
-    
-    if(nonlinearFactor == nullptr) {
-      linearizeStatus = LINEAR;
+  FactorWrapper(sharedFactor nonlinearFactor_in,
+                sharedLinearFactor cachedLinearFactor_in,
+                CholeskyEliminationTree* etree_in) 
+  : etree(etree_in),
+    nonlinearFactor_(nonlinearFactor_in),
+    cachedLinearFactor(cachedLinearFactor_in) {
+    if(nonlinearFactor_ == nullptr) {
+
+      status_ = LINEAR;
       // factorDim = cachedLinearFactor->dim();
+      for(Key unmappedKey : cachedLinearFactor->keys()) {
+        remappedKeys_.push_back(etree->getRemapKey(unmappedKey));
+      }
     }
     else {
-      // factorDim = nonlinearFactor->dim();
+      // factorDim = nonlinearFactor_->dim();
+      for(Key unmappedKey : nonlinearFactor_->keys()) {
+        remappedKeys_.push_back(etree->getRemapKey(unmappedKey));
+      }
+    }
+
+    // Add rhs to remapped keys
+    remappedKeys_.push_back(0);
+
+    updateBlockIndices();
+    updateLowestKey();
+  }
+
+  void updateBlockIndices() {
+    blockIndices_.clear();
+    assert(remappedKeys_.back() == 0);
+    size_t curCol = 0;
+    for(RemappedKey key : remappedKeys_) {
+      size_t width = etree->colWidth(key);
+      blockIndices_.push_back({key, curCol, width});
+      curCol += width;
     }
   }
 
-  const BlockIndexVector& blockIndices() const { return factorBlockIndices; }
-  const size_t dim() const { /*return factorDim;*/ assert(0); }
-  Status& status() { return linearizeStatus; }
+  const BlockIndexVector& blockIndices() const { return blockIndices_; }
 
-  void linearize(const Values& theta) {
-    if(linearizeStatus == UNLINEARIZED || linearizeStatus == RELINEARIZE) {
-      cachedLinearFactor = nonlinearFactor->linearize();
-
-      linearizeStatus = LINEARIZED;
+  void updateLowestKey() {
+    lowestKey_ = remappedKeys_.front();
+    for(RemappedKey key : remappedKeys_) {
+      if(etree->orderingLess_(key, lowestKey_)) {
+        lowestKey_ = key;
+      }
     }
   }
+
+  RemappedKey lowestKey() { return lowestKey_; }
+
+  const size_t dim() const { 
+    /*return factorDim;*/ 
+    throw std::runtime_error("dim() not implemented"); 
+    return 0; 
+  }
+
+  FactorStatus& status() { return status_; }
+
+  // Linearize the factor if it needs to be linearized. 
+  // Returns true if action is done, false otherwise
+  // This does not change the status of the factor yet
+  bool linearizeIfNeeded(const Values& theta) {
+    if(status_ == UNLINEARIZED || status_ == RELINEARIZE) {
+      cachedLinearFactor = nonlinearFactor_->linearize(theta);
+      status_ = LINEARIZED;
+      return true;
+    }
+    return false;
+  }
+
+  sharedFactor nonlinearFactor() { return nonlinearFactor_; }
 
   sharedLinearFactor getLinearFactor() {
     return cachedLinearFactor;
   }
 
-  void addNewKeys() {
+  void addNewKeys(const std::vector<RemappedKey>& newKeys) {
     // We actually don't need to do a lot here as the nonlinearFactor will have already been 
     // updated with new keys, but we do need to relinearize the factor though
-    linearizeStatus = RELINEARIZE;
+    status_ = RELINEARIZE;
+    for(RemappedKey key : newKeys) {
+      remappedKeys_.push_back(key);
+    }
+
+    // TODO: verify if new keys are added to the end of the list of keys
+    throw std::runtime_error("factor add new keys");
+
+    updateBlockIndices();
+    updateLowestKey();
+
     return;
   }
 
+  void markAffectedKeys(RemappedKeySet* affectedKeys) {
+    for(RemappedKey key : remappedKeys_) {
+      affectedKeys->insert(key);
+    }
+  }
+
+  const RemappedKeyVector& remappedKeys() {
+    return remappedKeys_;
+  }
+
   const KeyVector& keys() {
-    if(nonlinearFactor != nullptr) {
-      return nonlinearFactor->keys();
+    throw std::runtime_error("Are you sure you want to get unmapped keys");
+    if(nonlinearFactor_ != nullptr) {
+      return nonlinearFactor_->keys();
     }
     return cachedLinearFactor->keys();
   }
 
-  // const ColMajorMatrix& linearize(const Values& theta) {
+  const JacobianFactor* toJacobianFactor() const {
+    return dynamic_cast<const JacobianFactor*>(cachedLinearFactor.get());
+  }
 
-  //   std::vector<ColMajorMatrix> A;
+  const HessianFactor* toHessianFactor() const {
+    return dynamic_cast<const HessianFactor*>(cachedLinearFactor.get());
+  }
 
-  //   Vector b(factorDim);
-  //   nonlinearFactor->linearizeToMatrix(theta, &A, &b);
+  struct DefaultPred {
+    bool operator()(const RemappedKey& key) const { return true; }
+  };
 
-  //   size_t totalWidth = std::get<1>(factorBlockIndices.back()) + 1;
+  template<typename MATRIX, typename PREDICATE>
+  void updateHessianJacobian(
+      const JacobianFactor* jf, 
+      MATRIX& m, 
+      double sign, 
+      const BlockIndexMap& keyRowMap, 
+      const PREDICATE& pred=DefaultPred()) {
+    const Matrix& Ab = jf->matrixObject().matrix();
+    // const VerticalBlockMatrix& Ab = jf->matrixObject();
+    size_t height = Ab.rows();
 
-  //   cachedLinearFactor = ColMajorMatrix(factorDim, totalWidth);
-  //   for(size_t i = 0; i < factorBlockIndices.size() - 1; i++) {
-  //     auto&[_, col, width] = factorBlockIndices[i];
-  //     Eigen::Block<ColMajorMatrix> block(cachedLinearFactor, 0, col, factorDim, width);
-  //     block = A[i];
-  //   }
-  //   auto&[key, col, width] = factorBlockIndices.back();
-  //   assert(key == 0);
-  //   assert(width == 1);
-  //   Eigen::Block<ColMajorMatrix> block(cachedLinearFactor, 0, col, factorDim, width);
-  //   block = b;
+    for(size_t i = 0; i < blockIndices_.size(); i++) {
+      const auto&[lowerKey, srcCol1, srcW1] = blockIndices_.at(i);
+      // std::cout << "checking lowerKey = " << lowerKey << std::endl;
+      if(!pred(lowerKey)) {
+        continue;
+      }
+      const auto&[destR1, h1] = keyRowMap.at(lowerKey);
+      Eigen::Block<const Matrix> Ab_i(Ab, 0, srcCol1, height, srcW1);
+      for(size_t j = 0; j < remappedKeys_.size(); j++) {
+        const auto&[higherKey, srcCol2, srcW2] = blockIndices_.at(j);
+        if(etree->orderingLess_(higherKey, lowerKey)) {
+          continue;
+        }
+        // std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
+        const auto&[destR2, h2] = keyRowMap.at(higherKey);
+        Eigen::Block<const Matrix> Ab_j(Ab, 0, srcCol2, height, srcW2);
 
-  //   return cachedLinearFactor;
-  //   
-  // }
+        Eigen::Block<MATRIX> destBlock(m, destR2, destR1, h2, h1);
 
+        destBlock.noalias() += sign * Ab_j.transpose() * Ab_i;
+
+      }
+    }
+  }
+
+  template<typename MATRIX, typename PREDICATE>
+  void updateHessianHessian(
+      const HessianFactor* hf,
+      MATRIX& m, 
+      double sign, 
+      const BlockIndexMap& keyRowMap, 
+      const PREDICATE& pred=DefaultPred()) {
+    // const SymmetricBlockMatrix& info = hf->info();
+    // for(size_t i = 0; i < remappedKeys_.size(); i++) {
+    //   RemappedKey lowerKey = remappedKeys_[i];
+    //   if(!pred(lowerKey)) {
+    //     continue;
+    //   }
+    //   const auto&[destR1, h1] = keyRowMap.at(lowerKey);
+    //   for(size_t j = 0; j < remappedKeys_.size(); j++) {
+    //     RemappedKey higherKey = remappedKeys_[j];
+    //     if(etree->orderingLess_(higherKey, lowerKey)) {
+    //       continue;
+    //     }
+    //     const auto&[destR2, h2] = keyRowMap.at(higherKey);
+
+    //     Eigen::Block<MATRIX> destBlock(m, destR2, destR1, h2, h1);
+    //     if(i == j) {
+    //       Eigen::SelfAdjointView<Eigen::Block<MATRIX>, Eigen::Upper>(destBlock) 
+    //         += sign * info.diagonalBlock(i);
+    //     }
+    //     else {
+    //       DenseIndex I = std::min(i, j);
+    //       DenseIndex J = std::max(i, j);
+    //       destBlock += sign * info.aboveDiagonalBlock(I, J).transpose();
+    //     }
+    //   }
+    // }
+  }
+
+  // Populate the columns of the MATRIX m with the sign * Hessian of the factor
+  // skipping column key if pred(key) == false
+  template<typename MATRIX, typename PREDICATE>
+  void updateHessian(
+      MATRIX& m, 
+      double sign, 
+      const BlockIndexMap& keyRowMap, 
+      const PREDICATE& pred=DefaultPred()) {
+
+    if(const JacobianFactor* jf = toJacobianFactor()) {
+      updateHessianJacobian(jf, m, sign, keyRowMap, pred);
+    }
+    else if(const HessianFactor* hf = toHessianFactor()) {
+      updateHessianHessian(hf, m, sign, keyRowMap, pred);   
+    }
+    else {
+      throw std::runtime_error("Factor cannot be dynamically cast");
+    }
+  }
 };
 
 } // namespace gtsam

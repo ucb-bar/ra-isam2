@@ -150,13 +150,13 @@ void ISAM2::recalculate(const ISAM2UpdateParams& updateParams,
 
     KeySet affectedKeysSet;
     static const double kBatchThreshold = 0.65;
-    if (affectedKeys.size() >= theta_.size() * kBatchThreshold) {
-      // Do a batch step - reorder and relinearize all variables
-      recalculateBatch(updateParams, &affectedKeysSet, result);
-    } else {
+    // if (affectedKeys.size() >= theta_.size() * kBatchThreshold) {
+    //   // Do a batch step - reorder and relinearize all variables
+    //   recalculateBatch(updateParams, &affectedKeysSet, result);
+    // } else {
       recalculateIncremental(updateParams, relinKeys, affectedKeys,
                              &affectedKeysSet, &orphans, result);
-    }
+    // }
 
     // Root clique variables for detailed results
     if (result->detail && params_.enableDetailedResults) {
@@ -336,8 +336,10 @@ void ISAM2::recalculateIncremental(const ISAM2UpdateParams& updateParams,
 
   // Generate ordering
   gttic(Ordering);
-  const Ordering ordering =
-      Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
+  // DEBUG: Custom ordering
+  // const Ordering ordering =
+  //     Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
+  const Ordering ordering(*affectedKeysSet);
   gttoc(Ordering);
 
   // Do elimination

@@ -9,6 +9,7 @@
 
 #include <gtsam/base/Matrix.h>
 #include <gtsam/base/Workspace.h>
+#include <gtsam/linear/CholeskyEliminationTreeTypes.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/ISAM2UpdateParams.h>
 #include <vector>
@@ -26,11 +27,6 @@ private:
   class FactorWrapper;   // A wrapper around Factor, can contain nonlinear or linear factors
 
 public:
-  typedef Key RemappedKey;
-  typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> ColMajorMatrix;
-  typedef Eigen::VectorXd Vector;
-  typedef std::tuple<RemappedKey, size_t, size_t> KeyRowHeight;
-  typedef std::vector<KeyRowHeight> BlockIndexVector;
   typedef std::shared_ptr<Node> sharedNode;
   typedef std::shared_ptr<Clique> sharedClique;
   typedef std::shared_ptr<FactorWrapper> sharedFactorWrapper;
@@ -50,19 +46,21 @@ private:
     // Transform random key indices into ordered key indices starting at 1
     // 0 is used for the Atb row
     std::unordered_map<Key, RemappedKey> keyTransformMap_;
+    // unmappedKeys transforms the sequential remappedKeys back to unmapped keys
+    std::vector<Key> unmappedKeys_;
 
     std::vector<RemappedKey> keyToOrdering_; // Key to index
     std::vector<size_t> orderingToKey_;         // Index to key
 
-    size_t orderingVersion_;
+    size_t orderingVersion_ = 0;
 
     struct OrderingLess {
         CholeskyEliminationTree* etree = nullptr;
         OrderingLess() : etree(nullptr) {}
         OrderingLess(CholeskyEliminationTree* etree_in) : etree(etree_in) {}
         bool operator()(const RemappedKey lhs, const RemappedKey rhs) const {
-            assert(etree);
-            return etree->keyToOrdering_.at(lhs) < etree->keyToOrdering_.at(rhs);
+          assert(etree);
+          return etree->keyToOrdering_.at(lhs) < etree->keyToOrdering_.at(rhs);
         }
     };
 
@@ -90,40 +88,85 @@ public:
                         const KeySet& relinKeys, 
                         const ISAM2UpdateParams& updateParams,
                         // const boost::optional<FastList<Key>>& extraKeys,
-                        KeySet* affectedKeys,
-                        KeySet* observedKeys);
+                        RemappedKeySet* affectedKeys,
+                        RemappedKeySet* observedKeys);
 
   // Mark all ancestors of directly changed keys and disconnect child from parent 
   // As parent might change. But do not reset lambdaStructure as that does not change
-  void markAncestors(const KeySet& affectedKeys, KeySet* markedKeys);
+  void markAncestors(const RemappedKeySet& affectedKeys, RemappedKeySet* markedKeys);
 
-  void symbolicElimination(const KeySet& markedKeys);
+  void updateOrdering(const RemappedKeySet& markedKeys, const RemappedKeySet& observedKeys);
+
+  void symbolicElimination(const RemappedKeySet& markedKeys);
 
   void choleskyElimination(const Values& theta);
 
+  void backsolve(VectorValues* delta_ptr, double tol);
+
 private:
+  // Add new unmapped Key to transform map and return the mapped key, 
+  // If key already exists, just return the mapped key
+  // The new key is added to the end of the variable ordering (but before the last row)
   RemappedKey addRemapKey(const Key unmappedKey);
   RemappedKey getRemapKey(const Key unmappedKey);
+  Key unmapKey(const RemappedKey remappedKey);
 
   void addNewNode(const Key unmappedKey, const size_t width);
   
-  void markKey(const RemappedKey key, KeySet* markedKeys);
+  void markKey(const RemappedKey key, RemappedKeySet* markedKeys);
   
   // Perform symbolic elimination on the columns of variable key
   void symbolicEliminateKey(const RemappedKey key);
 
   // Post reordering is used to make sure nodes in the same clique is 
-  // adjacent in ordering (can probably skip)
+  // adjacent in ordering
+  // We need this so that when performing a structure altering operation (removing factors
+  // or adding factors in the middle, we can retain some structure. Need to prove this)
   void postReordering();
   
   // Allocate required memory for outer products
   // Required memory is the max sum of matrix sizes for any path from root to leaf
+  // This function also sets the update mode of the clique to EDIT or RECONSTRUCT
+  // We want to minimize clique traversal, so we will set everything whose changed 
+  // descendants have a fixed clique to be EDIT, otherwise RECONSTRUCT
   void allocateStack();
   void deallocateStack();
+
+  // Allocate and gather columns of the clique to a new workspace
+  // If reconstruct is true, will not gather but simply reset the columns
+  void allocateAndGatherClique(sharedClique clique, bool allocate, bool reconstruct);
+
+  void editOrReconstructFromClique(
+         sharedClique clique,
+         const std::vector<Key>& destCols,
+         double sign);
+  
+  void restoreClique(sharedClique clique);
+  
+  // Reset the first diagWidth columns in the clique's workspace
+  void resetCliqueColumns(sharedClique clique);
+  
+  // ADD AtA of factors. Handle edits of AtA here as well
+  void constructLambdaClique(sharedClique clique, const Values& theta);
+
+  void eliminateClique(sharedClique clique);
+
+  void mergeWorkspaceClique(sharedClique clique);
+
+  // Copy the data in the workspace to a local memory owned by the clique
+  void scatterClique(sharedClique clique);
+
+  void backsolveClique(sharedClique clique, VectorValues* delta_ptr, double tol);
+
+  bool valuesChanged(const Vector& diff, double tol);
 
   size_t colWidth(const RemappedKey key) const;
 
   bool checkSortedNoDuplicates(const std::vector<Key>& v) const;
+
+  // Public testing functions
+public:
+  void testFactorWrapper(const Values& theta);
 };
 
 }
