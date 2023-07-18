@@ -288,9 +288,8 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
     // Clique 0 cannot be merged and will always be root
     sharedClique childClique = *(clique->children.begin());
     if(childClique->marked() 
-        && colStructure.size() == childClique->blockIndices.size() - 1) {
+        && colStructure.size() == childClique->blockIndices.size() - childClique->cliqueSize()) {
       childClique->mergeClique(clique);
-      // assert(0); // BUG here, cliques not merging properly, also it shouldn't matter for correctness
       // Need to update clique pointer to current clique, which is the child clique
       assert(clique.unique());
       clique.reset();
