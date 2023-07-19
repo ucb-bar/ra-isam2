@@ -533,11 +533,10 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
       last_variable_count = theta_.size();
       reorder_flag = true;
   }
-  reorder_flag = false;
   if(reorder_flag) {
       // cout << "reordering" << endl;
       reorder_flag = false;
-      eTree_.updateOrdering(markedKeys, observedKeys);
+      eTree_.updateOrdering(markedKeys, observedKeys, updateParams);
   }
 
   // cout << "marked keys size = " << markedKeys.size() << " affected size = " << affectedKeys.size() << endl;
@@ -550,6 +549,7 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
       boost::get<ISAM2GaussNewtonParams>(params_.optimizationParams);
 
   eTree_.backsolve(&delta_, gaussNewtonParams.wildfireThreshold);
+  eTree_.reset();
   
   // string fname = "/root/igo-gtsam/build/matrix.out";
   // ofstream fout;

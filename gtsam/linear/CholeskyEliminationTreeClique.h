@@ -36,7 +36,6 @@ public:
   weakClique parent_;
   std::set<sharedClique> children;
 
-  // bool hasReconstructAncestor = false;
   bool marked_ = false; 
   // bool backsolve = false;
 
@@ -94,6 +93,9 @@ public:
   // not including the diagonal
   void findParent();
 
+  // Find new parent after variable reordering
+  void reorderAndFindParent();
+
   // Set parent to nullptr
   void detachParent();
 
@@ -110,8 +112,9 @@ public:
   // Populate blockIndices given a colStructure
   void populateBlockIndices(const std::vector<RemappedKey>& colStructure);
 
-  // Reorder underlying matrix. Return false if nothing needs to be done
-  bool reorderColumn(BlockIndexVector& newBlockIndices);
+  // Returns true if clique contributes to an ancestor that is marked
+  // Only need to check highest key that is not 0
+  bool hasMarkedAncestor();
 
   // Determine if a clique needs to be edited or reconstructed
   // Right now, the algorithm should be that, if any changed descendant is unmarked
@@ -161,6 +164,8 @@ public:
 
   // Width of the matrix
   size_t width() const;
+
+  void printBlockIndices(std::ostream& os);
 
   void printClique(std::ostream& os);
 

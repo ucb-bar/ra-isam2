@@ -22,6 +22,8 @@ public:
   CholeskyEliminationTree* etree = nullptr;
 
   // blockIndices_ store the list of (key, col, width) of the block row
+  // This DOES NOT change after reordering keys. Only needs updating after
+  // adding new keys
   BlockIndexVector blockIndices_;
 
   // Dimension is not supported as the factor can be a Hessian factor 
@@ -267,6 +269,12 @@ public:
     }
     else {
       throw std::runtime_error("Factor cannot be dynamically cast");
+    }
+  }
+
+  void printKeys(std::ostream& os) {
+    for(auto key : remappedKeys_) {
+      os << key << " ";
     }
   }
 };

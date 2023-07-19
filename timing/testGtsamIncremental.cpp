@@ -216,9 +216,9 @@ int main(int argc, char *argv[]) {
             d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
 
             if(step % print_frequency == 0) {
-                estimate = isam2.calculateEstimate();
-                cout << "Theta = " << endl;
-                estimate.print();
+                // estimate = isam2.calculateEstimate();
+                // cout << "Theta = " << endl;
+                // estimate.print();
             }
             if(step >= num_steps) {
                 break;

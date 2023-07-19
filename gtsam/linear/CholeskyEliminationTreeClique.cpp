@@ -19,7 +19,7 @@ using sharedNode = CholeskyEliminationTree::sharedNode;
 using sharedClique = CholeskyEliminationTree::sharedClique;
 
 CholeskyEliminationTree::Clique::Clique(CholeskyEliminationTree* etree_in)
-  : etree(etree_in) {}
+  : etree(etree_in), orderingVersion(etree->orderingVersion_) {}
 
 void CholeskyEliminationTree::Clique::addNode(sharedNode node) {
   nodes.push_back(node);
@@ -36,8 +36,6 @@ sharedClique CholeskyEliminationTree::Clique::markClique(
     // This is not a new clique, check that we have Atb row
     assert(blockIndices.size() >= nodes.size() + 1);
   }
-
-  assert(ownsColumns());
 
   int i;
   for(i = nodes.size() - 1; i >= 0; i--) {
@@ -82,7 +80,85 @@ sharedClique CholeskyEliminationTree::Clique::markClique(
 }
 
 void CholeskyEliminationTree::Clique::reorderClique() {
-  assert(0);
+  orderingVersion = etree->orderingVersion_;
+
+  // Reorder blockIndices
+  vector<RemappedKey> colStructure;
+  for(const auto&[key, row, height] : blockIndices) {
+    colStructure.push_back(key);
+  }
+  std::sort(colStructure.begin(), colStructure.end(), etree->orderingLess_);
+
+  populateBlockIndices(colStructure);
+
+  assert(ownsColumns());
+
+  // Permute subdiagonal blocks
+  if(!gatherSources.empty()) {
+    size_t r = height();
+    size_t c = width();
+    auto matrixSource = std::make_shared<vector<double>>(r * c, 0);
+    auto blockIndicesSource = std::make_shared<BlockIndexVector>(blockIndices);
+
+    LocalCliqueColumns newCliqueColumns(matrixSource,
+                                        blockIndicesSource,
+                                        0, cliqueSize());
+    newCliqueColumns.addCliqueColumns(gatherSources[0], true);
+
+    gatherSources[0] = newCliqueColumns;
+  }
+
+// 
+//     for(sharedNode node : clique->nodes) {
+//         assert(node->ordering_version != ordering_version_);
+//         node->ordering_version = ordering_version_;
+//     }
+// 
+//     // Find the keys that have been reordered and the lowest reordered key
+//     auto& colStructure = clique->front()->colStructure; 
+//     vector<Key> oldColStructure = clique->front()->colStructure; // make a copy to compare
+// 
+//     std::sort(colStructure.begin(), colStructure.end(), orderingLess);
+// 
+//     for(size_t i = 1; i < clique->nodes.size(); i++) {
+//         sharedNode node = clique->nodes[i];
+//         node->colStructure.clear();
+//         node->colStructure.insert(node->colStructure.end(),
+//                                   colStructure.begin() + i,
+//                                   colStructure.end());
+//     }
+// 
+//     BlockIndexVector newBlockIndices;
+//     newBlockIndices.reserve(clique->blockIndices.size());
+//     size_t curRow = 0;
+//     for(Key key : colStructure) {
+//         size_t height = colWidth(key);
+//         newBlockIndices.push_back({key, {curRow, height}});
+//         curRow += height;
+//     }
+//     newBlockIndices.push_back({-1, {curRow, 1}});
+//     curRow += 1;
+// 
+//     bool reordered = clique->reorderColumn(newBlockIndices);
+// 
+//     if(reordered) { 
+// 
+//         for(sharedNode node : clique->nodes) {
+//             // Reorder factorColStructure only if we need to reorder colStructure
+//             set<Key, OrderingLess> newFactorColStructure(orderingLess);
+//             set<Key, OrderingLess> newChangedFactorColStructure(orderingLess);
+//             for(Key k : node->factorColStructure) {
+//                 newFactorColStructure.insert(k);
+//             }
+//             node->factorColStructure = std::move(newFactorColStructure);
+//             for(Key k : node->changedFactorColStructure) {
+//                 if(!orderingLess(k, node->key)) {
+//                     newChangedFactorColStructure.insert(k);
+//                 }
+//             }
+//             node->changedFactorColStructure = std::move(newChangedFactorColStructure);
+//         }    
+//     }
 }
 
 sharedClique CholeskyEliminationTree::Clique::parent() {
@@ -103,13 +179,14 @@ void CholeskyEliminationTree::Clique::findParent() {
   RemappedKey parentKey = get<BLOCK_INDEX_KEY>(blockIndices.at(cliqueSize()));
   setParent(etree->nodes_[parentKey]->clique());
 
-  cout << "block indices: ";
-  for(auto [key, r, h] : blockIndices) {
-    cout << key << " ";
-  }
-  cout << endl;
+}
 
-  cout << "found parent " << *parent() << " " << parent() << endl;
+void CholeskyEliminationTree::Clique::reorderAndFindParent() {
+  reorderClique();
+
+  findParent();
+
+  assert(parent() != nullptr);
 }
 
 void CholeskyEliminationTree::Clique::detachParent() {
@@ -193,8 +270,6 @@ void CholeskyEliminationTree::Clique::mergeClique(sharedClique otherClique) {
     assert(otherClique->nodes.size() == 1);   
     assert(otherClique->nodes.front()->key != 0);
     assert(otherClique->children.find(get_ptr()) != otherClique->children.end());   
-
-    cout << "In merge clique: this = " << *this << " other = " << *otherClique << endl;
 
     addNode(otherClique->front());
 
@@ -288,8 +363,8 @@ void CholeskyEliminationTree::Clique::mergeColStructure(
 void CholeskyEliminationTree::Clique::populateBlockIndices(
     const std::vector<RemappedKey>& colStructure) {
   assert(colStructure.back() == 0);
-  assert(nodes.size() == 1);
-  assert(blockIndices.size() == 0);
+  blockIndices.clear();
+
   size_t row = 0;
   for(RemappedKey k : colStructure) {
     size_t height = etree->colWidth(k);
@@ -298,76 +373,19 @@ void CholeskyEliminationTree::Clique::populateBlockIndices(
   }
 }
 
-bool CholeskyEliminationTree::Clique::reorderColumn(BlockIndexVector& newBlockIndices) {
-  assert(0);
-  throw runtime_error("reorderColumn not implemented");
-  //   assert(newBlockIndices.size() == blockIndices.size());
+bool CholeskyEliminationTree::Clique::hasMarkedAncestor() {
+  // only need to check highest key that is not 0 (last row)
+  assert(blockIndices.size() > cliqueSize() + 1);
+  assert(get<BLOCK_INDEX_KEY>(blockIndices.back()) == 0);
 
-  //   size_t i = 0;
-  //   // The nodes in the clique should remain the same
-  //   for(i = 0; i < cliqueSize(); i++) {
-  //       assert(newBlockIndices[i] == blockIndices[i]);
-  //   }
+  RemappedKey highestKey = get<BLOCK_INDEX_KEY>(blockIndices[blockIndices.size() - 2]);
+  assert(highestKey != 0);
 
-  //   size_t lowestReorderedIndex = -1;
-  //   for(; i < blockIndices.size(); i++) {
-  //       if(newBlockIndices[i].first != blockIndices[i].first) {
-  //           lowestReorderedIndex = i;
-  //           break;
-  //       }
-  //   }
-
-  //   if(i == blockIndices.size()) {
-  //       return false;
-  //   }
-
-  //   assert(blockIndices[lowestReorderedIndex].second.first 
-  //           == newBlockIndices[lowestReorderedIndex].second.first);
-  //   size_t firstRow = blockIndices[lowestReorderedIndex].second.first;
-
-  //   unordered_map<Key, size_t> keyRowMap;
-
-  //   for(size_t i = lowestReorderedIndex; i < blockIndices.size(); i++) {
-  //       Key key = blockIndices[i].first;
-  //       size_t row = blockIndices[i].second.first;
-  //       keyRowMap.insert({key, row});
-  //   }
-
-  //   assert(gatherSources.size() == 1);
-  //   auto&[col_data_ptr, col_data_start, col_row_start, r, c] = gatherSources[0];
-
-  //   // if(firstRow * 2 < r) {
-  //   if(false) {
-  //       // Update partially
-  //       assert(0);
-  //   
-  //   } 
-  //   else {
-  //       // update all matrix
-  //       shared_ptr<vector<double>> new_col_data_ptr = make_shared<vector<double>>(r * c);
-  //       Eigen::Map<ColMajorMatrix> new_m(new_col_data_ptr->data(), r, c);
-  //       Eigen::Map<ColMajorMatrix> old_m(col_data_ptr->data(), r, c);
-
-  //       Eigen::Block<Eigen::Map<ColMajorMatrix>>(new_m, 0, 0, firstRow, c)
-  //           = Eigen::Block<Eigen::Map<ColMajorMatrix>>(old_m, 0, 0, firstRow, c);
-
-  //       for(size_t i = lowestReorderedIndex; i < blockIndices.size(); i++) {
-  //           Key newKey = newBlockIndices[i].first;
-  //           size_t newRow = newBlockIndices[i].second.first;
-  //           size_t width = newBlockIndices[i].second.second;
-  //           size_t oldRow = keyRowMap.at(newKey);
-
-  //           Eigen::Block<Eigen::Map<ColMajorMatrix>>(new_m, newRow, 0, width, c)
-  //               = Eigen::Block<Eigen::Map<ColMajorMatrix>>(old_m, oldRow, 0, width, c);
-  //       }
-
-  //       col_data_ptr = new_col_data_ptr;
-
-  //   }
-
-  //   blockIndices = std::move(newBlockIndices);
-  //   
-  //   return true;
+  if(etree->cliques_[highestKey]->marked()) {
+    assert(etree->cliques_[highestKey]->status == RECONSTRUCT);
+    return true;
+  }
+  return false;
 }
 
 void CholeskyEliminationTree::Clique::setEditOrReconstruct() {
@@ -383,10 +401,10 @@ void CholeskyEliminationTree::Clique::checkEditOrReconstruct(
   for(size_t i = cliqueSize(); i < blockIndices.size(); i++) { 
     // Start from subdiagonal keys
     RemappedKey key = get<BLOCK_INDEX_KEY>(blockIndices[i]);
-    assert(etree->nodes_[key]->clique()->marked());
     if(key != 0 && etree->nodes_[key]->clique()->status == mode) {
       // ignore last row
       destCols->push_back(key);
+      assert(etree->nodes_[key]->clique()->marked());
     }
   }
 }
@@ -425,7 +443,10 @@ void CholeskyEliminationTree::Clique::setBacksolve(bool backsolve) {
 }
 
 bool CholeskyEliminationTree::Clique::needsBacksolve() const {
-  for(size_t i = cliqueSize(); i < blockIndices.size(); i++) {
+  assert(get<BLOCK_INDEX_KEY>(blockIndices.back()) == 0);
+  // Don't check key 0. Start from the back as higher keys are more likely to 
+  // need to backsolve
+  for(size_t i = blockIndices.size() - 2; i >= cliqueSize(); i--) {
     RemappedKey key = get<BLOCK_INDEX_KEY>(blockIndices[i]);
     if(etree->nodes_[key]->backsolve) {
       return true;
@@ -451,6 +472,12 @@ void CholeskyEliminationTree::Clique::resetAfterBacksolve() {
   status = UNMARKED;
   marked_ = false;
   workspaceIndex = -1;
+}
+
+void CholeskyEliminationTree::Clique::printBlockIndices(ostream& os) {
+  for(const auto&[key, row, height] : blockIndices) {
+    os << "[" << key << " " << row << " " << height << "] ";
+  }
 }
 
 void CholeskyEliminationTree::Clique::printClique(ostream& os) {
