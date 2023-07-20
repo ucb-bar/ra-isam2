@@ -192,7 +192,8 @@ public:
     // const VerticalBlockMatrix& Ab = jf->matrixObject();
     size_t height = Ab.rows();
 
-    for(size_t i = 0; i < blockIndices_.size(); i++) {
+    for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
+      // Higher key represents the column. Don't need last column
       const auto&[lowerKey, srcCol1, srcW1] = blockIndices_.at(i);
       // std::cout << "checking lowerKey = " << lowerKey << std::endl;
       if(!pred(lowerKey)) {
@@ -224,6 +225,7 @@ public:
       double sign, 
       const BlockIndexMap& keyRowMap, 
       const PREDICATE& pred=DefaultPred()) {
+    assert(0);
     // const SymmetricBlockMatrix& info = hf->info();
     // for(size_t i = 0; i < remappedKeys_.size(); i++) {
     //   RemappedKey lowerKey = remappedKeys_[i];

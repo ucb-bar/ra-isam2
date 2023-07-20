@@ -108,8 +108,11 @@ void CholeskyEliminationTree::markAffectedKeys(
     factors_.push_back(factorWrapper);
 
     for(RemappedKey k : factorWrapper->remappedKeys()) {
-      sharedNode node = nodes_[k];
-      node->addFactor(factorWrapper);
+      // k is in every factor, we shouldn't have to store it
+      if(k != 0) {
+        sharedNode node = nodes_[k];
+        node->addFactor(factorWrapper);
+      }
     }
 
     factorWrapper->markAffectedKeys(affectedKeys);
@@ -231,7 +234,9 @@ void CholeskyEliminationTree::symbolicElimination(const RemappedKeySet& markedKe
 
   allocateStack();
 
+#ifdef DEBUG
   checkInvariant_afterSymbolic();
+#endif
 }
 
 void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
@@ -359,65 +364,67 @@ void CholeskyEliminationTree::remapConstrainedKeys(
 
 void CholeskyEliminationTree::constructCSCMatrix(
     const unordered_map<RemappedKey, int>& markedKeysIndex,
+    const vector<RemappedKey>& markedKeysVector,
     int* nEntries,
     int* nVars,
     int* nFactors,
     vector<int>* A,
     vector<int>* p) {
 
-  vector<vector<int>> csc_matrix;
+  assert(markedKeysVector.back() != 0);
+
+  vector<vector<int>> csc_matrix(markedKeysVector.size());
   csc_matrix = vector<vector<int>>(markedKeysIndex.size());
 
-  unordered_set<sharedFactorWrapper> rawFactors;
+  unordered_map<sharedFactorWrapper, size_t> rawFactors;
 
-  for(const auto&[key, _] : markedKeysIndex) {
-    for(sharedFactorWrapper factor : nodes_[key]->factors) {
-      rawFactors.insert(factor);
+  size_t entriesCount = 0;
+
+  for(const RemappedKey& key : markedKeysVector) {
+    sharedNode node = nodes_[key];
+    for(sharedFactorWrapper factor : node->factors) {
+        auto it = rawFactors.insert({factor, rawFactors.size()}).first;
+        size_t factorIndex = it->second;
+        csc_matrix[markedKeysIndex.at(key)].push_back(factorIndex);
+        entriesCount++;
     }
   }
-
-  int factorCount = 0;
-  for(sharedFactorWrapper factor : rawFactors) {
-    for(RemappedKey key : factor->remappedKeys()) {
-      auto it = markedKeysIndex.find(key);
-      if(it != markedKeysIndex.end()) {
-        csc_matrix[it->second].push_back(factorCount);
-      }
-    }
-    factorCount++;
-  }
+  size_t factorCount = rawFactors.size();
 
   // Deal with induced factors, each child contributes an induced factor
-  for(const auto&[key, _] : markedKeysIndex) {
-    for(sharedClique child : cliques_[key]->children) {
+  for(const RemappedKey& key : markedKeysVector) {
+    sharedClique clique = cliques_[key];
+    for(sharedClique child : clique->children) {
       assert(!child->marked());
-      for(size_t i = child->cliqueSize(); i < child->blockIndices.size(); i++) {
+      for(size_t i = child->cliqueSize(); i < child->blockIndices.size() - 1; i++) {
         RemappedKey key = get<BLOCK_INDEX_KEY>(child->blockIndices[i]);
         auto it = markedKeysIndex.find(key);
         assert(it != markedKeysIndex.end());
         csc_matrix[it->second].push_back(factorCount);
+        entriesCount++;
       }
       factorCount++;
     }
   }
 
-  // Remove last column that corresponds to Atb column
-  assert(markedKeysIndex.at(0) == markedKeysIndex.size() - 1);
-  csc_matrix.pop_back();
+  p->clear();
+  p->reserve(markedKeysVector.size());
+  p->push_back(0);
 
   A->clear();
-  p->clear();
-  p->push_back(0);
+  A->reserve(entriesCount);
 
   int count = 0;
   for(const vector<int>& A_col : csc_matrix) {
+    // TODO: Check if factors are sorted
     for(int row : A_col) {
       A->push_back(row);
       count++;
     }
     p->push_back(count);
   }
-  *nVars = csc_matrix.size();
+
+  *nVars = markedKeysVector.size();
   *nFactors = factorCount;
   *nEntries = count;
 }
@@ -439,13 +446,16 @@ void CholeskyEliminationTree::getPartialReordering(
   std::sort(markedKeysVector.begin(), markedKeysVector.end(), orderingLess_);
   assert(markedKeysVector.back() == 0);
 
+  // No need to add key 0
+  markedKeysVector.pop_back();
+
   for(RemappedKey key : markedKeysVector) {
     markedKeysIndex.insert({key, markedKeysIndex.size()});
   }
 
   int nEntries, nVars, nFactors;
   vector<int> A, p;
-  constructCSCMatrix(markedKeysIndex, &nEntries, &nVars, &nFactors, &A, &p);
+  constructCSCMatrix(markedKeysIndex, markedKeysVector, &nEntries, &nVars, &nFactors, &A, &p);
   const size_t Alen = ccolamd_recommended(nEntries, nFactors, nVars);
   A.resize(Alen);
 
@@ -519,7 +529,7 @@ void CholeskyEliminationTree::getPartialReordering(
 
   // Manually add back key 0
   partialOrdering->push_back(0);
-  assert(partialOrdering->size() == markedKeysVector.size());
+  assert(partialOrdering->size() == markedKeys.size());
 
   // cout << "Ordering: ";
   // for(auto k : *partialOrdering) {
@@ -1087,10 +1097,11 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
   const auto& blockIndices = clique->blockIndices;
 
   BlockIndexMap keyRowMap;
+  vector<MarkedStatus> statusVec;
 
   for(const auto& p : blockIndices) {
-    keyRowMap.insert({get<BLOCK_INDEX_KEY>(p), 
-                     {get<BLOCK_INDEX_ROW>(p), get<BLOCK_INDEX_HEIGHT>(p)}});
+    const auto&[key, row, height] = p;
+    keyRowMap.insert({key, {row, height}});
   }
 
   for(sharedNode node : clique->nodes) {
@@ -1275,7 +1286,8 @@ void CholeskyEliminationTree::backsolve(VectorValues* delta_ptr, double tol) {
   // Do a pre-order traversal from top ot bottom
   // For each node, first process the belowDiagonalBlocks, then do solve on the transpose of the diagonal
   vector<pair<sharedClique, bool>> stack(1, {root_, false});
-  // Vector higher_delta()
+  // Already solved delta. Used to avoid VectorValues.at(key)
+  vector<Vector> cachedDelta(nodes_.size());
   while(!stack.empty()) {
     auto& curPair = stack.back();
     sharedClique clique = curPair.first;
@@ -1307,11 +1319,15 @@ void CholeskyEliminationTree::backsolve(VectorValues* delta_ptr, double tol) {
 
   deallocateStack();
 
+#ifdef DEBUG
   checkInvariant_afterBackSolve();
+#endif
 }
 
-void CholeskyEliminationTree::backsolveClique(sharedClique clique, 
-    VectorValues* delta_ptr, double tol) {
+void CholeskyEliminationTree::backsolveClique(
+    sharedClique clique, 
+    VectorValues* delta_ptr, 
+    double tol) {
   if(clique->isLastRow()) { return; }
 
   // cout << "CholeskyEliminationTree::backsolveClique(): " << *clique << endl;
@@ -1423,6 +1439,8 @@ void CholeskyEliminationTree::addNewNode(const RemappedKey key, const size_t wid
   newClique->addNode(newNode);
 
   assert(newNode->clique() == newClique);
+
+  totalDeltaDim_ += width;
 }
 
 size_t CholeskyEliminationTree::colWidth(const RemappedKey key) const {

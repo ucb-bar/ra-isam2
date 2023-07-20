@@ -75,6 +75,7 @@ private:
     Workspace workspace_;
 
     bool postOrder_ = false;
+    size_t totalDeltaDim_ = 0;
     
     // TODO: Remove DEBUG
     std::vector<std::vector<RemappedKey>> descendants_;
@@ -133,6 +134,7 @@ private:
   // Construct CSC matrix of all the nodes denoted by markedKeys
   // markedKeysIndex[key] gives the index of key within all the marked keys
   void constructCSCMatrix(const std::unordered_map<RemappedKey, int>& markedKeysIndex,
+                          const std::vector<RemappedKey>& markedKeysVector,
                           int* nEntries,
                           int* nVars,
                           int* nFactors,
@@ -184,7 +186,9 @@ private:
   // Copy the data in the workspace to a local memory owned by the clique
   void scatterClique(sharedClique clique);
 
-  void backsolveClique(sharedClique clique, VectorValues* delta_ptr, double tol);
+  void backsolveClique(sharedClique clique, 
+                       VectorValues* delta_ptr, 
+                       double tol);
 
   bool valuesChanged(const Vector& diff, double tol);
 
