@@ -181,6 +181,39 @@ public:
       assert(matrixSource_->size() >= rows_ * cols_);
       matrixSource_->resize(matrixSource_->size() - rows_ * cols_);
     }
+
+    void forceOwn() {
+      if(ownsData()) { return; }
+
+      auto oldMatrix = matrix();
+      auto oldRows = rows_;
+      auto newMatrixSource = std::make_shared<std::vector<double>>(rows_ * cols_, 0);
+      auto newBlockIndicesSource = std::make_shared<BlockIndexVector>();
+      auto itOffset = blockIndicesSource_->begin() + startIndex_;
+      const size_t rowOffset = std::get<BLOCK_INDEX_ROW>(*itOffset);
+      newBlockIndicesSource->reserve(blockIndicesSource_->size() - startIndex_);
+      for(auto it = itOffset; it != blockIndicesSource_->end(); it++) {
+        const auto&[key, row, height] = *it;
+        newBlockIndicesSource->push_back({key, row - rowOffset, height});
+      }
+      endIndex_ -= startIndex_;
+      startIndex_ = 0;
+
+      *this = LocalCliqueColumns(newMatrixSource, newBlockIndicesSource, startIndex_, endIndex_);
+  
+      assert(rows_ == oldRows - rowOffset);
+
+      auto newMatrix = matrix();
+      Eigen::Block<Eigen::Map<ColMajorMatrix>> oldBlock(oldMatrix, rowOffset, 0, 
+                                                        rows_, cols_);
+      Eigen::Block<Eigen::Map<ColMajorMatrix>> newBlock(newMatrix, 0, 0, 
+                                                        rows_, cols_);
+      newBlock = oldBlock;
+
+      assert(ownsData());
+    }
+
+    std::shared_ptr<BlockIndexVector> blockIndicesSource() { return blockIndicesSource_; }
 };
 
 }   // namespace gtsam

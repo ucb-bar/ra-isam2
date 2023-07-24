@@ -113,13 +113,25 @@ public:
   // Reset after each iteration
   void reset();
 
+  // This is used in marginalization
+  void getAffectedKeys(Key unmappedKey, std::set<Key>& additionalKeys) const;
+
+  void marginalizeLeaves(
+      const FastList<Key>& leafKeys,
+      boost::optional<FactorIndices&> marginalFactorsIndices = boost::none,
+      boost::optional<FactorIndices&> deletedFactorsIndices = boost::none);
+  
+
+  void printOrderingUnmapped(std::ostream& os) const;
+  void printOrderingRemapped(std::ostream& os) const;
+
 private:
   // Add new unmapped Key to transform map and return the mapped key, 
   // If key already exists, just return the mapped key
   // The new key is added to the end of the variable ordering (but before the last row)
   RemappedKey addRemapKey(const Key unmappedKey);
-  RemappedKey getRemapKey(const Key unmappedKey);
-  Key unmapKey(const RemappedKey remappedKey);
+  RemappedKey getRemapKey(const Key unmappedKey) const;
+  Key unmapKey(const RemappedKey remappedKey) const;
 
   void addNewNode(const Key unmappedKey, const size_t width);
   
@@ -193,6 +205,11 @@ private:
   bool valuesChanged(const Vector& diff, double tol);
 
   size_t colWidth(const RemappedKey key) const;
+
+  void marginalizeClique(
+      sharedClique clique,
+      FactorIndices* deletedFactors,
+      FactorIndices* marginalFactors);
 
   bool checkSortedNoDuplicates(const std::vector<Key>& v) const;
 

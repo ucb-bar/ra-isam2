@@ -55,6 +55,8 @@ TEST( IncrementalFixedLagSmoother, Example )
   // Test the IncrementalFixedLagSmoother in a pure linear environment. Thus, full optimization and
   // the IncrementalFixedLagSmoother should be identical (even with the linearized approximations at
   // the end of the smoothing lag)
+  
+  cout << "test0" << endl;
 
   SETDEBUG("IncrementalFixedLagSmoother update", true);
 
@@ -62,17 +64,21 @@ TEST( IncrementalFixedLagSmoother, Example )
   SharedDiagonal odometerNoise = noiseModel::Diagonal::Sigmas(Vector2(0.1, 0.1));
   SharedDiagonal loopNoise = noiseModel::Diagonal::Sigmas(Vector2(0.1, 0.1));
 
+  cout << "test1" << endl;
   // Create a Fixed-Lag Smoother
   typedef IncrementalFixedLagSmoother::KeyTimestampMap Timestamps;
   IncrementalFixedLagSmoother smoother(7.0, ISAM2Params());
+  cout << "test2" << endl;
 
   // Create containers to keep the full graph
   Values fullinit;
   NonlinearFactorGraph fullgraph;
+  cout << "test3" << endl;
 
   // i keeps track of the time step
   size_t i = 0;
 
+  cout << "test4" << endl;
   // Add a prior at time 0 and update the HMF
   {
     Key key0 = MakeKey(0);
@@ -88,14 +94,17 @@ TEST( IncrementalFixedLagSmoother, Example )
     fullgraph.push_back(newFactors);
     fullinit.insert(newValues);
 
+  cout << "test5" << endl;
     // Update the smoother
     smoother.update(newFactors, newValues, newTimestamps);
+  cout << "test6" << endl;
 
     // Check
     CHECK(check_smoother(fullgraph, fullinit, smoother, key0));
 
     ++i;
   }
+  cout << "test7" << endl;
 
   // Add odometry from time 0 to time 5
   while(i <= 5) {
@@ -113,11 +122,14 @@ TEST( IncrementalFixedLagSmoother, Example )
     fullgraph.push_back(newFactors);
     fullinit.insert(newValues);
 
+  cout << "test8" << endl;
     // Update the smoother
     smoother.update(newFactors, newValues, newTimestamps);
+  cout << "test9" << endl;
 
     // Check
     CHECK(check_smoother(fullgraph, fullinit, smoother, key2));
+  cout << "test10" << endl;
 
     ++i;
   }
@@ -132,19 +144,24 @@ TEST( IncrementalFixedLagSmoother, Example )
     Values newValues;
     Timestamps newTimestamps;
 
+  cout << "test11" << endl;
     newFactors.push_back(BetweenFactor<Point2>(key1, key2, Point2(1.0, 0.0), odometerNoise));
     newFactors.push_back(BetweenFactor<Point2>(MakeKey(2), MakeKey(5), Point2(3.5, 0.0), loopNoise));
     newValues.insert(key2, Point2(double(i)+0.1, -0.1));
     newTimestamps[key2] = double(i);
 
+  cout << "test12" << endl;
     fullgraph.push_back(newFactors);
     fullinit.insert(newValues);
+  cout << "test13" << endl;
 
     // Update the smoother
     smoother.update(newFactors, newValues, newTimestamps);
+  cout << "test14" << endl;
 
     // Check
     CHECK(check_smoother(fullgraph, fullinit, smoother, key2));
+  cout << "test15" << endl;
 
     ++i;
   }
@@ -154,22 +171,28 @@ TEST( IncrementalFixedLagSmoother, Example )
     Key key1 = MakeKey(i-1);
     Key key2 = MakeKey(i);
 
+  cout << "test16" << endl;
     NonlinearFactorGraph newFactors;
     Values newValues;
     Timestamps newTimestamps;
 
+  cout << "test17" << endl;
     newFactors.push_back(BetweenFactor<Point2>(key1, key2, Point2(1.0, 0.0), odometerNoise));
     newValues.insert(key2, Point2(double(i)+0.1, -0.1));
     newTimestamps[key2] = double(i);
+  cout << "test18" << endl;
 
     fullgraph.push_back(newFactors);
     fullinit.insert(newValues);
+  cout << "test19" << endl;
 
     // Update the smoother
     smoother.update(newFactors, newValues, newTimestamps);
+  cout << "test20" << endl;
 
     // Check
     CHECK(check_smoother(fullgraph, fullinit, smoother, key2));
+  cout << "test21" << endl;
 
     ++i;
   }

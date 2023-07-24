@@ -24,7 +24,7 @@ namespace gtsam {
   typedef std::vector<RemappedKey> RemappedKeyVector;
   typedef std::set<RemappedKey> RemappedKeySet;
 
-  enum MarkedStatus {UNMARKED=0, EDIT=1, RECONSTRUCT=2, NEW=3};
+  enum MarkedStatus {UNMARKED=0, EDIT=1, RECONSTRUCT=2, NEW=3, MARGINALIZE=4};
   enum FactorStatus {UNLINEARIZED, LINEARIZED, RELINEARIZE, LINEAR, REMOVING, REMOVED};
 
   static constexpr size_t BLOCK_INDEX_KEY = 0;

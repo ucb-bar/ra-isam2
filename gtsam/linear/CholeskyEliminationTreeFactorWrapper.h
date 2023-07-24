@@ -20,6 +20,7 @@ public:
   typedef Eigen::Block<const Matrix> constBlock;
 
   CholeskyEliminationTree* etree = nullptr;
+  size_t factorIndex_;
 
   // blockIndices_ store the list of (key, col, width) of the block row
   // This DOES NOT change after reordering keys. Only needs updating after
@@ -52,14 +53,16 @@ public:
 
   RemappedKeyVector remappedKeys_;
 
-  RemappedKey lowestKey_;
+  RemappedKey lowestKey_, highestKey_;
 
   // Construct a wrapper around a factor
   // If nonlinearFactor_in == nullptr, then we are constructing a linear factor
-  FactorWrapper(sharedFactor nonlinearFactor_in,
+  FactorWrapper(size_t factorIndex_in,
+                sharedFactor nonlinearFactor_in,
                 sharedLinearFactor cachedLinearFactor_in,
                 CholeskyEliminationTree* etree_in) 
   : etree(etree_in),
+    factorIndex_(factorIndex_in),
     nonlinearFactor_(nonlinearFactor_in),
     cachedLinearFactor(cachedLinearFactor_in) {
     if(nonlinearFactor_ == nullptr) {
@@ -81,10 +84,11 @@ public:
     remappedKeys_.push_back(0);
 
     updateBlockIndices();
-    updateLowestKey();
+    updateLowestHighestKeys();
   }
 
   void updateBlockIndices() {
+    assert(status_ != REMOVING && status_ != REMOVED);
     blockIndices_.clear();
     assert(remappedKeys_.back() == 0);
     size_t curCol = 0;
@@ -95,18 +99,27 @@ public:
     }
   }
 
+  size_t factorIndex() const { return factorIndex_; }
+
   const BlockIndexVector& blockIndices() const { return blockIndices_; }
 
-  void updateLowestKey() {
+  void updateLowestHighestKeys() {
     lowestKey_ = remappedKeys_.front();
-    for(RemappedKey key : remappedKeys_) {
+    highestKey_ = remappedKeys_.front();
+    for(auto it = remappedKeys_.begin(); it != remappedKeys_.end() - 1; it++) {
+      // No need to check key 0
+      RemappedKey key = *it;
       if(etree->orderingLess_(key, lowestKey_)) {
         lowestKey_ = key;
+      }
+      else if(etree->orderingLess_(highestKey_, key)) {
+        highestKey_ = key;
       }
     }
   }
 
   RemappedKey lowestKey() { return lowestKey_; }
+  RemappedKey highestKey() { return highestKey_; }
 
   const size_t dim() const { 
     /*return factorDim;*/ 
@@ -114,12 +127,27 @@ public:
     return 0; 
   }
 
-  FactorStatus& status() { return status_; }
+  const FactorStatus& status() const { return status_; }
+
+  void setStatusRemoved() {
+    assert(status_ == REMOVING);
+    status_ = REMOVED;
+  }
+
+  void setStatusRelinearize() {
+    assert(status_ == LINEARIZED);
+    status_ = RELINEARIZE;
+  }
+
+  void setStatusRemoving() {
+    if(status_ != REMOVED) { status_ = REMOVING; }
+  }
 
   // Linearize the factor if it needs to be linearized. 
   // Returns true if action is done, false otherwise
   // This does not change the status of the factor yet
   bool linearizeIfNeeded(const Values& theta) {
+    assert(status_ != REMOVING && status_ != REMOVED);
     if(status_ == UNLINEARIZED || status_ == RELINEARIZE) {
       cachedLinearFactor = nonlinearFactor_->linearize(theta);
       status_ = LINEARIZED;
@@ -135,6 +163,7 @@ public:
   }
 
   void addNewKeys(const std::vector<RemappedKey>& newKeys) {
+    assert(status_ != REMOVING && status_ != REMOVED);
     // We actually don't need to do a lot here as the nonlinearFactor will have already been 
     // updated with new keys, but we do need to relinearize the factor though
     status_ = RELINEARIZE;
@@ -146,12 +175,13 @@ public:
     throw std::runtime_error("factor add new keys");
 
     updateBlockIndices();
-    updateLowestKey();
+    updateLowestHighestKeys();
 
     return;
   }
 
   void markAffectedKeys(RemappedKeySet* affectedKeys) {
+    assert(status_ != REMOVING && status_ != REMOVED);
     for(RemappedKey key : remappedKeys_) {
       affectedKeys->insert(key);
     }
@@ -161,33 +191,22 @@ public:
     return remappedKeys_;
   }
 
-  const KeyVector& keys() {
-    throw std::runtime_error("Are you sure you want to get unmapped keys");
-    if(nonlinearFactor_ != nullptr) {
-      return nonlinearFactor_->keys();
-    }
-    return cachedLinearFactor->keys();
-  }
+  const KeyVector& keys();
 
-  const JacobianFactor* toJacobianFactor() const {
-    return dynamic_cast<const JacobianFactor*>(cachedLinearFactor.get());
-  }
+  // Given the factor is linear or already linearized
+  void marginalizeKeys();
 
-  const HessianFactor* toHessianFactor() const {
-    return dynamic_cast<const HessianFactor*>(cachedLinearFactor.get());
-  }
+  const JacobianFactor* toJacobianFactor() const;
 
-  struct DefaultPred {
-    bool operator()(const RemappedKey& key) const { return true; }
-  };
+  const HessianFactor* toHessianFactor() const;
 
-  template<typename MATRIX, typename PREDICATE>
+  template<typename MATRIX, typename INFO, typename PREDICATE>
   void updateHessianJacobian(
       const JacobianFactor* jf, 
       MATRIX& m, 
       double sign, 
-      const BlockIndexMap& keyRowMap, 
-      const PREDICATE& pred=DefaultPred()) {
+      const INFO& info,
+      const PREDICATE& pred) {
     const Matrix& Ab = jf->matrixObject().matrix();
     // const VerticalBlockMatrix& Ab = jf->matrixObject();
     size_t height = Ab.rows();
@@ -195,22 +214,22 @@ public:
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
       const auto&[lowerKey, srcCol1, srcW1] = blockIndices_.at(i);
+      const auto&[destR1, ordering1, status1] = info(i);
       // std::cout << "checking lowerKey = " << lowerKey << std::endl;
-      if(!pred(lowerKey)) {
+      if(!pred(status1)) {
         continue;
       }
-      const auto&[destR1, h1] = keyRowMap.at(lowerKey);
       Eigen::Block<const Matrix> Ab_i(Ab, 0, srcCol1, height, srcW1);
-      for(size_t j = 0; j < remappedKeys_.size(); j++) {
+      for(size_t j = 0; j < blockIndices_.size(); j++) {
         const auto&[higherKey, srcCol2, srcW2] = blockIndices_.at(j);
-        if(etree->orderingLess_(higherKey, lowerKey)) {
+        const auto&[destR2, ordering2, status2] = info(j);
+        if(ordering2 < ordering1) {
           continue;
         }
         // std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
-        const auto&[destR2, h2] = keyRowMap.at(higherKey);
         Eigen::Block<const Matrix> Ab_j(Ab, 0, srcCol2, height, srcW2);
 
-        Eigen::Block<MATRIX> destBlock(m, destR2, destR1, h2, h1);
+        Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         destBlock.noalias() += sign * Ab_j.transpose() * Ab_i;
 
@@ -218,13 +237,13 @@ public:
     }
   }
 
-  template<typename MATRIX, typename PREDICATE>
+  template<typename MATRIX, typename INFO, typename PREDICATE>
   void updateHessianHessian(
       const HessianFactor* hf,
       MATRIX& m, 
       double sign, 
-      const BlockIndexMap& keyRowMap, 
-      const PREDICATE& pred=DefaultPred()) {
+      const INFO& info,
+      const PREDICATE& pred) {
     assert(0);
     // const SymmetricBlockMatrix& info = hf->info();
     // for(size_t i = 0; i < remappedKeys_.size(); i++) {
@@ -256,29 +275,26 @@ public:
 
   // Populate the columns of the MATRIX m with the sign * Hessian of the factor
   // skipping column key if pred(key) == false
-  template<typename MATRIX, typename PREDICATE>
+  template<typename MATRIX, typename INFO, typename PREDICATE>
   void updateHessian(
       MATRIX& m, 
       double sign, 
-      const BlockIndexMap& keyRowMap, 
-      const PREDICATE& pred=DefaultPred()) {
+      const INFO& info,
+      const PREDICATE& pred) {
 
     if(const JacobianFactor* jf = toJacobianFactor()) {
-      updateHessianJacobian(jf, m, sign, keyRowMap, pred);
+      updateHessianJacobian(jf, m, sign, info, pred);
     }
     else if(const HessianFactor* hf = toHessianFactor()) {
-      updateHessianHessian(hf, m, sign, keyRowMap, pred);   
+      updateHessianHessian(hf, m, sign, info, pred);   
     }
     else {
       throw std::runtime_error("Factor cannot be dynamically cast");
     }
   }
 
-  void printKeys(std::ostream& os) {
-    for(auto key : remappedKeys_) {
-      os << key << " ";
-    }
-  }
+
+  void printKeys(std::ostream& os);
 };
 
 } // namespace gtsam

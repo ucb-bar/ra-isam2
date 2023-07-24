@@ -42,6 +42,7 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
   // cout << "[CholeskyEliminationTree] addVariables() " << newTheta.size() << endl;
   for(const auto& keyValPair : newTheta) {
     const Key& unmappedKey = keyValPair.key;
+    cout << "In add variables, add " << unmappedKey << endl;
     const Value& val = keyValPair.value;
     const size_t dim = val.dim();
 
@@ -74,8 +75,8 @@ void CholeskyEliminationTree::markAffectedKeys(
     assert(relinNode->status != MarkedStatus::NEW);
 
     for(sharedFactorWrapper factorWrapper : relinNode->factors) {
-      if(factorWrapper->status() != LINEAR) {
-        factorWrapper->status() = RELINEARIZE;
+      if(factorWrapper->status() == LINEARIZED) {
+        factorWrapper->setStatusRelinearize();
       }
     }
 
@@ -103,7 +104,9 @@ void CholeskyEliminationTree::markAffectedKeys(
     // newFactorIndex starts from 0, and does not necessarily correspond to total factor index
     BlockIndexVector blockIndices;
     sharedFactor factor = nonlinearFactors[newFactorIndex];
-    sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(factor, nullptr, this);
+    size_t factorIndex = factors_.size();
+    sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
+                                          factorIndex, factor, nullptr, this);
 
     factors_.push_back(factorWrapper);
 
@@ -121,7 +124,7 @@ void CholeskyEliminationTree::markAffectedKeys(
 
   for(const FactorIndex removeFactorIndex : updateParams.removeFactorIndices) {
     sharedFactorWrapper factorWrapper = factors_.at(removeFactorIndex);
-    factorWrapper->status() = REMOVING;
+    factorWrapper->setStatusRemoving();
     factorWrapper->markAffectedKeys(affectedKeys);
   }
 
@@ -612,7 +615,7 @@ void CholeskyEliminationTree::updateOrdering(const RemappedKeySet& markedKeys,
   // No need to reorder factor keys, but need to update the lowest key
   // of a factor
   for(auto factor : affectedFactors) {
-    factor->updateLowestKey();
+    factor->updateLowestHighestKeys();
   }
 }
 
@@ -1088,6 +1091,39 @@ void CholeskyEliminationTree::resetCliqueColumns(sharedClique clique) {
   DB.setZero();
 }
 
+struct FactorInfo {
+  // <row, ordering, status>
+  bool valid = false;
+  vector<tuple<size_t, size_t, MarkedStatus>> v;
+  void construct(
+      const vector<RemappedKey>& factorKeys,
+      const unordered_map<RemappedKey, tuple<size_t, size_t, MarkedStatus>>& infoMap) {
+    valid = true;
+    v.reserve(factorKeys.size());
+    for(const auto& key : factorKeys) {
+      v.push_back(infoMap.at(key));
+    }
+  }
+  const tuple<size_t, size_t, MarkedStatus>& operator()(const size_t& i) const {
+    return v[i];
+  }
+};
+
+struct CheckEdits {
+  bool operator()(const MarkedStatus& status) const { 
+    return status == EDIT;
+  }
+};
+struct CheckNotUnmarked {
+  bool operator()(const MarkedStatus& status) const { 
+    return !(status == UNMARKED);
+  }
+};
+struct CheckReconstructNew {
+  bool operator()(const MarkedStatus& status) const { 
+    return (status == RECONSTRUCT) || (status == NEW);
+  }
+};
 
 void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const Values& theta) {
   if(clique->isLastRow()) { return; }
@@ -1096,12 +1132,9 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
 
   const auto& blockIndices = clique->blockIndices;
 
-  BlockIndexMap keyRowMap;
-  vector<MarkedStatus> statusVec;
-
-  for(const auto& p : blockIndices) {
-    const auto&[key, row, height] = p;
-    keyRowMap.insert({key, {row, height}});
+  unordered_map<RemappedKey, tuple<size_t, size_t, MarkedStatus>> infoMap;
+  for(const auto&[key, row, height] : blockIndices) {
+    infoMap.insert({key, {row, keyToOrdering_[key], nodes_[key]->status}});
   }
 
   for(sharedNode node : clique->nodes) {
@@ -1134,8 +1167,7 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
       // This allows us to change factorWrapper->status() without worrying about the logic
       FactorStatus factorStatus = factorWrapper->status();
 
-      size_t totalHeight = clique->height();
-      size_t diagWidth = clique->width();
+      FactorInfo info;
 
       // Handle edits first
       // Subtract Hessian of the cachedLinearFactor from the workspace
@@ -1143,19 +1175,15 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
         sharedLinearFactor linearFactor = factorWrapper->getLinearFactor();
         assert(linearFactor != nullptr);
 
-        struct CheckEdits {
-          CholeskyEliminationTree* etree = nullptr;
-          CheckEdits(CholeskyEliminationTree* etree_in) : etree(etree_in) {}
-          bool operator()(const RemappedKey& key) const { 
-            return etree->nodes_[key]->status == EDIT;
-          }
-        };
-        factorWrapper->updateHessian(m, -1, keyRowMap, CheckEdits(this));
+        info.construct(factorWrapper->remappedKeys(), infoMap);
 
-        if(factorStatus == REMOVING) { 
-          factorWrapper->status() = REMOVED; 
-          continue;
-        }
+        factorWrapper->updateHessian(m, -1, info, CheckEdits());
+
+      }
+
+      if(factorStatus == REMOVING) { 
+        factorWrapper->setStatusRemoved(); 
+        continue;
       }
 
       // Then relinearize factor to linear factor
@@ -1163,35 +1191,26 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
 
       // Then add hessian of factor to workspace
       if(unlinearized) {
-        struct CheckNotUnmarked {
-          CholeskyEliminationTree* etree = nullptr;
-          CheckNotUnmarked(CholeskyEliminationTree* etree_in) : etree(etree_in) {}
-          bool operator()(const RemappedKey& key) const { 
-            return !(etree->nodes_[key]->status == UNMARKED);
-          }
-        };
         // // DEBUG
         // cout << "ADD factor " << factorWrapper << " keys: ";
         // factorWrapper->printKeys(cout);
         // cout << endl;
         // // END DEBUG
-        factorWrapper->updateHessian(m, 1, keyRowMap, CheckNotUnmarked(this));
+        if(!info.valid) {
+          info.construct(factorWrapper->remappedKeys(), infoMap);
+        }
+        factorWrapper->updateHessian(m, 1, info, CheckNotUnmarked());
       }
       else if(factorStatus == LINEARIZED || factorStatus == LINEAR) {
-        struct CheckReconstructNew {
-          CholeskyEliminationTree* etree = nullptr;
-          CheckReconstructNew(CholeskyEliminationTree* etree_in) : etree(etree_in) {}
-          bool operator()(const RemappedKey& key) const { 
-            const auto& status = etree->nodes_[key]->status;
-            return (status == RECONSTRUCT) || (status == NEW);
-          }
-        };
         // // DEBUG
         // cout << "ADD factor " << factorWrapper << " keys: ";
         // factorWrapper->printKeys(cout);
         // cout << endl;
         // // END DEBUG
-        factorWrapper->updateHessian(m, 1, keyRowMap, CheckReconstructNew(this));
+        if(!info.valid) {
+          info.construct(factorWrapper->remappedKeys(), infoMap);
+        }
+        factorWrapper->updateHessian(m, 1, info, CheckReconstructNew());
       }
     }
   }
@@ -1389,6 +1408,170 @@ void CholeskyEliminationTree::reset() {
   postOrder_ = false;
 }
 
+void CholeskyEliminationTree::getAffectedKeys(Key unmappedKey, set<Key>& additionalKeys) const {
+  cout << "in getAffectedKeys, cliques_.size() = " << cliques_.size() << endl;
+  for(size_t i = 0; i < unmappedKeys_.size(); i++) {
+    cout << "remap key " << i << " " << unmappedKeys_[i] << endl;
+  }
+  RemappedKey startKey = getRemapKey(unmappedKey);
+  sharedClique curClique = cliques_[startKey];
+
+  // Everything above index should be affected
+  size_t index = -1;
+  for(index = 0; index < curClique->cliqueSize(); index++) {
+    RemappedKey key = get<BLOCK_INDEX_KEY>(curClique->blockIndices[index]);
+    if(key == startKey) { break; }
+  }
+  assert(index != -1);
+
+  do {
+    for(; index < curClique->cliqueSize(); index++) {
+      RemappedKey key = get<BLOCK_INDEX_KEY>(curClique->blockIndices[index]);
+      Key unmappedKey = unmapKey(key);
+      additionalKeys.insert(unmappedKey);
+      cout << "added " << key << " " << unmappedKey << endl;
+    }
+
+    // Start from index 0 in parent
+    curClique = curClique->parent();
+    index = 0;
+  } while(curClique != root_);
+}
+
+void CholeskyEliminationTree::marginalizeLeaves(
+    const FastList<Key>& leafKeys,
+    boost::optional<FactorIndices&> marginalFactorsIndices,
+    boost::optional<FactorIndices&> deletedFactorsIndices) {
+
+  // First remap keys and mark all nodes we want to marginalize
+  vector<sharedClique> marginalizedCliques;
+  vector<RemappedKey> remappedLeafKeys;
+  for(Key unmappedKey : leafKeys) {
+    RemappedKey key = getRemapKey(unmappedKey);
+    remappedLeafKeys.push_back(key);
+    assert(nodes_[key]->status == UNMARKED);
+    nodes_[key]->status = MARGINALIZE;
+    sharedClique clique = cliques_[key];
+    if(key == clique->frontKey()) {
+      // No need to worry about duplicates if we only mark clique 
+      // for the first key of the clique. If a later key in the clique is marginalized
+      // the first key must also be marginalized
+      clique->status = MARGINALIZE;
+      marginalizedCliques.push_back(clique);
+    }
+  }
+
+  // Remove cliques that have no connections to any unmarginalized nodes
+  for(int i = marginalizedCliques.size() - 1; i >= 0; i--) {
+    sharedClique clique = marginalizedCliques[i];
+    RemappedKey lastKey = get<BLOCK_INDEX_KEY>(*(clique->blockIndices.rbegin() + 1));
+    if(nodes_[lastKey]->status == MARGINALIZE) {
+      // clique can be safely removed
+      marginalizedCliques[i] = marginalizedCliques.back();
+      marginalizedCliques.pop_back();
+    }
+  }
+
+  // Mark all the nodes that we want to marginalize
+  FactorIndices deletedFactors;
+  FactorIndices marginalFactors;
+  for(sharedClique clique : marginalizedCliques) {
+    marginalizeClique(clique, &deletedFactors, &marginalFactors);
+  }
+}
+
+void CholeskyEliminationTree::marginalizeClique(
+      sharedClique clique,
+      FactorIndices* deletedFactors,
+      FactorIndices* marginalFactors) {
+  // Remove all factors in each node
+  // There is a catch here. If a factor is set to REMOVING and its lower keys 
+  // are marginalized out, we need to update the factor so that its lowest key
+  // is the lowest remaining key. This is because if that key is set to EDIT
+  // later on, the factor needs to be subtracted. We can simple remove the block indices
+  // corresponding to the marginalized keys
+  for(sharedNode node : clique->nodes) {
+    for(sharedFactorWrapper factor : node->factors) {
+      if(factor->lowestKey() == node->key) {
+        deletedFactors->push_back(factor->factorIndex());
+        factor->setStatusRemoving();
+        factor->marginalizeKeys();
+      }
+    }
+  }
+
+  assert(clique->gatherSources.size() == 1 && clique->ownsColumns());
+  LocalCliqueColumns cliqueColumns = clique->gatherSources.front();
+
+  const BlockIndexVector& blockIndices = clique->blockIndices;
+  size_t lowestIndex = 0, lowestRow = 0;
+  for(size_t i = 0; i < blockIndices.size() - 1; i++) {
+    const auto&[key, row, height] = blockIndices[i];
+    if(nodes_[key]->status != MARGINALIZE) {
+      lowestIndex = i;
+      lowestRow = row;
+      break;
+    }
+  }
+  assert(lowestIndex != 0);
+  
+  bool splitClique = lowestIndex < clique->cliqueSize();
+  size_t totalWidth = clique->height();
+  size_t lowestCol = splitClique? lowestRow : totalWidth;
+  size_t newHeight = clique->height() - lowestRow;
+
+  auto origCol = cliqueColumns.matrix();
+
+  auto B = block(origCol, lowestRow, 0, newHeight, lowestCol);
+
+  // Construct SymmetricBlockMatrix for HessianFactor
+  vector<size_t> dimensions;
+  vector<Key> unmappedKeys;
+  dimensions.reserve(blockIndices.size());
+  for(const auto&[key, row, height] : blockIndices) {
+    dimensions.push_back(height);
+    unmappedKeys.push_back(unmapKey(key));
+  }
+  SymmetricBlockMatrix factorMatrix(dimensions);
+  factorMatrix.selfadjointView().rankUpdate(B, -1);
+
+  // Make HessianFactor
+  HessianFactor::shared_ptr marginalFactor = boost::make_shared<HessianFactor>(unmappedKeys, factorMatrix);
+
+  size_t factorIndex = factors_.size();
+  sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
+                                        factorIndex, nullptr, marginalFactor, this);
+  factors_.push_back(factorWrapper);
+  for(RemappedKey key : factorWrapper->remappedKeys()) {
+    nodes_[key]->addFactor(factorWrapper);
+  }
+
+  if(splitClique) {
+    // If a clique is split in the middle, We need to create a new Clique with 
+    // correct clique columns
+    LocalCliqueColumns newCliqueColumns = cliqueColumns.split(lowestIndex);
+    assert(0);
+  }
+
+
+}
+
+void CholeskyEliminationTree::printOrderingUnmapped(std::ostream& os) const {
+  os << "Unmapped Ordering: ";
+  for(RemappedKey key : orderingToKey_) {
+    os << unmapKey(key) << " ";
+  }
+  os << endl;
+}
+
+void CholeskyEliminationTree::printOrderingRemapped(std::ostream& os) const {
+  os << "Remapped Ordering: ";
+  for(RemappedKey key : orderingToKey_) {
+    os << key << " ";
+  }
+  os << endl;
+}
+
 RemappedKey CholeskyEliminationTree::addRemapKey(const Key unmappedKey) {
   // Remap regular keys to start from 1, 0 is for last row (unmappedKey -1)
   RemappedKey remappedKey = keyTransformMap_.size();
@@ -1418,12 +1601,12 @@ RemappedKey CholeskyEliminationTree::addRemapKey(const Key unmappedKey) {
   return remappedKey;
 }
 
-RemappedKey CholeskyEliminationTree::getRemapKey(const Key unmappedKey) {
+RemappedKey CholeskyEliminationTree::getRemapKey(const Key unmappedKey) const {
   assert(keyTransformMap_.find(unmappedKey) != keyTransformMap_.end());
   return keyTransformMap_.at(unmappedKey);
 }
 
-Key CholeskyEliminationTree::unmapKey(const RemappedKey remappedKey) {
+Key CholeskyEliminationTree::unmapKey(const RemappedKey remappedKey) const {
   return unmappedKeys_.at(remappedKey);
 }
 
@@ -1481,92 +1664,5 @@ void CholeskyEliminationTree::checkInvariant_afterBackSolve() const {
     assert(node.use_count() == 2);
   }
 }
-
-
-template<typename MATRIX>
-void scatterMatrix(const MATRIX& src, 
-                   const BlockIndexVector& srcBlockIndices,
-                   size_t srcStartIndex,
-                   size_t srcWidth,
-                   const MATRIX& dest,
-                   const BlockIndexVector& destBlockIndices,
-                   size_t destStartIndex) {
-  // scan the two block indices to see which rows can be merged
-  
-  vector<tuple<size_t, size_t, size_t>> mergedIndices;
-  // Want to be able to cleanly copy over data col by col using the same scatter indices
-
-  size_t startCol = get<BLOCK_INDEX_ROW>(srcBlockIndices[srcStartIndex]);
-}
-
-// // Take in two BlockIndexVector's and map the corresponding keys from srcBlockIndices
-// // to the rows in destBlockIndices, merging heights whenever possible. 
-// // The keys in srcBlockIndices must be a subset of the keys destBlockIndices
-// // and must be in the same order
-// // Taking care that the merged heights do not cross the srcCliqueSize boundary
-// // Return vectors of tuple <srcRow, destRow, height>, inCliqueIndices are all the mapped
-// // rows of keys in this clique
-// BlockIndexVector mapBlockIndices(const BlockIndexVector& srcBlockIndices,
-//                                  size_t srcCliqueSize,
-//                                  const BlockIndexVector& destBlockIndices,
-//                                  tuple<size_t, size_t, size_t>* inCliqueIndices,
-//                                  tuple<size_t, size_t, size_t>* outCliqueIndices) {
-// 
-//   size_t j = 0;
-//   size_t lastRow = -1;
-//   tuple<size_t, size_t, size_t>* dest = inCliqueIndices;
-//   for(size_t i = 0; i < srcBlockIndices.size(); i++) {
-//     auto&[srcKey, srcRow, srcHeight] = srcBlockIndices[i];
-// 
-//     assert(srcKey != 0);
-//     
-//     RemappedKey destKey;
-//     size_t destRow, destHeight;
-//     while(j < destBlockIndices.size()) {
-//       std::tie(destKey, destRow, destHeight) = destBlockIndices[j];
-//       assert(destHeight == srcHeight);
-//       if(destKey == srcKey) {
-//         break;
-//       }
-//       j++;
-//     }
-// 
-//     if(j == destBlockIndices.size()) {
-//       throw runtime_error("In mapBlockIndices, srcBlockIndices is not a subset of destBlockIndices!");
-//     }
-// 
-//     if(i == srcCliqueSize) {
-//       // Reset lastRow so we force a separation between the keys in clique and out
-//       lastRow = -1;
-//       dest = outCliqueIndices;
-//     }
-//     if(destRow != lastRow) {
-//       // If cannot be merged
-//       dest->push_back({srcRow, destRow, destHeight});
-//     }
-//     else {
-//       get<BLOCK_INDEX_HEIGHT>(dest->back()) += destHeight;
-//     }
-//     lastRow = destRow + destHeight;
-//   }
-// }
-
-// // Scatter the entries of the matrix src into the matrix dest
-// // src is a (not strict) submatrix of a matrix indexed by srcBlockIndices
-// // dest is a (not strict) submatrix of a matrix indexed by destBlockIndices
-// // The keys in srcBlockIndices must be a subset of the keys in destBlockIndices
-// // and must have the same ordering
-// // The submatrix src is defined by srcBlockIndices[srcR1:srcR2, srcC1:srcC2]
-// // The submatrix dest is defined by destBlockIndices[destR1:destR2, destC1:destC2]
-// template<class MATRIX>
-// void scatterMatrix(MATRIX& src, MATRIX& dest, 
-//                    const BlockIndexVector& srcBlockIndices,
-//                    const BlockIndexVector& destBlockIndices,
-//                    size_t srcR1, size_t srcR2, size_t srcC1, size_t srcC2,
-//                    size_t destR1, size_t destR2, size_t destC1, size_t destC2) {
-//   // Do a scan of the blockIndices to determine what rows can be merged
-//   mappedIndices = mapBlockIndices(srcBlockIndices, destBlockIndices, srcR1, srcR2, destR1, destR2);
-// }
-
 
 } // namespace gtsam
