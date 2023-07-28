@@ -111,7 +111,7 @@ void isam2_marginalization(
 int main(int argc, char *argv[]) {
 
     string dataset_name;
-    string marginalize_test_file;
+    string marginalize_test_inputs;
     int K = 1;
     int relinearize_skip = 4;
     int print_frequency = 100;
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
         {"relinearize_skip", required_argument, 0, 's'},
         {"print_frequency", required_argument, 0, 'p'},
         {"num_steps", required_argument, 0, 't'},
-        {"marginalize_test_file", required_argument, 0, 1},
+        {"marginalize_test_inputs", required_argument, 0, 1},
         {"new", no_argument, 0, 2},
         {"old", no_argument, 0, 3},
         {0, 0, 0, 0}
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
                 num_steps = atoi(optarg);
                 break;
             case 1:
-                marginalize_test_file = string(optarg);
+                marginalize_test_inputs = string(optarg);
                 break;
             case 2:
                 is_new = true;
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
          << ", print_frequency = " << print_frequency 
          << endl;
 
-    cout << "Marginalize test file: " << marginalize_test_file << endl;
+    cout << "Marginalize test file: " << marginalize_test_inputs << endl;
 
     if(is_new) {
         cout << "Testing NEW code" << endl;
@@ -196,9 +196,9 @@ int main(int argc, char *argv[]) {
         cout << "Testing OLD code" << endl;
     }
 
-    ifstream margin_fin(marginalize_test_file);
+    ifstream margin_fin(marginalize_test_inputs);
     if(!margin_fin.is_open()) {
-      cerr << "Error opening file: " << marginalize_test_file;
+      cerr << "Error opening file: " << marginalize_test_inputs;
       exit(1);
     }
 

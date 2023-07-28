@@ -6,21 +6,21 @@ from copy import deepcopy
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("--dataset", "-f", dest="dataset",
-                      default="", help="The filename that contains data.")
+                      default="", help="The full path to the file that contains data.")
     parser.add_option("--print_to", dest="outfile",
-                      default="file.out", help="The filename that contains data.")
+                      default="file.out", help="Output file path.")
     parser.add_option("--max_step", dest="max_step",
                       default="350", help="Maximum step at which to generate removes or marginalizations")
     parser.add_option("--min_step", dest="min_step",
-                      default="20", help="Maximum step at which to generate removes or marginalizations")
+                      default="20", help="Minimum step at which to generate removes or marginalizations")
     parser.add_option("--max_removes", dest="max_removes",
-                      default="10", help="Maximum step at which to generate removes or marginalizations")
+                      default="10", help="Maximum removed factors at any step")
     parser.add_option("--remove_rate", dest="remove_rate",
-                      default="0.2", help="Maximum step at which to generate removes or marginalizations")
+                      default="0.2", help="Rate at which a step will be chosen to remove factors")
     parser.add_option("--max_marginalize", dest="max_marginalize",
-                      default="10", help="Maximum step at which to generate removes or marginalizations")
+                      default="10", help="Maximum marginalized variables at any step")
     parser.add_option("--marginalize_rate", dest="marginalize_rate",
-                      default="0.1", help="Maximum step at which to generate removes or marginalizations")
+                      default="0.1", help="Rate at which a step will be chosen to marginalize variables")
     parser.add_option("--marginalization_lag", dest="marginalization_lag",
                       default="10", help="Max key that can be marginalized behind current step")
     parser.add_option("--seed", dest="seed",
