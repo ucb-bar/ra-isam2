@@ -521,6 +521,38 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 }
 
 /* ************************************************************************* */
+void recursiveMarkAffectedKeys(const Key& key,
+    const ISAM2Clique::shared_ptr& clique, std::set<Key>* additionalKeys) {
+
+  // Check if the separator keys of the current clique contain the specified key
+  if (std::find(clique->conditional()->beginParents(),
+      clique->conditional()->endParents(), key)
+      != clique->conditional()->endParents()) {
+
+    // Mark the frontal keys of the current clique
+    for(Key i: clique->conditional()->frontals()) {
+      additionalKeys->insert(i);
+    }
+
+    // Recursively mark all of the children
+    for(const ISAM2Clique::shared_ptr& child: clique->children) {
+      recursiveMarkAffectedKeys(key, child, additionalKeys);
+    }
+  }
+  // If the key was not found in the separator/parents, then none of its children can have it either
+}
+
+void ISAM2::getAffectedDescendants(const KeyVector& marginalizableKeys, set<Key>* additionalKeys) {
+  additionalKeys->clear();
+  for(Key key: marginalizableKeys) {
+    ISAM2Clique::shared_ptr clique = (*this)[key];
+    for(const ISAM2Clique::shared_ptr& child: clique->children) {
+      recursiveMarkAffectedKeys(key, child, additionalKeys);
+    }
+  }
+}
+
+/* ************************************************************************* */
 void ISAM2::marginalizeLeaves(
     const FastList<Key>& leafKeysList,
     boost::optional<FactorIndices&> marginalFactorsIndices,
