@@ -73,10 +73,7 @@ void createOrderingConstraints(
     const set<Key>& activeKeys,
     FastMap<Key, int>& constrainedKeys) {
   if (marginalizableKeys.size() > 0) {
-    cout << "here 110 " << endl;
     constrainedKeys = FastMap<Key, int>();
-    cout << "here 111" << endl;
-  cout << "1 constrained keys size = " << constrainedKeys.size();
     // Generate ordering constraints so that the marginalizable variables will be eliminated first
     // Set all variables to Group1
     for(Key k : activeKeys) {
@@ -86,7 +83,6 @@ void createOrderingConstraints(
     for(Key key: marginalizableKeys) {
       constrainedKeys[key] = 0;
     }
-    cout << "constrained keys size = " << constrainedKeys.size();
   }
 }
 
@@ -99,28 +95,17 @@ void isam2_marginalization(
     FastMap<Key, int>* constrainedKeys,
     KeyList* additionalMarkedKeys) {
 
-  cout << "marginalizableKeys: ";
-  for(auto key : marginalizableKeys) {
-    cout << key << " ";
-  }
-  cout << endl;
-
-  cout << "here221" << endl;
   createOrderingConstraints(max_key, marginalizableKeys, activeKeys, *constrainedKeys);
-  cout << "here222" << endl;
 
   // Mark additional keys between the marginalized keys and the leaves
   std::set<Key> additionalKeys;
   for(Key key: marginalizableKeys) {
-    cout << "1 Recursively marking key: " << key << endl;
     ISAM2Clique::shared_ptr clique = isam2[key];
     for(const ISAM2Clique::shared_ptr& child: clique->children) {
-      cout << "Recursively marking key: " << key << endl;
       recursiveMarkAffectedKeys(key, child, additionalKeys);
     }
   }
   *additionalMarkedKeys = KeyList(activeKeys.begin(), activeKeys.end());
-  cout << "here223" << endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -214,6 +199,7 @@ int main(int argc, char *argv[]) {
     ifstream margin_fin(marginalize_test_file);
     if(!margin_fin.is_open()) {
       cerr << "Error opening file: " << marginalize_test_file;
+      exit(1);
     }
 
     // Read in marginalization test
@@ -375,7 +361,6 @@ int main(int argc, char *argv[]) {
         if(step % print_frequency == 0) {
           cout << "step = " << step << endl;
         }
-        cout << "here 0" << endl;
 
         KeyList additionalMarkedKeys;
         FactorIndices factorsToRemove;
@@ -383,15 +368,10 @@ int main(int argc, char *argv[]) {
 
         FastList<Key> leafKeys;
 
-        cout << "here 1" << endl;
-
         if(!remove_marginalize_steps.empty() &&
             step == remove_marginalize_steps[remove_or_marginalize_index]) {
-        cout << "here 2" << endl;
           for(auto factor_index : remove_factor_indices[remove_or_marginalize_index]) {
-        cout << "here 2.1" << remove_or_marginalize_index << " " << factor_index << endl;
             auto real_factor_index = real_factor_indices[factor_index];
-        cout << "here 2.2 " << real_factor_index << " " << isam2.getCholeskyEliminationTree().numFactors() << endl;
             factorsToRemove.push_back(real_factor_index);
             if(is_new) {
               assert(isam2.getCholeskyEliminationTree().nonlinearFactorAt(real_factor_index) == measurements[factor_index]);
@@ -400,14 +380,12 @@ int main(int argc, char *argv[]) {
               assert(isam2.getFactorsUnsafe()[real_factor_index] == measurements[factor_index]);
             }
           }
-        cout << "here 3" << endl;
 
           auto& marginalizableKeys = marginalize_keys[remove_or_marginalize_index];
 
           if(is_new) {
             std::set<Key> additionalKeys;
 
-            cout << "here 4" << endl;
             if(!marginalizableKeys.empty()) {
 
               for(Key key : activeKeys) {
@@ -422,12 +400,6 @@ int main(int argc, char *argv[]) {
                 constrainedKeys->operator[](key) = 0;
                 leafKeys.push_back(key);
               }
-
-              cout << "additional reelim keys: ";
-              for(Key key : additionalKeys) {
-                cout << key << " ";
-              }
-              cout << endl;
 
             }
 
@@ -449,20 +421,16 @@ int main(int argc, char *argv[]) {
           constrainedKeys = boost::none;
         }
 
-        cout << "before update" << endl;
         // Update iSAM2
         auto isamResult_ = isam2.update(newFactors, newVariables,
                         factorsToRemove, constrainedKeys, boost::none, additionalMarkedKeys, true);
-        cout << "after update" << endl;
 
         if(!leafKeys.empty()) {
-        cout << "before marginalize" << endl;
           for(Key key : leafKeys) {
             activeKeys.erase(key);
             marginalized_keys.insert(key);
           }
           isam2.marginalizeLeaves(leafKeys, boost::none, boost::none);
-        cout << "after marginalize" << endl;
         }
 
 

@@ -422,7 +422,6 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   // 5. Do symbolic factorization and construct new etree
   // 6. Re-eliminate
   //
-  cout << "isam2 0" << endl;
   gttic(ISAM2_update);
   this->update_count_ += 1;
   UpdateImpl::LogStartingUpdate(newFactors, *this);
@@ -436,8 +435,6 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   // 1. Add new variables first
   addVariables(newTheta, result.details());
   eTree_.addVariables(newTheta);
-  cout << "isam2 0" << endl;
-
 
   // 1. Add any new factors \Factors:=\Factors\cup\Factors'.
   // Also compute keys that are updated
@@ -446,8 +443,6 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   RemappedKeySet markedKeys;
 
   result.newFactorsIndices = nonlinearFactors_.add_factors(newFactors, false);
-
-  cout << "isam2 2" << endl;
 
   // Compute involved keys
   // Compute relin keys
@@ -459,20 +454,11 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   relinKeys = update.CheckRelinearizationFull(delta_, params_.relinearizeThreshold);
 
   if (!relinKeys.empty()) {
-      cout << "relin keys = ";
-    for(Key key : relinKeys) {
-        cout << key << " ";
-    }
-    cout << endl;
     // 6. Update linearization point for marked variables:
     // \Theta_{J}:=\Theta_{J}+\Delta_{J}.
     UpdateImpl::ExpmapMasked(delta_, relinKeys, &theta_);
-    cout << "Roger debug, after retract, theta = " << endl;
-    delta_.print();
-    theta_.print();
   }
 
-  cout << "isam2 7" << endl;
   eTree_.markAffectedKeys(nonlinearFactors_,
                           result.newFactorsIndices,
                           relinKeys,
@@ -480,12 +466,9 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
                           // updateParams.extraReelimKeys,
                           &affectedKeys,
                           &observedKeys);
-  cout << "isam2 8" << endl;
-
 
   // This step is technically not needed, we can just do this in symbolic update
   eTree_.markAncestors(affectedKeys, &markedKeys);
-  cout << "isam2 9" << endl;
 
   static int last_variable_count;
   static bool reorder_flag;
@@ -514,42 +497,18 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
       reorder_flag = false;
       eTree_.updateOrdering(markedKeys, observedKeys, updateParams);
   }
-  cout << "isam2 10" << endl;
 
-  // cout << "marked keys size = " << markedKeys.size() << " affected size = " << affectedKeys.size() << endl;
-
-
-  cout << "isam2 11" << endl;
   eTree_.symbolicElimination(markedKeys);
-  cout << "isam2 12" << endl;
   eTree_.choleskyElimination(theta_);
-  cout << "isam2 13" << endl;
 
   const ISAM2GaussNewtonParams& gaussNewtonParams =
       boost::get<ISAM2GaussNewtonParams>(params_.optimizationParams);
 
-  cout << "isam2 14" << endl;
   eTree_.backsolve(&delta_, gaussNewtonParams.wildfireThreshold);
-  cout << "isam2 15" << endl;
   eTree_.reset();
-  cout << "isam2 16" << endl;
   
-  // string fname = "/root/igo-gtsam/build/matrix.out";
-  // ofstream fout;
-  // fout.open(fname, ios_base::app);
-  // if(!fout.is_open()) {
-  //     cout << "Error opening file: " << fname << endl;
-  //     exit(1);
-  // }
-  // eTree_.print(fout);
-  // eTree_.print(cout);
-
   // cout << "Delta = " << endl;
   // delta_.print();
-
-  // cout << "eTree done" << endl;
-
-  cout << "isam2 17" << endl;
 
   // char t;
   // cin >> t;

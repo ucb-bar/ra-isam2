@@ -274,22 +274,17 @@ public:
           continue;
         }
 
-        // std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         if(srcCol2 >= srcCol1) {
           // Note: We need to access the upper triangular part of the Hessian matrix
           Eigen::Block<const Matrix> AbtAb_ij(AbtAb, srcCol1, srcCol2, srcW1, srcW2);
 
-          // std::cout << "hessian block = " << AbtAb_ij << std::endl;
-
           destBlock.noalias() += sign * AbtAb_ij.transpose();
         }
         else {
           // Note: We need to access the upper triangular part of the Hessian matrix
           Eigen::Block<const Matrix> AbtAb_ij(AbtAb, srcCol2, srcCol1, srcW2, srcW1);
-
-          // std::cout << "hessian block = " << AbtAb_ij << std::endl;
 
           destBlock.noalias() += sign * AbtAb_ij;
         }

@@ -335,46 +335,46 @@ void ISAM2::recalculateIncremental(const ISAM2UpdateParams& updateParams,
   }
   gttoc(ordering_constraints);
 
-  // DEBUG: Custom ordering
-  static ifstream ordering_fin("/home/rogerhh/gtsam-kimera-integrate/build/marginalize_incorrect.out");
-  vector<int> custom;
-  string header;
-  while(ordering_fin >> header) {
-    if(header == "NEW_GTSAM_ORDERING") {
-        int max_key, key;
-        ordering_fin >> max_key >> header >> header;
-        cout << "max_key: " << max_key << endl;
-        cout << "custom: ";
-        for(int i = 0; i <= max_key; i++) {
-            ordering_fin >> key;
-            if(affectedKeysSet->find(key) != affectedKeysSet->end()) {
-                custom.push_back(key);
-                cout << key << " ";
-            }
-        }
-        cout << endl;
-        break;
-    }
-  }
+  // // DEBUG: Custom ordering
+  // static ifstream ordering_fin("/home/rogerhh/gtsam-kimera-integrate/build/marginalize_incorrect.out");
+  // vector<int> custom;
+  // string header;
+  // while(ordering_fin >> header) {
+  //   if(header == "NEW_GTSAM_ORDERING") {
+  //       int max_key, key;
+  //       ordering_fin >> max_key >> header >> header;
+  //       cout << "max_key: " << max_key << endl;
+  //       cout << "custom: ";
+  //       for(int i = 0; i <= max_key; i++) {
+  //           ordering_fin >> key;
+  //           if(affectedKeysSet->find(key) != affectedKeysSet->end()) {
+  //               custom.push_back(key);
+  //               cout << key << " ";
+  //           }
+  //       }
+  //       cout << endl;
+  //       break;
+  //   }
+  // }
 
-  Ordering ordering;
-  if(custom.empty()) {
-    ordering = Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
-  }
-  else {
-    ordering = Ordering(custom);
-  }
+  // Ordering ordering;
+  // if(custom.empty()) {
+  //   ordering = Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
+  // }
+  // else {
+  //   ordering = Ordering(custom);
+  // }
 
   // Generate ordering
   gttic(Ordering);
-  // const Ordering ordering =
-  //     Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
+  const Ordering ordering =
+      Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
   // DEBUG: Custom ordering
 
-  // const Ordering ordering(*affectedKeysSet);
-  cout << "Ordering: \n";
-  ordering.print();
-  cout << endl;
+  // // const Ordering ordering(*affectedKeysSet);
+  // cout << "Ordering: \n";
+  // ordering.print();
+  // cout << endl;
   gttoc(Ordering);
 
   // Do elimination

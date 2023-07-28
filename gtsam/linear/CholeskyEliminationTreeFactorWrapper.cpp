@@ -17,7 +17,6 @@ using namespace std;
 namespace gtsam {
 
 void CholeskyEliminationTree::FactorWrapper::markAffectedKeys(RemappedKeySet* affectedKeys) {
-  cout << "mark affected relin factor " << *this << endl;;
   if(status_ == REMOVED) {
     return;
   }
@@ -30,8 +29,6 @@ void CholeskyEliminationTree::FactorWrapper::markAffectedKeys(RemappedKeySet* af
 
 bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
   assert(cachedLinearFactor != nullptr);
-
-  cout << "marginalize factor " << *this << endl;;
 
   if(etree->nodes_[highestKey_]->status() == MARGINALIZED) { 
     status_ = REMOVED;
@@ -60,8 +57,6 @@ bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
   }
 
   updateLowestHighestKeys();
-
-  cout << "after marginalize factor " << *this << endl;;
 
   return false;
 }
