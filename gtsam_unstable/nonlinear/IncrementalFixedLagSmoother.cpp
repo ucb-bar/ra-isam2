@@ -116,12 +116,14 @@ FixedLagSmoother::Result IncrementalFixedLagSmoother::update(
 
   // Mark additional keys between the marginalized keys and the leaves
   std::set<Key> additionalKeys;
-  for(Key key: marginalizableKeys) {
+  /*for(Key key: marginalizableKeys) {
     ISAM2Clique::shared_ptr clique = isam_[key];
     for(const ISAM2Clique::shared_ptr& child: clique->children) {
       recursiveMarkAffectedKeys(key, child, additionalKeys);
     }
-  }
+  }*/
+  isam_.getAffectedDescendants(marginalizableKeys, &additionalKeys);
+
   KeyList additionalMarkedKeys(additionalKeys.begin(), additionalKeys.end());
 
   // Update iSAM2

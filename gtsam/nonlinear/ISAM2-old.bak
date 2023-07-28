@@ -748,11 +748,9 @@ void ISAM2::marginalizeLeaves(
         if (params_.cacheLinearizedFactors) linearFactors_.push_back(factor);
         // 2023/07/27: Roger: This seems wrong, just because a variable has a factor that 
         // is marginalized does not mean that the factor should be fixed
-        /*
         for (Key factorKey : *factor) {
           fixedVariables_.insert(factorKey);
         }
-        */
       }
     }
   }

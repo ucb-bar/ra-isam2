@@ -1205,7 +1205,6 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
         info.construct(factorWrapper->remappedKeys(), infoMap);
 
         factorWrapper->updateHessian(m, -1, info, CheckEdits());
-
       }
 
       if(factorStatus == REMOVING) { 
