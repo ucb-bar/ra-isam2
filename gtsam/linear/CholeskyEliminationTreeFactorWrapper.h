@@ -130,8 +130,13 @@ public:
   const FactorStatus& status() const { return status_; }
 
   void setStatusRemoved() {
-    assert(status_ == REMOVING);
-    status_ = REMOVED;
+    if(status_ == REMOVING || status_ == UNLINEARIZED) {
+      status_ = REMOVED;
+    }
+    else {
+      assert(0);
+      throw std::runtime_error("Removing factor that is not REMOVING or UNLINEARIZED! Factor status" + status_);
+    }
   }
 
   void setStatusRelinearize() {
@@ -139,18 +144,34 @@ public:
     status_ = RELINEARIZE;
   }
 
+  void setStatusLinear() {
+    assert(status_ == LINEARIZED || status_ == LINEAR || status_ == REMOVED);
+    if(status_ != REMOVED) { status_ = LINEAR; }
+    nonlinearFactor_ = nullptr;
+  }
+
   void setStatusRemoving() {
     if(status_ != REMOVED) { status_ = REMOVING; }
   }
+
+  bool hasMarginalizedKeys() const;
 
   // Linearize the factor if it needs to be linearized. 
   // Returns true if action is done, false otherwise
   // This does not change the status of the factor yet
   bool linearizeIfNeeded(const Values& theta) {
+
     assert(status_ != REMOVING && status_ != REMOVED);
     if(status_ == UNLINEARIZED || status_ == RELINEARIZE) {
       cachedLinearFactor = nonlinearFactor_->linearize(theta);
       status_ = LINEARIZED;
+      
+      // DEBUG
+      if(factorIndex_ == 102) {
+          theta.print();
+          cachedLinearFactor->print();
+      }
+      // DEBUG END
       return true;
     }
     return false;
@@ -180,21 +201,20 @@ public:
     return;
   }
 
-  void markAffectedKeys(RemappedKeySet* affectedKeys) {
-    assert(status_ != REMOVING && status_ != REMOVED);
-    for(RemappedKey key : remappedKeys_) {
-      affectedKeys->insert(key);
-    }
-  }
+  void markAffectedKeys(RemappedKeySet* affectedKeys);
 
   const RemappedKeyVector& remappedKeys() {
     return remappedKeys_;
   }
 
+  void checkInvariant() const {}
+
   const KeyVector& keys();
 
-  // Given the factor is linear or already linearized
-  void marginalizeKeys();
+  // Given the factor is linear or already linearized, ignore the blocks that correspond to 
+  // keys that are marginalized out. Returns true if al keys are marginalized out
+  // false otherwise
+  bool marginalizeKeys();
 
   const JacobianFactor* toJacobianFactor() const;
 
@@ -207,6 +227,13 @@ public:
       double sign, 
       const INFO& info,
       const PREDICATE& pred) {
+      
+  // DEBUG
+  if(factorIndex_ == 102) {
+      cachedLinearFactor->print();
+  }
+  // DEBUG END
+
     const Matrix& Ab = jf->matrixObject().matrix();
     // const VerticalBlockMatrix& Ab = jf->matrixObject();
     size_t height = Ab.rows();
@@ -226,12 +253,19 @@ public:
         if(ordering2 < ordering1) {
           continue;
         }
-        // std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
+        std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
         Eigen::Block<const Matrix> Ab_j(Ab, 0, srcCol2, height, srcW2);
 
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         destBlock.noalias() += sign * Ab_j.transpose() * Ab_i;
+
+        // DEBUG
+        if(lowerKey == 40 && higherKey == 41) {
+            std::cout << "raw block = \n" << Ab_j << "\n\n" << Ab_i << std::endl << std::endl;
+            std::cout << "mult block = \n" << sign * Ab_j.transpose() * Ab_i << std::endl << std::endl;
+            std::cout << "dest block = \n" << destBlock << std::endl << std::endl;
+        }
 
       }
     }
@@ -244,33 +278,44 @@ public:
       double sign, 
       const INFO& info,
       const PREDICATE& pred) {
-    assert(0);
-    // const SymmetricBlockMatrix& info = hf->info();
-    // for(size_t i = 0; i < remappedKeys_.size(); i++) {
-    //   RemappedKey lowerKey = remappedKeys_[i];
-    //   if(!pred(lowerKey)) {
-    //     continue;
-    //   }
-    //   const auto&[destR1, h1] = keyRowMap.at(lowerKey);
-    //   for(size_t j = 0; j < remappedKeys_.size(); j++) {
-    //     RemappedKey higherKey = remappedKeys_[j];
-    //     if(etree->orderingLess_(higherKey, lowerKey)) {
-    //       continue;
-    //     }
-    //     const auto&[destR2, h2] = keyRowMap.at(higherKey);
+    const auto& AbtAb = hf->info().matrix();
+    for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
+      // Higher key represents the column. Don't need last column
+      const auto&[lowerKey, srcCol1, srcW1] = blockIndices_.at(i);
+      const auto&[destR1, ordering1, status1] = info(i);
+      // std::cout << "checking lowerKey = " << lowerKey << std::endl;
+      if(!pred(status1)) {
+        continue;
+      }
+      for(size_t j = 0; j < blockIndices_.size(); j++) {
+        const auto&[higherKey, srcCol2, srcW2] = blockIndices_.at(j);
+        const auto&[destR2, ordering2, status2] = info(j);
+        if(ordering2 < ordering1) {
+          continue;
+        }
 
-    //     Eigen::Block<MATRIX> destBlock(m, destR2, destR1, h2, h1);
-    //     if(i == j) {
-    //       Eigen::SelfAdjointView<Eigen::Block<MATRIX>, Eigen::Upper>(destBlock) 
-    //         += sign * info.diagonalBlock(i);
-    //     }
-    //     else {
-    //       DenseIndex I = std::min(i, j);
-    //       DenseIndex J = std::max(i, j);
-    //       destBlock += sign * info.aboveDiagonalBlock(I, J).transpose();
-    //     }
-    //   }
-    // }
+        std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
+        Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
+
+        if(srcCol2 >= srcCol1) {
+          // Note: We need to access the upper triangular part of the Hessian matrix
+          Eigen::Block<const Matrix> AbtAb_ij(AbtAb, srcCol1, srcCol2, srcW1, srcW2);
+
+          // std::cout << "hessian block = " << AbtAb_ij << std::endl;
+
+          destBlock.noalias() += sign * AbtAb_ij.transpose();
+        }
+        else {
+          // Note: We need to access the upper triangular part of the Hessian matrix
+          Eigen::Block<const Matrix> AbtAb_ij(AbtAb, srcCol2, srcCol1, srcW2, srcW1);
+
+          // std::cout << "hessian block = " << AbtAb_ij << std::endl;
+
+          destBlock.noalias() += sign * AbtAb_ij;
+        }
+
+      }
+    }
   }
 
   // Populate the columns of the MATRIX m with the sign * Hessian of the factor
@@ -281,6 +326,8 @@ public:
       double sign, 
       const INFO& info,
       const PREDICATE& pred) {
+
+    std::cout << "Updating hessian for " << *this << " sign = " << sign << std::endl;
 
     if(const JacobianFactor* jf = toJacobianFactor()) {
       updateHessianJacobian(jf, m, sign, info, pred);
@@ -294,7 +341,7 @@ public:
   }
 
 
-  void printKeys(std::ostream& os);
+  void printKeys(std::ostream& os) const;
 };
 
 } // namespace gtsam

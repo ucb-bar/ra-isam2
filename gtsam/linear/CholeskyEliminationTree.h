@@ -39,6 +39,7 @@ public:
   static constexpr size_t BLOCK_INDEX_HEIGHT = 2;
   
   friend std::ostream& operator<<(std::ostream& os, const Clique& clique);
+  friend std::ostream& operator<<(std::ostream& os, const FactorWrapper& factorWrapper);
 
 private:
     std::vector<sharedNode> nodes_;
@@ -113,8 +114,11 @@ public:
   // Reset after each iteration
   void reset();
 
-  // This is used in marginalization
+  // Add all ancestors of unmappedKey to additionalKeys. This is used in marginalization
   void getAffectedKeys(Key unmappedKey, std::set<Key>& additionalKeys) const;
+
+  // Add all descendants of unmappedKey to additionalKeys. This is used in marginalization
+  void getAffectedDescendantKeys(Key unmappedKey, std::set<Key>& additionalKeys) const;
 
   void marginalizeLeaves(
       const FastList<Key>& leafKeys,
@@ -124,6 +128,11 @@ public:
 
   void printOrderingUnmapped(std::ostream& os) const;
   void printOrderingRemapped(std::ostream& os) const;
+
+  // Number of all factors, including deleted factors
+  size_t numFactors() const { return factors_.size(); }
+
+  sharedFactor nonlinearFactorAt(size_t i);
 
 private:
   // Add new unmapped Key to transform map and return the mapped key, 
@@ -216,6 +225,7 @@ private:
   void checkInvariant_afterSymbolic() const;
   void checkInvariant_afterCholesky() const;
   void checkInvariant_afterBackSolve() const;
+  void checkInvariant_afterMarginalize() const;
 
   // Public testing functions
 public:

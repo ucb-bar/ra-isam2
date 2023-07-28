@@ -39,7 +39,7 @@ public:
   bool marked_ = false; 
   // bool backsolve = false;
 
-  MarkedStatus status = UNMARKED;
+  MarkedStatus status_ = UNMARKED;
 
   // The memory allocated for this clique
   size_t workspaceIndex = -1;
@@ -68,6 +68,7 @@ public:
   // a contiguous memory though addCliqueColumns()
   std::vector<LocalCliqueColumns> gatherSources;
 
+  // FIXME: make this into data structure in tree traversal
   // How much memory is needed at this clique and all its children
   size_t accumSize = 0;
   // How much memory is needed just for this node
@@ -131,10 +132,39 @@ public:
   // Iterate over all nodes and set their MarkedStatus
   // If a node is NEW and the clique is EDIT, the node remains NEW
   void setNodeStatus();
+  void setNodeStatusMarginalize();
+
+  const MarkedStatus& status() const { return status_; }
+
+  void setStatusUnmarked() {
+    assert(status_ == UNMARKED || status_ == EDIT || status_ == RECONSTRUCT);
+    status_ = UNMARKED;
+  }
+
+  void setStatusEdit() {
+    assert(status_ == UNMARKED || status_ == EDIT || status_ == RECONSTRUCT);
+    status_ = EDIT;
+  }
+
+  void setStatusReconstruct() {
+    if(!(status_ == UNMARKED || status_ == RECONSTRUCT)) {
+      std::cout << "Clique " << *this << " status_ is " << status_ << std::endl;
+    }
+    assert(status_ == UNMARKED || status_ == RECONSTRUCT);
+    status_ = RECONSTRUCT;
+  }
+  void setStatusMarginalized() {
+    assert(status_ == UNMARKED);
+    status_ = MARGINALIZED;
+  }
 
   void setBacksolve(bool backsolve);
 
   bool needsBacksolve() const;
+
+  // Split a clique into 2, where the second clique owns its own data. This is used 
+  // in marginalization
+  sharedClique splitClique(size_t splitIndex);
 
   // Reset all member variables after elimination and all nodes
   void resetAfterCholesky();

@@ -7,7 +7,6 @@ using namespace std;
 using namespace gtsam;
 
 int main() {
-    shared_ptr<vector<double>> matrixSource = make_shared<vector<double>>(1000, 0);
 
     // shared_ptr<BlockIndexVector> blockIndices 
     //  = make_shared<BlockIndexVector>({{1, 0, 3}, {2, 3, 4}, {5, 7, 2}, {4, 9, 3}, {0, 12, 1}});
@@ -20,6 +19,11 @@ int main() {
     }
 
     size_t startIndex = 0, endIndex = 3;
+    size_t h1 = get<BLOCK_INDEX_ROW>(blockIndices->back()) 
+                + get<BLOCK_INDEX_HEIGHT>(blockIndices->back());
+    size_t w1 = get<BLOCK_INDEX_ROW>(blockIndices->at(endIndex)) 
+                + get<BLOCK_INDEX_HEIGHT>(blockIndices->at(endIndex));
+    shared_ptr<vector<double>> matrixSource = make_shared<vector<double>>(h1 * w1, 0);
 
     LocalCliqueColumns cliqueColumns(matrixSource, blockIndices, startIndex, endIndex);
 
@@ -40,8 +44,6 @@ int main() {
         }
     }
 
-
-    shared_ptr<vector<double>> matrixSource2 = make_shared<vector<double>>(1000, 0);
     shared_ptr<BlockIndexVector> blockIndices2 = make_shared<BlockIndexVector>();
     vector<tuple<size_t, size_t>> keyWidthPairs2({{5, 2}, {1, 2}, {2, 3}, {6, 3}, {4, 2}, {7, 1}, {0, 1}});
     curRow = 0;
@@ -50,6 +52,12 @@ int main() {
         curRow += height;
     }
 
+    size_t h2 = get<BLOCK_INDEX_ROW>(blockIndices2->back()) 
+                + get<BLOCK_INDEX_HEIGHT>(blockIndices2->back());
+    size_t w2 = get<BLOCK_INDEX_ROW>(blockIndices2->back()) 
+                + get<BLOCK_INDEX_HEIGHT>(blockIndices2->back());
+
+    shared_ptr<vector<double>> matrixSource2 = make_shared<vector<double>>(h2 * w2, 0);
     // size_t startIndex = 0, endIndex = 3;
 
     size_t height1 = get<BLOCK_INDEX_ROW>(blockIndices->back()) + 1;
@@ -70,6 +78,9 @@ int main() {
 
     cout << "splitParentClique2:\n" << cliqueColumns3 << endl << endl;
 
+    cout << "splitParentClique1:\n" << cliqueColumns2 << endl << endl;
+
+    assert(cliqueColumns2.isEndOfCliqueColumns());
 
 
 }

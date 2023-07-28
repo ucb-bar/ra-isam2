@@ -83,82 +83,42 @@ void CholeskyEliminationTree::Clique::reorderClique() {
   orderingVersion = etree->orderingVersion_;
 
   // Reorder blockIndices
+  size_t lowestReorderedIndex = 0;
   vector<RemappedKey> colStructure;
-  for(const auto&[key, row, height] : blockIndices) {
-    colStructure.push_back(key);
+  colStructure.reserve(blockIndices.size());
+  for(size_t i = 0; i < blockIndices.size(); i++) {
+    colStructure.push_back(get<BLOCK_INDEX_KEY>(blockIndices[i]));
   }
   std::sort(colStructure.begin(), colStructure.end(), etree->orderingLess_);
 
-  populateBlockIndices(colStructure);
-
-  assert(ownsColumns());
-
-  // Permute subdiagonal blocks
-  if(!gatherSources.empty()) {
-    size_t r = height();
-    size_t c = width();
-    auto matrixSource = std::make_shared<vector<double>>(r * c, 0);
-    auto blockIndicesSource = std::make_shared<BlockIndexVector>(blockIndices);
-
-    LocalCliqueColumns newCliqueColumns(matrixSource,
-                                        blockIndicesSource,
-                                        0, cliqueSize());
-    newCliqueColumns.addCliqueColumns(gatherSources[0], true);
-
-    gatherSources[0] = newCliqueColumns;
+  bool needReorder = false;
+  for(size_t i = 0; i < blockIndices.size() - 1; i++) {
+    if(colStructure[i] != get<BLOCK_INDEX_KEY>(blockIndices[i])) {
+      needReorder = true;
+      break;
+    }
   }
 
-// 
-//     for(sharedNode node : clique->nodes) {
-//         assert(node->ordering_version != ordering_version_);
-//         node->ordering_version = ordering_version_;
-//     }
-// 
-//     // Find the keys that have been reordered and the lowest reordered key
-//     auto& colStructure = clique->front()->colStructure; 
-//     vector<Key> oldColStructure = clique->front()->colStructure; // make a copy to compare
-// 
-//     std::sort(colStructure.begin(), colStructure.end(), orderingLess);
-// 
-//     for(size_t i = 1; i < clique->nodes.size(); i++) {
-//         sharedNode node = clique->nodes[i];
-//         node->colStructure.clear();
-//         node->colStructure.insert(node->colStructure.end(),
-//                                   colStructure.begin() + i,
-//                                   colStructure.end());
-//     }
-// 
-//     BlockIndexVector newBlockIndices;
-//     newBlockIndices.reserve(clique->blockIndices.size());
-//     size_t curRow = 0;
-//     for(Key key : colStructure) {
-//         size_t height = colWidth(key);
-//         newBlockIndices.push_back({key, {curRow, height}});
-//         curRow += height;
-//     }
-//     newBlockIndices.push_back({-1, {curRow, 1}});
-//     curRow += 1;
-// 
-//     bool reordered = clique->reorderColumn(newBlockIndices);
-// 
-//     if(reordered) { 
-// 
-//         for(sharedNode node : clique->nodes) {
-//             // Reorder factorColStructure only if we need to reorder colStructure
-//             set<Key, OrderingLess> newFactorColStructure(orderingLess);
-//             set<Key, OrderingLess> newChangedFactorColStructure(orderingLess);
-//             for(Key k : node->factorColStructure) {
-//                 newFactorColStructure.insert(k);
-//             }
-//             node->factorColStructure = std::move(newFactorColStructure);
-//             for(Key k : node->changedFactorColStructure) {
-//                 if(!orderingLess(k, node->key)) {
-//                     newChangedFactorColStructure.insert(k);
-//                 }
-//             }
-//             node->changedFactorColStructure = std::move(newChangedFactorColStructure);
-//         }    
-//     }
+  if(needReorder) {
+    populateBlockIndices(colStructure);
+
+    assert(ownsColumns());
+
+    // Permute subdiagonal blocks
+    if(!gatherSources.empty()) {
+      size_t r = height();
+      size_t c = width();
+      auto matrixSource = std::make_shared<vector<double>>(r * c, 0);
+      auto blockIndicesSource = std::make_shared<BlockIndexVector>(blockIndices);
+
+      LocalCliqueColumns newCliqueColumns(matrixSource,
+          blockIndicesSource,
+          0, cliqueSize());
+      newCliqueColumns.addCliqueColumns(gatherSources[0], true);
+
+      gatherSources[0] = newCliqueColumns;
+    }
+  }
 }
 
 sharedClique CholeskyEliminationTree::Clique::parent() {
@@ -382,7 +342,7 @@ bool CholeskyEliminationTree::Clique::hasMarkedAncestor() {
   assert(highestKey != 0);
 
   if(etree->cliques_[highestKey]->marked()) {
-    assert(etree->cliques_[highestKey]->status == RECONSTRUCT);
+    assert(etree->cliques_[highestKey]->status() == RECONSTRUCT);
     return true;
   }
   return false;
@@ -401,7 +361,7 @@ void CholeskyEliminationTree::Clique::checkEditOrReconstruct(
   for(size_t i = cliqueSize(); i < blockIndices.size(); i++) { 
     // Start from subdiagonal keys
     RemappedKey key = get<BLOCK_INDEX_KEY>(blockIndices[i]);
-    if(key != 0 && etree->nodes_[key]->clique()->status == mode) {
+    if(key != 0 && etree->nodes_[key]->clique()->status() == mode) {
       // ignore last row
       destCols->push_back(key);
       assert(etree->nodes_[key]->clique()->marked());
@@ -427,12 +387,26 @@ void CholeskyEliminationTree::Clique::checkEditOrReconstruct(
 
 void CholeskyEliminationTree::Clique::setNodeStatus() {
   for(sharedNode node : nodes) {
-    if(node->status == NEW && this->status == EDIT) {
+    if(node->status() == NEW && this->status() == EDIT) {
       // Do nothing
     }
     else {
-      node->status = this->status;
+      if(this->status() == EDIT) {
+        node->setStatusEdit();
+      }
+      else if(this->status() == RECONSTRUCT) {
+        node->setStatusReconstruct();
+      }
+      else {
+        throw runtime_error("Set invalid node status");
+      }
     }
+  }
+}
+
+void CholeskyEliminationTree::Clique::setNodeStatusMarginalize() {
+  for(sharedNode node : nodes) {
+    node->setStatusMarginalized();
   }
 }
 
@@ -455,6 +429,53 @@ bool CholeskyEliminationTree::Clique::needsBacksolve() const {
   return false;
 }
 
+sharedClique CholeskyEliminationTree::Clique::splitClique(size_t splitIndex) {
+  assert(splitIndex < cliqueSize() && splitIndex > 0);
+
+  sharedClique newClique = make_shared<Clique>(etree);
+
+  for(size_t i = splitIndex; i < cliqueSize(); i++) {
+    newClique->addNode(nodes[i]);
+  }
+  this->nodes.resize(splitIndex);
+
+  newClique->setParent(this->parent());
+  this->setParent(newClique);
+
+  assert(this->marked_ == false);
+  assert(this->status() == MARGINALIZED);
+  assert(this->workspaceIndex == -1);
+
+  size_t startRow = get<BLOCK_INDEX_ROW>(this->blockIndices[splitIndex]);
+  for(size_t i = splitIndex; i < blockIndices.size(); i++) {
+    newClique->blockIndices.push_back(blockIndices[i]);
+    get<BLOCK_INDEX_ROW>(newClique->blockIndices.back()) -= startRow;
+  }
+
+  newClique->orderingVersion = this->orderingVersion;
+
+  assert(this->gatherSources.size() == 1);
+  assert(this->ownsColumns());
+
+  LocalCliqueColumns newGatherSource = this->gatherSources.front().split(splitIndex);
+
+  newGatherSource.forceOwn();
+
+  newClique->gatherSources.push_back(newGatherSource);
+
+  assert(newClique->ownsColumns());
+
+  for(auto node : this->nodes) {
+    assert(node->clique() == this->get_ptr());
+  }
+  for(auto node : newClique->nodes) {
+    assert(node->clique() == newClique);
+  }
+
+  return newClique;
+
+}
+
 void CholeskyEliminationTree::Clique::resetAfterCholesky() {
 }
 
@@ -464,12 +485,12 @@ void CholeskyEliminationTree::Clique::resetAfterBacksolve() {
 
   // Reset node member variables
   for(sharedNode node : nodes) {
-    node->status = UNMARKED;
+    node->setStatusUnmarked();
     // node->changedLambdaStructure.clear();
   }
 
   // Reset member variables
-  status = UNMARKED;
+  status_ = UNMARKED;
   marked_ = false;
   workspaceIndex = -1;
 }

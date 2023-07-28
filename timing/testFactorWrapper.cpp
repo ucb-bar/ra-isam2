@@ -244,7 +244,7 @@ void CholeskyEliminationTree::testFactorWrapper(const Values& theta) {
   };
 
   for(sharedFactorWrapper factorWrapper : factors_) {
-    factorWrapper->linearize(theta);
+    factorWrapper->linearizeIfNeeded(theta);
     factorWrapper->getLinearFactor()->print();
     factorWrapper->updateHessian(m, -1, blockMap, Pred(this));
   }

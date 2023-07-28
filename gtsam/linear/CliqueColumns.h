@@ -165,9 +165,9 @@ public:
 
     LocalCliqueColumns(const LocalCliqueColumns& other) = default;
 
-    LocalCliqueColumns split(size_t startIndex_) {
-      LocalCliqueColumns res(matrixSource_, blockIndicesSource_, startIndex_, endIndex_);     
-      endIndex_ = startIndex_;
+    LocalCliqueColumns split(size_t splitIndex) {
+      LocalCliqueColumns res(matrixSource_, blockIndicesSource_, splitIndex, endIndex_);     
+      endIndex_ = splitIndex;
       cols_ = cols_ - res.cols_;
       return res;
     }
@@ -182,11 +182,27 @@ public:
       matrixSource_->resize(matrixSource_->size() - rows_ * cols_);
     }
 
+    size_t getEndCol() const {
+      size_t endCol = std::get<BLOCK_INDEX_ROW>(blockIndicesSource_->at(endIndex_ - 1)) 
+                      + std::get<BLOCK_INDEX_HEIGHT>(blockIndicesSource_->at(endIndex_ - 1));
+      return endCol;
+    }
+
+    bool isEndOfCliqueColumns() const {
+      // This clique columns has to be the last clique columns in the matrix source
+      return getEndCol() * rows_ == matrixSource_->size();
+    }
+
     void forceOwn() {
       if(ownsData()) { return; }
 
+      // This clique columns has to be the last clique columns in the matrix source
+      assert(isEndOfCliqueColumns());
+
+      auto oldMatrixSource = matrixSource_;
       auto oldMatrix = matrix();
       auto oldRows = rows_;
+      auto oldCols = cols_;
       auto newMatrixSource = std::make_shared<std::vector<double>>(rows_ * cols_, 0);
       auto newBlockIndicesSource = std::make_shared<BlockIndexVector>();
       auto itOffset = blockIndicesSource_->begin() + startIndex_;
@@ -211,6 +227,10 @@ public:
       newBlock = oldBlock;
 
       assert(ownsData());
+
+      // Release old matrix source memtory
+      oldMatrixSource->resize(oldMatrixSource->size() - oldCols * oldRows);
+
     }
 
     std::shared_ptr<BlockIndexVector> blockIndicesSource() { return blockIndicesSource_; }

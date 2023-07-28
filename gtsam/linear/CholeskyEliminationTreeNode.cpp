@@ -22,4 +22,14 @@ void CholeskyEliminationTree::Node::addFactor(sharedFactorWrapper factor) {
   }
 }
 
+void CholeskyEliminationTree::Node::removeFactor(sharedFactorWrapper factor) {
+  for(RemappedKey k : factor->remappedKeys()) {
+    assert(lambdaStructure.at(k) > 0);
+    lambdaStructure[k]--;
+    if(lambdaStructure.at(k) == 0) {
+      lambdaStructure.erase(k);
+    }
+  }
+}
+
 } // namespace gtsam
