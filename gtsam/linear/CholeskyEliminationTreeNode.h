@@ -63,7 +63,7 @@ public:
 
   void setStatusEdit() {
     assert(status_ == UNMARKED || status_ == NEW);
-    status_ = UNMARKED;
+    status_ = EDIT;
   }
 
   void setStatusReconstruct() {

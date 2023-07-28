@@ -85,7 +85,9 @@ const HessianFactor* CholeskyEliminationTree::FactorWrapper::toHessianFactor() c
 }
 
 ostream& operator<<(ostream& os, const CholeskyEliminationTree::FactorWrapper& factorWrapper) {
-  os << "Factor: " << factorWrapper.factorIndex() << ", keys = ";
+  os << "Factor: " << factorWrapper.factorIndex() 
+     << ", status: " << factorWrapper.status() 
+     << ", keys: ";
   factorWrapper.printKeys(os);
   return os;
 }

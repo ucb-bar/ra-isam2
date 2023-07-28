@@ -247,9 +247,9 @@ void CholeskyEliminationTree::markKey(const RemappedKey key, RemappedKeySet* mar
   sharedClique curClique = node->clique();
   RemappedKey curKey = key;
   do {
-    if(curClique->status() != UNMARKED) {
-      cout << "mark clique " << *curClique << " is not UNMARKED. status = " << curClique->status() << endl;
-    }
+    // if(curClique->status() != UNMARKED) {
+    //   cout << "mark clique " << *curClique << " is not UNMARKED. status = " << curClique->status() << endl;
+    // }
     assert(curClique->status() == UNMARKED);
 
     if(curClique->orderingVersion != orderingVersion_) {
@@ -767,7 +767,6 @@ void CholeskyEliminationTree::allocateStackRegular() {
       if(clique->marked()) {
         // Defaults to reconstructing
         // TODO: We do not have to default to reconstructing
-        // cout << "set clique " << *clique << " to RECONSTRUCT" << endl;
         clique->setStatusReconstruct();
 
         size_t diagonalHeight = clique->diagonalHeight();
@@ -792,7 +791,6 @@ void CholeskyEliminationTree::allocateStackRegular() {
           // For any marked clique, if any of its decendants is unmarked, set to EDIT
           const auto&[key, row, height] = clique->blockIndices[i];
           assert(nodes_[key]->clique()->marked());
-          // cout << "set clique " << *clique << " to EDIT" << endl;
           nodes_[key]->clique()->setStatusEdit();
         }
       }
@@ -836,7 +834,7 @@ void CholeskyEliminationTree::allocateStackPostOrdering() {
 
       if(clique->marked() || clique->hasMarkedAncestor()) {
         if(clique->marked()) {
-          // cout << "set clique " << *clique << " to RECONSTRUCT" << endl;
+          cout << "set clique " << *clique << " to RECONSTRUCT" << endl;
           clique->setStatusReconstruct();
         }
 
@@ -1230,6 +1228,8 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
 
   unordered_map<RemappedKey, tuple<size_t, size_t, MarkedStatus>> infoMap;
   for(const auto&[key, row, height] : blockIndices) {
+    cout << "Key " << key << " status = " << nodes_[key]->status() << endl;
+    assert(nodes_[key]->status() != MARGINALIZED);
     infoMap.insert({key, {row, keyToOrdering_[key], nodes_[key]->status()}});
   }
 
@@ -1323,10 +1323,10 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
 
   assert(totalHeight == m.rows());
 
-  // DEBUG
-  cout << "Clique: " << *clique << endl << endl;
-  m.triangularView<Eigen::StrictlyUpper>().setZero();
-  cout << "Before eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
+  // // DEBUG
+  // cout << "Clique: " << *clique << endl << endl;
+  // m.triangularView<Eigen::StrictlyUpper>().setZero();
+  // cout << "Before eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
 
   Eigen::Block<Eigen::Map<ColMajorMatrix>> D = block(m, 0, 0, bWidth, bWidth);
   Eigen::LLT<Eigen::Ref<Eigen::Block<Eigen::Map<ColMajorMatrix>>>> llt(D);
@@ -1345,9 +1345,9 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
     C.selfadjointView<Eigen::Lower>().rankUpdate(B, -1);
   }
 
-  // DEBUG
-  m.triangularView<Eigen::StrictlyUpper>().setZero();
-  cout << "After eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
+  // // DEBUG
+  // m.triangularView<Eigen::StrictlyUpper>().setZero();
+  // cout << "After eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
 }
 
 void CholeskyEliminationTree::mergeWorkspaceClique(sharedClique clique) {

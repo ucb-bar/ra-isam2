@@ -386,6 +386,7 @@ void CholeskyEliminationTree::Clique::checkEditOrReconstruct(
 // }
 
 void CholeskyEliminationTree::Clique::setNodeStatus() {
+  // FIXME: delegate this checking to the nodes
   for(sharedNode node : nodes) {
     if(node->status() == NEW && this->status() == EDIT) {
       // Do nothing

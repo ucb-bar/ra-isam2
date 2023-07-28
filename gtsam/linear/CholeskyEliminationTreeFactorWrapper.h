@@ -166,12 +166,6 @@ public:
       cachedLinearFactor = nonlinearFactor_->linearize(theta);
       status_ = LINEARIZED;
       
-      // DEBUG
-      if(factorIndex_ == 102) {
-          theta.print();
-          cachedLinearFactor->print();
-      }
-      // DEBUG END
       return true;
     }
     return false;
@@ -228,12 +222,6 @@ public:
       const INFO& info,
       const PREDICATE& pred) {
       
-  // DEBUG
-  if(factorIndex_ == 102) {
-      cachedLinearFactor->print();
-  }
-  // DEBUG END
-
     const Matrix& Ab = jf->matrixObject().matrix();
     // const VerticalBlockMatrix& Ab = jf->matrixObject();
     size_t height = Ab.rows();
@@ -253,20 +241,12 @@ public:
         if(ordering2 < ordering1) {
           continue;
         }
-        std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
+        // std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
         Eigen::Block<const Matrix> Ab_j(Ab, 0, srcCol2, height, srcW2);
 
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         destBlock.noalias() += sign * Ab_j.transpose() * Ab_i;
-
-        // DEBUG
-        if(lowerKey == 40 && higherKey == 41) {
-            std::cout << "raw block = \n" << Ab_j << "\n\n" << Ab_i << std::endl << std::endl;
-            std::cout << "mult block = \n" << sign * Ab_j.transpose() * Ab_i << std::endl << std::endl;
-            std::cout << "dest block = \n" << destBlock << std::endl << std::endl;
-        }
-
       }
     }
   }
@@ -294,7 +274,7 @@ public:
           continue;
         }
 
-        std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
+        // std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         if(srcCol2 >= srcCol1) {
@@ -327,7 +307,7 @@ public:
       const INFO& info,
       const PREDICATE& pred) {
 
-    std::cout << "Updating hessian for " << *this << " sign = " << sign << std::endl;
+    // std::cout << "Updating hessian for " << *this << " sign = " << sign << std::endl;
 
     if(const JacobianFactor* jf = toJacobianFactor()) {
       updateHessianJacobian(jf, m, sign, info, pred);

@@ -511,11 +511,11 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
     update.error(nonlinearFactors_, calculateEstimate(), &result.errorAfter);
 
   updateDelta(true);
-  // DEBUG
-  cout << "Delta = " << endl;
-  delta_.print();
-  theta_.print();
-  // DEBUG END
+  // // DEBUG
+  // cout << "Delta = " << endl;
+  // delta_.print();
+  // theta_.print();
+  // // DEBUG END
 
   return result;
 }

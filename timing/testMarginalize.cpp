@@ -432,21 +432,21 @@ int main(int argc, char *argv[]) {
             }
 
             additionalMarkedKeys = KeyList(additionalKeys.begin(), additionalKeys.end());
-        cout << "here 6" << endl;
           }
           else {
             KeyVector marginalizableKeyVector(marginalizableKeys.begin(), marginalizableKeys.end());
-        cout << "here 7" << endl;
             FastMap<Key, int> constrainedKeysMap;
             isam2_marginalization(step, marginalizableKeyVector, activeKeys, isam2, &constrainedKeysMap, &additionalMarkedKeys);
-        cout << "here 7.5" << endl;
             constrainedKeys = constrainedKeysMap;
             assert(constrainedKeys.is_initialized());
             leafKeys = FastList<Key>(marginalizableKeys.begin(), marginalizableKeys.end());
-        cout << "here 8" << endl;
           }
 
           remove_or_marginalize_index++;
+        }
+
+        if(constrainedKeys->empty()) {
+          constrainedKeys = boost::none;
         }
 
         cout << "before update" << endl;

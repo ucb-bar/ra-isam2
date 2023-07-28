@@ -147,9 +147,6 @@ public:
   }
 
   void setStatusReconstruct() {
-    if(!(status_ == UNMARKED || status_ == RECONSTRUCT)) {
-      std::cout << "Clique " << *this << " status_ is " << status_ << std::endl;
-    }
     assert(status_ == UNMARKED || status_ == RECONSTRUCT);
     status_ = RECONSTRUCT;
   }
