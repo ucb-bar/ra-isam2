@@ -46,6 +46,8 @@ bool check_smoother(const NonlinearFactorGraph& fullgraph, const Values& fullini
   Point2 expected = fullfinal.at<Point2>(key);
   Point2 actual = smoother.calculateEstimate<Point2>(key);
 
+  cout << "Expected: " << expected << ", Actual = " << actual << endl;
+
   return assert_equal(expected, actual);
 }
 
@@ -55,7 +57,7 @@ TEST( IncrementalFixedLagSmoother, Example )
   // Test the IncrementalFixedLagSmoother in a pure linear environment. Thus, full optimization and
   // the IncrementalFixedLagSmoother should be identical (even with the linearized approximations at
   // the end of the smoothing lag)
-
+  
   SETDEBUG("IncrementalFixedLagSmoother update", true);
 
   // Set up parameters

@@ -119,6 +119,12 @@ class GTSAM_EXPORT ISAM2 : public BayesTree<ISAM2Clique> {
   /** Compare equality */
   virtual bool equals(const ISAM2& other, double tol = 1e-9) const;
 
+  CholeskyEliminationTree& getCholeskyEliminationTree() {
+    return eTree_;
+  }
+
+  void getAffectedDescendants(const KeyVector& marginalizableKeys, std::set<Key>* additionalKeys);
+
   /**
    * Add new factors, updating the solution and relinearizing as needed.
    *

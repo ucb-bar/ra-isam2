@@ -16,6 +16,7 @@
  * @author  Michael Kaess, Richard Roberts, Frank Dellaert
  */
 
+#include "gtsam/inference/Key.h"
 #include <gtsam/nonlinear/ISAM2-impl.h>
 #include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/nonlinear/ISAM2Result.h>
@@ -433,76 +434,31 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
     updateDelta(updateParams.forceFullSolve);
 
   // 1. Add new variables first
+  addVariables(newTheta, result.details());
   eTree_.addVariables(newTheta);
-
-  KeySet relinKeys;
 
   // 1. Add any new factors \Factors:=\Factors\cup\Factors'.
   // Also compute keys that are updated
-  KeySet observedKeys;
-  KeySet affectedKeys;
-  KeySet markedKeys;
+  RemappedKeySet observedKeys;
+  RemappedKeySet affectedKeys;
+  RemappedKeySet markedKeys;
 
-  update.pushBackFactors(newFactors, &nonlinearFactors_, &linearFactors_,
-                         &variableIndex_, &result.newFactorsIndices,
-                         &result.keysWithRemovedFactors);
-
-  update.computeUnusedKeys(newFactors, variableIndex_,
-                           result.keysWithRemovedFactors, &result.unusedKeys);
-
-  // 2. Initialize any new variables \Theta_{new} and add
-  // \Theta:=\Theta\cup\Theta_{new}.
-  addVariables(newTheta, result.details());
-  if (params_.evaluateNonlinearError)
-    update.error(nonlinearFactors_, calculateEstimate(), &result.errorBefore);
+  result.newFactorsIndices = nonlinearFactors_.add_factors(newFactors, false);
 
   // Compute involved keys
   // Compute relin keys
 
   // Gather involved keys
 
-  // 3. Mark linear update
-  // update.gatherInvolvedKeys(newFactors, nonlinearFactors_,
-  //                           result.keysWithRemovedFactors, &result.markedKeys);
-  // update.updateKeys(result.markedKeys, &result);
+  KeySet relinKeys;
 
-  result.variablesRelinearized = 0;
-  if (update.relinarizationNeeded(update_count_)) {
-    // 4. Mark keys in \Delta above threshold \beta:
-    // Roger 2/12/2023: relinKeys can just include new variables
-    relinKeys = update.gatherRelinearizeKeys(roots_, delta_, fixedVariables_,
-                                             &result.markedKeys);
+  relinKeys = update.CheckRelinearizationFull(delta_, params_.relinearizeThreshold);
 
-    // RelinKeys don't include the new keys, but the etree nodes are already marked un-linearized
-
-    // Roger DEBUG
-    // cout << "[Roger DEBUG] relinKeys: ";
-    // for(auto key : relinKeys) {
-    //     cout << key << " ";
-    // }
-    // cout << endl;
-
-    update.recordRelinearizeDetail(relinKeys, result.details());
-    if (!relinKeys.empty()) {
-      // 5. Mark cliques that involve marked variables \Theta_{J} and ancestors.
-      // Roger 2/12/2023. This is a bug, no? We only update if there are relinKeys?
-      update.findFluid(roots_, relinKeys, &result.markedKeys, result.details());
-      // 6. Update linearization point for marked variables:
-      // \Theta_{J}:=\Theta_{J}+\Delta_{J}.
-      theta_.retractMasked(delta_, relinKeys);
-
-      
-    }
-    result.variablesRelinearized = result.markedKeys.size();
+  if (!relinKeys.empty()) {
+    // 6. Update linearization point for marked variables:
+    // \Theta_{J}:=\Theta_{J}+\Delta_{J}.
+    UpdateImpl::ExpmapMasked(delta_, relinKeys, &theta_);
   }
-
-  KeyVector orphanKeys;
-  // 7. Linearize new factors
-  // update.linearizeNewFactors(newFactors, theta_, nonlinearFactors_.size(),
-  //                            result.newFactorsIndices, &linearFactors_);
-  // update.augmentVariableIndex(newFactors, result.newFactorsIndices,
-  //                             &variableIndex_);
-
 
   eTree_.markAffectedKeys(nonlinearFactors_,
                           result.newFactorsIndices,
@@ -511,7 +467,6 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
                           // updateParams.extraReelimKeys,
                           &affectedKeys,
                           &observedKeys);
-
 
   // This step is technically not needed, we can just do this in symbolic update
   eTree_.markAncestors(affectedKeys, &markedKeys);
@@ -526,6 +481,11 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   // if(theta_.size() > 2500 && theta_.size() < 2800) {
   //   cout << "marked keys size =  " <<  markedKeys.size() << endl;
   // }
+
+  if(updateParams.constrainedKeys) {
+    // If we have constrained keys, we need to reorder
+    reorder_flag = true;
+  }
   if(markedKeys.size() > 0
         && (theta_.size() - last_variable_count >= reorder_period 
         || affectedKeys.size() * 10 <= markedKeys.size() 
@@ -536,11 +496,8 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   if(reorder_flag) {
       // cout << "reordering" << endl;
       reorder_flag = false;
-      eTree_.updateOrdering(markedKeys, observedKeys);
+      eTree_.updateOrdering(markedKeys, observedKeys, updateParams);
   }
-
-  // cout << "marked keys size = " << markedKeys.size() << " affected size = " << affectedKeys.size() << endl;
-
 
   eTree_.symbolicElimination(markedKeys);
   eTree_.choleskyElimination(theta_);
@@ -548,31 +505,11 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   const ISAM2GaussNewtonParams& gaussNewtonParams =
       boost::get<ISAM2GaussNewtonParams>(params_.optimizationParams);
 
-  eTree_.backwardSolve(&delta_, gaussNewtonParams.wildfireThreshold);
-  // eTree_.backwardSolve(&delta_, 0);
+  eTree_.backsolve(&delta_, gaussNewtonParams.wildfireThreshold);
+  eTree_.reset();
   
-  // string fname = "/root/igo-gtsam/build/matrix.out";
-  // ofstream fout;
-  // fout.open(fname, ios_base::app);
-  // if(!fout.is_open()) {
-  //     cout << "Error opening file: " << fname << endl;
-  //     exit(1);
-  // }
-  // eTree_.print(fout);
-  // eTree_.print(cout);
-
-  // cout << "Theta = " << endl;
-  // theta_.print();
-
-  // cout << "eTree done" << endl;
-
-  // 8. Redo top of Bayes tree and update data structures
-  // recalculate(updateParams, relinKeys, orphanKeys, &result);
-  if (!result.unusedKeys.empty()) removeVariables(result.unusedKeys);
-  result.cliques = this->nodes().size();
-
-  if (params_.evaluateNonlinearError)
-    update.error(nonlinearFactors_, calculateEstimate(), &result.errorAfter);
+  // cout << "Delta = " << endl;
+  // delta_.print();
 
   // char t;
   // cin >> t;
@@ -581,11 +518,22 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   return result;
 }
 
+void ISAM2::getAffectedDescendants(const KeyVector& marginalizableKeys, set<Key>* additionalKeys) {
+  for(Key key : marginalizableKeys) {
+    eTree_.getAffectedDescendantKeys(key, *additionalKeys);
+  }
+}
+
 /* ************************************************************************* */
 void ISAM2::marginalizeLeaves(
     const FastList<Key>& leafKeysList,
     boost::optional<FactorIndices&> marginalFactorsIndices,
     boost::optional<FactorIndices&> deletedFactorsIndices) {
+
+  eTree_.marginalizeLeaves(leafKeysList, marginalFactorsIndices, deletedFactorsIndices);
+
+  return;
+
   // Convert to ordered set
   KeySet leafKeys(leafKeysList.begin(), leafKeysList.end());
 

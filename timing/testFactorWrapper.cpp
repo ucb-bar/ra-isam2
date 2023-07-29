@@ -1,9 +1,11 @@
+#include <gtsam/linear/CholeskyEliminationTreeFactorWrapper.h>
+#include <gtsam/linear/CholeskyEliminationTreeNode.h>
+
 #include <gtsam/slam/dataset.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/sam/BearingRangeFactor.h>
 #include <gtsam/geometry/Pose2.h>
 #include <gtsam/inference/Symbol.h>
-#include <gtsam/nonlinear/ISAM2.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/base/timing.h>
 
@@ -118,12 +120,9 @@ int main(int argc, char *argv[]) {
 
     cout << "Playing forward time steps..." << endl;
 
-    ISAM2Params isam2params;
-    isam2params.relinearizeSkip = relinearize_skip;
-    ISAM2 isam2(isam2params);
-
     vector<int> update_times, calc_times;
 
+    CholeskyEliminationTree etree;
     size_t nextMeasurement = 0;
     int K_count = 0;
     int print_count = 0;
@@ -131,6 +130,8 @@ int main(int argc, char *argv[]) {
     Pose prevPose;
     Values newVariables;
     NonlinearFactorGraph newFactors;
+    NonlinearFactorGraph allFactors;
+
     for(size_t step=1; nextMeasurement < measurements.size(); ++step) {
 
         // Collect measurements and new variables for the current step
@@ -168,8 +169,8 @@ int main(int argc, char *argv[]) {
                         newPose = measurement->measured().inverse();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                        if(step > 0) {
+                          prevPose = newVariables.at<Pose>(step - 1);
                         }
                         newPose = prevPose * measurement->measured().inverse();
                     }
@@ -181,116 +182,73 @@ int main(int argc, char *argv[]) {
                         newPose = measurement->measured();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                        if(step > 0) {
+                          prevPose = newVariables.at<Pose>(step - 1);
                         }
                         newPose = prevPose * measurement->measured();
                     }
                     newVariables.insert(step, newPose);
                     prevPose = newPose;
                 }
+
             }
             else {
                 throw std::runtime_error("Unknown factor type read from data file");
             }
             ++ nextMeasurement;
         }
+        
+        RemappedKeySet affectedKeys, observedKeys;
+        FactorIndices newFactorIndices = allFactors.add_factors(newFactors, true);
 
-        // Update iSAM2
-        int d1 = 0, d2 = 0;
-        if(K_count == K || nextMeasurement == measurements.size()) {
-            if(step % print_frequency == 0) {
-                cout << "step = " << step << endl;
-            }
+        etree.addVariables(newVariables);
+        etree.markAffectedKeys(newFactors, newFactorIndices, KeySet(), ISAM2UpdateParams(), &affectedKeys, &observedKeys);
 
-            ISAM2UpdateParams params;
-            params.force_relinearize = true;
-            K_count = 0;
-            Values estimate;
-            auto start = chrono::high_resolution_clock::now();
-            isam2.update(newFactors, newVariables, params);
-            auto update_end = chrono::high_resolution_clock::now();
-            // estimate = isam2.calculateEstimate();
-            auto calc_end = chrono::high_resolution_clock::now();
-            d1 += chrono::duration_cast<chrono::microseconds>(update_end - start).count();
-            d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
+        etree.testFactorWrapper(initial);
 
-            if(step % print_frequency == 0) {
-                // estimate = isam2.calculateEstimate();
-                // cout << "Theta = " << endl;
-                // estimate.print();
-            }
-            if(step >= num_steps) {
-                break;
-            }
+        newVariables.clear();
+        newFactors = NonlinearFactorGraph();
 
-            // last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-            // print_count++;
-            // if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //     cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //          << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            // }
-
-            // if(K > 1) {
-            //     NonlinearFactorGraph dummy_nfg;
-            //     Values dummy_vals;
-            //     int iter = 0;
-
-            //     while(1) {
-            //         if(last_chi2 <= epsilon) {
-            //             break;
-            //         }
-            //         auto start = chrono::high_resolution_clock::now();
-            //         isam2.update(dummy_nfg, dummy_vals);
-            //         auto update_end = chrono::high_resolution_clock::now();
-            //         estimate = isam2.calculateEstimate();
-            //         auto calc_end = chrono::high_resolution_clock::now();
-            //         d1 += chrono::duration_cast<chrono::microseconds>
-            //                     (update_end - start).count();
-            //         d2 += chrono::duration_cast<chrono::microseconds>
-            //                     (calc_end - update_end).count();
-
-            //         double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-
-            //         if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //             cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //                 << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            //         }
-
-            //         if(abs(last_chi2 - chi2) < d_error) {
-            //             break;
-            //         }
-
-            //         last_chi2 = chi2;
-            //         iter++;
-            //         if(iter >= max_iter) {
-            //             cout << "Nonlinear optimization exceed max iterations: " 
-            //                  << iter << " >= " << max_iter << ", chi2 = " << chi2 << endl;
-            //             break;
-            //         }
-            //     }
-            // }
-            newVariables.clear();
-            newFactors = NonlinearFactorGraph();
+        if(step >= num_steps) {
+          break;;
         }
-        K_count++;
-        update_times.push_back(d1);
-        calc_times.push_back(d2);
-
     }
-
-    Values estimate(isam2.calculateEstimate());
-    double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-    cout << "final_chi2 = " << chi2 
-         << ", final_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-
-    for(int i = 0; i < update_times.size(); i++) {
-        cout << "step = " << i << ", update_time = " << update_times[i] << " us"
-             << ", calc_time = " << calc_times[i] << " us" << endl;
-    }
-
-    estimate.print();
-
-    tictoc_print2_();
-
 }
+
+void CholeskyEliminationTree::testFactorWrapper(const Values& theta) {
+  BlockIndexVector blockIndices;
+  vector<tuple<Key, size_t>> keyWidthPairs({{2, 3}, {0, 3}, {4, 3}, {1, 3}});
+  size_t curCol = 0;
+  for(auto&[key, width] : keyWidthPairs) {
+    blockIndices.push_back({addRemapKey(key), curCol, width});
+    curCol += width;
+  }
+  blockIndices.push_back({0, curCol, 1});
+
+  BlockIndexMap blockMap;
+  for(auto& p : blockIndices) {
+    blockMap.insert({std::get<BLOCK_INDEX_KEY>(p), 
+                    {get<BLOCK_INDEX_ROW>(p), get<BLOCK_INDEX_HEIGHT>(p)}});
+  }
+
+  size_t totalHeight = get<BLOCK_INDEX_ROW>(blockIndices.back()) + 1;
+  Matrix m(totalHeight, totalHeight);
+  m.setZero();
+
+  struct Pred {
+    CholeskyEliminationTree* etree = nullptr;
+    Pred(CholeskyEliminationTree* etree_in) : etree(etree_in) {}
+    bool operator()(const RemappedKey& key) const { 
+      return key != 0; 
+    }
+  };
+
+  for(sharedFactorWrapper factorWrapper : factors_) {
+    factorWrapper->linearizeIfNeeded(theta);
+    factorWrapper->getLinearFactor()->print();
+    factorWrapper->updateHessian(m, -1, blockMap, Pred(this));
+  }
+
+  cout << "m = \n" << m << endl;
+}
+

@@ -149,14 +149,14 @@ void ISAM2::recalculate(const ISAM2UpdateParams& updateParams,
     gttoc(affectedKeys);
 
     KeySet affectedKeysSet;
-    static const double kBatchThreshold = 0.65;
-    if (affectedKeys.size() >= theta_.size() * kBatchThreshold) {
-      // Do a batch step - reorder and relinearize all variables
-      recalculateBatch(updateParams, &affectedKeysSet, result);
-    } else {
+    // static const double kBatchThreshold = 0.65;
+    // if (affectedKeys.size() >= theta_.size() * kBatchThreshold) {
+    //   // Do a batch step - reorder and relinearize all variables
+    //   recalculateBatch(updateParams, &affectedKeysSet, result);
+    // } else {
       recalculateIncremental(updateParams, relinKeys, affectedKeys,
                              &affectedKeysSet, &orphans, result);
-    }
+    // }
 
     // Root clique variables for detailed results
     if (result->detail && params_.enableDetailedResults) {
@@ -256,6 +256,7 @@ void ISAM2::recalculateIncremental(const ISAM2UpdateParams& updateParams,
   affectedAndNewKeys.insert(affectedAndNewKeys.end(),
                             result->observedKeys.begin(),
                             result->observedKeys.end());
+
   GaussianFactorGraph factors =
       relinearizeAffectedFactors(updateParams, affectedAndNewKeys, relinKeys);
 
@@ -334,10 +335,46 @@ void ISAM2::recalculateIncremental(const ISAM2UpdateParams& updateParams,
   }
   gttoc(ordering_constraints);
 
+  // // DEBUG: Custom ordering
+  // static ifstream ordering_fin("/home/rogerhh/gtsam-kimera-integrate/build/marginalize_incorrect.out");
+  // vector<int> custom;
+  // string header;
+  // while(ordering_fin >> header) {
+  //   if(header == "NEW_GTSAM_ORDERING") {
+  //       int max_key, key;
+  //       ordering_fin >> max_key >> header >> header;
+  //       cout << "max_key: " << max_key << endl;
+  //       cout << "custom: ";
+  //       for(int i = 0; i <= max_key; i++) {
+  //           ordering_fin >> key;
+  //           if(affectedKeysSet->find(key) != affectedKeysSet->end()) {
+  //               custom.push_back(key);
+  //               cout << key << " ";
+  //           }
+  //       }
+  //       cout << endl;
+  //       break;
+  //   }
+  // }
+
+  // Ordering ordering;
+  // if(custom.empty()) {
+  //   ordering = Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
+  // }
+  // else {
+  //   ordering = Ordering(custom);
+  // }
+
   // Generate ordering
   gttic(Ordering);
   const Ordering ordering =
       Ordering::ColamdConstrained(affectedFactorsVarIndex, constraintGroups);
+  // DEBUG: Custom ordering
+
+  // // const Ordering ordering(*affectedKeysSet);
+  // cout << "Ordering: \n";
+  // ordering.print();
+  // cout << endl;
   gttoc(Ordering);
 
   // Do elimination
@@ -472,7 +509,47 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 
   if (params_.evaluateNonlinearError)
     update.error(nonlinearFactors_, calculateEstimate(), &result.errorAfter);
+
+  updateDelta(true);
+  // // DEBUG
+  // cout << "Delta = " << endl;
+  // delta_.print();
+  // theta_.print();
+  // // DEBUG END
+
   return result;
+}
+
+/* ************************************************************************* */
+void recursiveMarkAffectedKeys(const Key& key,
+    const ISAM2Clique::shared_ptr& clique, std::set<Key>* additionalKeys) {
+
+  // Check if the separator keys of the current clique contain the specified key
+  if (std::find(clique->conditional()->beginParents(),
+      clique->conditional()->endParents(), key)
+      != clique->conditional()->endParents()) {
+
+    // Mark the frontal keys of the current clique
+    for(Key i: clique->conditional()->frontals()) {
+      additionalKeys->insert(i);
+    }
+
+    // Recursively mark all of the children
+    for(const ISAM2Clique::shared_ptr& child: clique->children) {
+      recursiveMarkAffectedKeys(key, child, additionalKeys);
+    }
+  }
+  // If the key was not found in the separator/parents, then none of its children can have it either
+}
+
+void ISAM2::getAffectedDescendants(const KeyVector& marginalizableKeys, set<Key>* additionalKeys) {
+  additionalKeys->clear();
+  for(Key key: marginalizableKeys) {
+    ISAM2Clique::shared_ptr clique = (*this)[key];
+    for(const ISAM2Clique::shared_ptr& child: clique->children) {
+      recursiveMarkAffectedKeys(key, child, additionalKeys);
+    }
+  }
 }
 
 /* ************************************************************************* */
@@ -669,6 +746,8 @@ void ISAM2::marginalizeLeaves(
         nonlinearFactors_.push_back(
             boost::make_shared<LinearContainerFactor>(factor));
         if (params_.cacheLinearizedFactors) linearFactors_.push_back(factor);
+        // 2023/07/27: Roger: This seems wrong, just because a variable has a factor that 
+        // is marginalized does not mean that the factor should be fixed
         for (Key factorKey : *factor) {
           fixedVariables_.insert(factorKey);
         }

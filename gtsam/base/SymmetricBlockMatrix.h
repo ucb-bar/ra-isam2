@@ -309,6 +309,10 @@ namespace gtsam {
      */
     VerticalBlockMatrix split(DenseIndex nFrontals);
 
+    // Roger added
+    const Matrix& matrix() const { return matrix_; }
+    Matrix& matrix() { return matrix_; }
+
   protected:
 
     /// Number of offsets in the full matrix.
