@@ -144,7 +144,7 @@ void CholeskyEliminationTree::markAffectedKeys(
   }
 
   if(updateParams.newAffectedKeys) {
-    for(auto&[factorIndex, newKeys] : updateParams.newAffectedKeys) {
+    for(auto&[factorIndex, newKeys] : *updateParams.newAffectedKeys) {
       
     }
   }
