@@ -126,9 +126,15 @@ FixedLagSmoother::Result IncrementalFixedLagSmoother::update(
 
   KeyList additionalMarkedKeys(additionalKeys.begin(), additionalKeys.end());
 
+  // std::cout << "[Roger DEBUG] Before isam update" << std::endl;
+
   // Update iSAM2
   isamResult_ = isam_.update(newFactors, newTheta,
       factorsToRemove, constrainedKeys, boost::none, additionalMarkedKeys);
+
+  // std::cout << "[Roger DEBUG] IncrementalFixedLagSmoother after marginalization" << std::endl;
+  // isam_.getCholeskyEliminationTree().printOrderingRemapped(std::cout);
+  // isam_.getCholeskyEliminationTree().printOrderingUnmapped(std::cout);
 
   if (debug) {
     PrintSymbolicTree(isam_,
