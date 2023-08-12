@@ -222,9 +222,33 @@ public:
       const INFO& info,
       const PREDICATE& pred) {
       
+    // First check if any of the columns need to be processed
+    bool skip = true;
+    for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
+      // Higher key represents the column. Don't need last column
+      const auto&[destR1, ordering1, status1] = info(i);
+      // std::cout << "checking lowerKey = " << lowerKey << std::endl;
+      if(pred(status1)) {
+        skip = false;
+        continue;
+      }
+    }
+    if(skip) { return; }
+
     const Matrix& Ab = jf->matrixObject().matrix();
     // const VerticalBlockMatrix& Ab = jf->matrixObject();
     size_t height = Ab.rows();
+    size_t width = Ab.cols();
+
+    
+    std::vector<float> Ab_float(height * width, 0);
+    gather(Ab, Ab_float.data());
+
+    // Allocate a large scratch space
+    std::vector<float> C_float(width * width, 0);
+    syrk(height, width, 
+         sign,
+         Ab_float.data(), C_float.data());
 
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
@@ -234,19 +258,21 @@ public:
       if(!pred(status1)) {
         continue;
       }
-      Eigen::Block<const Matrix> Ab_i(Ab, 0, srcCol1, height, srcW1);
       for(size_t j = 0; j < blockIndices_.size(); j++) {
         const auto&[higherKey, srcCol2, srcW2] = blockIndices_.at(j);
         const auto&[destR2, ordering2, status2] = info(j);
         if(ordering2 < ordering1) {
           continue;
         }
-        // std::cout << "lowerKey = " << lowerKey << " higherKey = " << higherKey << std::endl;
-        Eigen::Block<const Matrix> Ab_j(Ab, 0, srcCol2, height, srcW2);
 
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
-        destBlock.noalias() += sign * Ab_j.transpose() * Ab_i;
+        if(srcCol2 >= srcCol1) {
+          scatter_add(width, width, C_float, srcCol2, srcCol1, srcW2, srcW1, destBlock);
+        }
+        else {
+          transpose_scatter_add(width, width, C_float, srcCol1, srcCol2, srcW1, srcW2, destBlock);
+        }
       }
     }
   }
