@@ -12,7 +12,6 @@
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/ISAM2UpdateParams.h>
-#include <gtsam/linear/gemmini_functions.h>
 #include <vector>
 #include <unordered_map>
 #include <utility>

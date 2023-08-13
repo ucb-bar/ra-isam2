@@ -10,6 +10,7 @@
 #include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/nonlinear/NonlinearFactor.h>
+#include <gtsam/linear/gemmini_functions.h>
 #include <utility>
 
 namespace gtsam {
@@ -241,11 +242,11 @@ public:
     size_t width = Ab.cols();
 
     
-    std::vector<float> Ab_float(height * width, 0);
+    std::vector<GEMMINI_TYPE> Ab_float(height * width, 0);
     gather(Ab, Ab_float.data());
 
     // Allocate a large scratch space
-    std::vector<float> C_float(width * width, 0);
+    std::vector<GEMMINI_TYPE> C_float(width * width, 0);
     syrk(height, width, 
          sign,
          Ab_float.data(), C_float.data());
@@ -268,10 +269,10 @@ public:
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         if(srcCol2 >= srcCol1) {
-          scatter_add(width, width, C_float, srcCol2, srcCol1, srcW2, srcW1, destBlock);
+          scatter_add(width, width, C_float.data(), srcCol2, srcCol1, srcW2, srcW1, destBlock);
         }
         else {
-          transpose_scatter_add(width, width, C_float, srcCol1, srcCol2, srcW1, srcW2, destBlock);
+          transpose_scatter_add(width, width, C_float.data(), srcCol1, srcCol2, srcW1, srcW2, destBlock);
         }
       }
     }

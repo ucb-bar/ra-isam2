@@ -51,6 +51,21 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
     RemappedKey key = addRemapKey(unmappedKey);
     addNewNode(key, dim);
     
+    // Add regularization factor because problem is too ill conditioned
+    double lambda = 100000; // This needs to be a large number since the Hessian factor takes in the covariance matrix
+    Vector mu = Matrix::Zero(dim, 1);
+    Matrix sigma = lambda * Matrix::Identity(dim, dim);
+    HessianFactor::shared_ptr regularization_factor 
+        = boost::make_shared<HessianFactor>(unmappedKey, mu, sigma);
+
+    size_t factorIndex = factors_.size();
+    sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
+            factorIndex, nullptr, regularization_factor, this);
+
+    factors_.push_back(factorWrapper);
+
+    nodes_[key]->addFactor(factorWrapper);
+
   }
 } 
 
