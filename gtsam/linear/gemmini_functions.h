@@ -9,7 +9,7 @@
 #ifndef GEMMINI_FUNCTIONS_H
 #define GEMMINI_FUNCTIONS_H
 
-#define GEMMINI_TYPE double
+#define GEMMINI_TYPE float
 
 #include <gtsam/base/Matrix.h>
 #include <iostream>
