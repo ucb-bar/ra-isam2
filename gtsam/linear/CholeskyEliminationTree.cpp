@@ -1040,7 +1040,19 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
 
   if(processGrouped) {
 
-    C.selfadjointView<Eigen::Lower>().rankUpdate(B, sign);
+    vector<GEMMINI_TYPE> BT_float(diagWidth * subdiagHeight, 0);
+    vector<GEMMINI_TYPE> C_float(subdiagHeight * subdiagHeight, 0);
+    transpose_gather(B, BT_float.data());
+    syrk(diagWidth, subdiagHeight, 
+         sign,
+         BT_float.data(), C_float.data());
+
+    scatter_add(subdiagHeight, subdiagHeight, 
+                C_float.data(), 
+                0, 0, subdiagHeight, subdiagHeight,
+                C);
+
+    // C.selfadjointView<Eigen::Lower>().rankUpdate(B, sign);
 
     auto destIt = destCols.begin();
     auto destEnd = destCols.end();
@@ -1395,7 +1407,22 @@ void CholeskyEliminationTree::backsolveClique(
     }
 
     auto B = block(m, diagWidth, 0, subdiagHeight - 1, diagWidth); // sub-diagonal blocks
-    delta -= B.transpose() * gatherX;
+    vector<GEMMINI_TYPE> B_float((subdiagHeight - 1) * diagWidth, 0);
+    gather(B, B_float.data());
+    vector<GEMMINI_TYPE> gatherX_float(subdiagHeight - 1, 0);
+    gather(gatherX, gatherX_float.data());
+    vector<GEMMINI_TYPE> delta_float(diagWidth, 0);
+    gather(delta, delta_float.data());
+    transpose_gemv(subdiagHeight - 1, diagWidth, 
+                   -1,
+                   B_float.data(), gatherX_float.data(), delta_float.data());
+
+    delta.setZero();
+    scatter_add(diagWidth, 1, delta_float.data(), 
+                0, 0, diagWidth, 1,
+                delta);
+
+    // delta -= B.transpose() * gatherX;
   }
   
   // Solve diagonal

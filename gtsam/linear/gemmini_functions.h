@@ -9,14 +9,14 @@
 #ifndef GEMMINI_FUNCTIONS_H
 #define GEMMINI_FUNCTIONS_H
 
-#define GEMMINI_TYPE float
+#define GEMMINI_TYPE double
 
 #include <gtsam/base/Matrix.h>
 #include <iostream>
 
 namespace gtsam {
 
-// Copy the contents of M into a GEMMINI_TYPEing point array A
+// Copy the contents of M into a GEMMINI_TYPE array A
 // M is typically a matrix of doubles, so it must be down-casted
 // A must be preallocated
 template<typename MATRIX>
@@ -27,6 +27,23 @@ void gather(const MATRIX& M, GEMMINI_TYPE* A) {
     GEMMINI_TYPE* A_start = A + j * rows;
     for(size_t i = 0; i < rows; i++) {
       *(A_start + i) = (GEMMINI_TYPE) M(i, j);
+    }
+  }
+}
+
+// Copy the contents of M.T into a GEMMINI_TYPE array A
+// M is typically a matrix of doubles, so it must be down-casted
+// A must be preallocated
+template<typename MATRIX>
+void transpose_gather(const MATRIX& M, GEMMINI_TYPE* A) {
+  size_t rows = M.rows();
+  size_t cols = M.cols();
+  size_t stride = cols;
+  for(size_t j = 0; j < cols; j++) {
+    GEMMINI_TYPE* A_start = A + j;
+    for(size_t i = 0; i < rows; i++) {
+      *(A_start) = (GEMMINI_TYPE) M(i, j);
+      A_start += stride;
     }
   }
 }
@@ -107,6 +124,40 @@ void transpose_scatter_add(
       M(i, j) += (double) *(A_start + i * A_rows);
     }
   }
+}
+
+// Do y += scale * Ax
+inline void gemv(
+  size_t A_rows, size_t A_cols,
+  GEMMINI_TYPE scale,
+  const GEMMINI_TYPE* A, 
+  const GEMMINI_TYPE* x,
+  GEMMINI_TYPE* y) {
+
+  for(size_t j = 0; j < A_cols; j++) {
+    const GEMMINI_TYPE* A_start = A + j * A_rows;
+    for(size_t i = 0; i < A_rows; i++) {
+      y[i] += scale * A_start[i] * x[j];
+    }
+  }
+
+}
+
+// Do y += scale * A.Tx
+inline void transpose_gemv(
+  size_t A_rows, size_t A_cols,
+  GEMMINI_TYPE scale,
+  const GEMMINI_TYPE* A, 
+  const GEMMINI_TYPE* x, 
+  GEMMINI_TYPE* y) {
+
+  for(size_t j = 0; j < A_cols; j++) {
+    const GEMMINI_TYPE* A_start = A + j * A_rows;
+    for(size_t i = 0; i < A_rows; i++) {
+      y[j] += scale * A_start[i] * x[i];
+    }
+  }
+
 }
 
 } // namespace gtsam

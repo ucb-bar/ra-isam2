@@ -39,4 +39,10 @@ int main() {
 
   cout << m << endl;
 
+  vector<float> n_float(25, 0);
+  transpose_gather(m, n_float.data());
+
+  Eigen::Map<Eigen::MatrixXf> B(n_float.data(), 5, 5);
+  cout << B << endl;
+
 }
