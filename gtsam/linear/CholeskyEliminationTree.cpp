@@ -14,6 +14,7 @@
 #include <gtsam/linear/CholeskyEliminationTreeFactorWrapper.h>
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
 #include <gtsam/linear/CliqueColumns.h>
+#include <gtsam/linear/gemmini_functions.h>
 #include <gtsam/3rdparty/CCOLAMD/Include/ccolamd.h>
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -1041,7 +1042,7 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
   if(processGrouped) {
 
     // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
-    matmul(subdiagHeight, subdiagHeight, diagWidth,
+    syrk(subdiagHeight, subdiagHeight, diagWidth,
            &m(diagWidth, 0), &m(diagWidth, 0), &m(diagWidth, diagWidth),
            totalHeight, totalHeight, totalHeight,
            sign, 1, 

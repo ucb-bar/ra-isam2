@@ -243,35 +243,18 @@ public:
 
     
     std::vector<GEMMINI_TYPE> Ab_float(height * width, 0);
-    gather(Ab, Ab_float.data());
 
     // Allocate a large scratch space
     std::vector<GEMMINI_TYPE> C_float(width * width, 0);
     // std::vector<GEMMINI_TYPE> C_float_copy(width * width, 0);
 
     // We want to get H^T = BB^T, where B = A^T
-    matmul(height, height, width,
+    syrk(width, width, height,
            &Ab(0, 0), &Ab(0, 0), C_float.data(),
            height, height, width,
-           1, 1, 
+           sign, 1, 
            false, true);
     
-    // syrk(height, width, 
-    //      sign,
-    //      Ab_float.data(), C_float.data());
-
-    // std::cout << "C_float = ";
-    // for(auto f : C_float) {
-    //   std::cout << f << " ";
-    // }
-    // std::cout << std::endl;
-    // std::cout << "C_float_copy = ";
-    // for(auto f : C_float_copy) {
-    //   std::cout << f << " ";
-    // }
-    // std::cout << std::endl;
-    // exit(0);
-
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
       const auto&[lowerKey, srcCol1, srcW1] = blockIndices_.at(i);
