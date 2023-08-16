@@ -1040,17 +1040,24 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
 
   if(processGrouped) {
 
-    vector<GEMMINI_TYPE> BT_float(diagWidth * subdiagHeight, 0);
-    vector<GEMMINI_TYPE> C_float(subdiagHeight * subdiagHeight, 0);
-    transpose_gather(B, BT_float.data());
-    syrk(diagWidth, subdiagHeight, 
-         sign,
-         BT_float.data(), C_float.data());
+    // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
+    matmul(subdiagHeight, subdiagHeight, diagWidth,
+           &m(diagWidth, 0), &m(diagWidth, 0), &m(diagWidth, diagWidth),
+           totalHeight, totalHeight, totalHeight,
+           sign, 1, 
+           true, false);
 
-    scatter_add(subdiagHeight, subdiagHeight, 
-                C_float.data(), 
-                0, 0, subdiagHeight, subdiagHeight,
-                C);
+    // vector<GEMMINI_TYPE> BT_float(diagWidth * subdiagHeight, 0);
+    // vector<GEMMINI_TYPE> C_float(subdiagHeight * subdiagHeight, 0);
+    // transpose_gather(B, BT_float.data());
+    // syrk(diagWidth, subdiagHeight, 
+    //      sign,
+    //      BT_float.data(), C_float.data());
+
+    // scatter_add(subdiagHeight, subdiagHeight, 
+    //             C_float.data(), 
+    //             0, 0, subdiagHeight, subdiagHeight,
+    //             C);
 
     // C.selfadjointView<Eigen::Lower>().rankUpdate(B, sign);
 
@@ -1275,7 +1282,22 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
   L.solveInPlace(B.transpose());
 
   if(bHeight != -1) {
-    C.selfadjointView<Eigen::Lower>().rankUpdate(B, -1);
+    // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
+    // static int debug_count = 0;
+    // cout << "m before = \n" << m << endl << endl;
+    syrk(bHeight, bHeight, bWidth,
+           &m(bWidth, 0), &m(bWidth, 0), &m(bWidth, bWidth),
+           totalHeight, totalHeight, totalHeight,
+           -1, 1, 
+           true, false);
+
+    // cout << "m after = \n" << m << endl << endl;
+    // debug_count++;
+    // if(debug_count >= 10) {
+    //     exit(1);
+    // }
+
+    // C.selfadjointView<Eigen::Lower>().rankUpdate(B, -1);
   }
 
   // // DEBUG
@@ -1406,23 +1428,32 @@ void CholeskyEliminationTree::backsolveClique(
       gatherX.block(row, 0, height, 1) = delta_ptr->at(unmappedKey);
     }
 
-    auto B = block(m, diagWidth, 0, subdiagHeight - 1, diagWidth); // sub-diagonal blocks
-    vector<GEMMINI_TYPE> B_float((subdiagHeight - 1) * diagWidth, 0);
-    gather(B, B_float.data());
-    vector<GEMMINI_TYPE> gatherX_float(subdiagHeight - 1, 0);
-    gather(gatherX, gatherX_float.data());
-    vector<GEMMINI_TYPE> delta_float(diagWidth, 0);
-    gather(delta, delta_float.data());
-    transpose_gemv(subdiagHeight - 1, diagWidth, 
-                   -1,
-                   B_float.data(), gatherX_float.data(), delta_float.data());
+    // Vector delta_copy = delta;
+    gemv(diagWidth, subdiagHeight - 1, 
+         &m(diagWidth, 0), &gatherX(0), &delta(0), 
+         totalHeight, 
+         -1);
 
-    delta.setZero();
-    scatter_add(diagWidth, 1, delta_float.data(), 
-                0, 0, diagWidth, 1,
-                delta);
+    // auto B = block(m, diagWidth, 0, subdiagHeight - 1, diagWidth); // sub-diagonal blocks
+    // vector<GEMMINI_TYPE> B_float((subdiagHeight - 1) * diagWidth, 0);
+    // gather(B, B_float.data());
+    // vector<GEMMINI_TYPE> gatherX_float(subdiagHeight - 1, 0);
+    // gather(gatherX, gatherX_float.data());
+    // vector<GEMMINI_TYPE> delta_float(diagWidth, 0);
+    // gather(delta, delta_float.data());
+    // transpose_gemv(subdiagHeight - 1, diagWidth, 
+    //                -1,
+    //                B_float.data(), gatherX_float.data(), delta_float.data());
 
+    // delta.setZero();
+    // scatter_add(diagWidth, 1, delta_float.data(), 
+    //             0, 0, diagWidth, 1,
+    //             delta);
     // delta -= B.transpose() * gatherX;
+
+    // cout << "delta = " << delta << endl;;
+    // cout << "delta copy = " << delta_copy << endl;
+
   }
   
   // Solve diagonal
