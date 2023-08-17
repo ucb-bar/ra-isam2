@@ -333,6 +333,25 @@ void CholeskyEliminationTree::Clique::populateBlockIndices(
   }
 }
 
+void CholeskyEliminationTree::Clique::extendBlockIndices(
+    const std::vector<RemappedKey>& colStructure) {
+  const size_t cliqueSize = this->cliqueSize();
+
+  assert(colStructure.back() == 0);
+  assert(get<BLOCK_INDEX_KEY>(blockIndices[cliqueSize - 1]) == colStructure[0]);
+
+  size_t row = get<BLOCK_INDEX_ROW>(blockIndices[cliqueSize]);
+  blockIndices.resize(cliqueSize - 1 + colStructure.size());
+
+  for(size_t i = 1; i < colStructure.size(); i++) {
+    RemappedKey k = colStructure[i];
+    size_t height = etree->colWidth(k);
+    blockIndices[cliqueSize - 1 + i] = {k, row, height};
+    row += height;
+  }
+
+}
+
 bool CholeskyEliminationTree::Clique::hasMarkedAncestor() {
   // only need to check highest key that is not 0 (last row)
   assert(blockIndices.size() > cliqueSize() + 1);

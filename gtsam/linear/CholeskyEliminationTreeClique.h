@@ -113,6 +113,9 @@ public:
   // Populate blockIndices given a colStructure
   void populateBlockIndices(const std::vector<RemappedKey>& colStructure);
 
+  // Extend a blockIndices with a colStructure
+  void extendBlockIndices(const std::vector<RemappedKey>& colStructure);
+
   // Returns true if clique contributes to an ancestor that is marked
   // Only need to check highest key that is not 0
   bool hasMarkedAncestor();

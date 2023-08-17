@@ -112,7 +112,7 @@ inline void syrk(
   }
 }
 
-// Perform y += A_scale_factor A * x + z
+// Perform y += A_scale_factor A * x
 inline void gemv(
   size_t dim_I, size_t dim_K,
   const elem_t* A, const elem_t* x, elem_t* y,

@@ -118,22 +118,22 @@ public:
   // Get the row mappings from one CliqueColumns to another
   // The blockIndices of the src CliqueColumns must be a subset of this one
   // and must be in the same order
-  std::vector<Scatter> getScatterMap(const CliqueColumns& src);
+  std::vector<Scatter> getScatterMap(CliqueColumns& src);
 
   // Get the row mappings from one CliqueColumns to another
   // The blockIndices of the src CliqueColumns must be a subset of this one
   // But they don't have to be in the same order
-  std::vector<Scatter> getScatterMapReordered(const CliqueColumns& src);
+  std::vector<Scatter> getScatterMapReordered(CliqueColumns& src);
 
   // Add the entries of the CliqueColumn src into the entries of this. As the src CliqueColumns blockIndices is the subset 
   // of this->blockIndices, a scatter operation is needed.
-  void addCliqueColumns(const CliqueColumns& src, bool reordered=false);
+  void addCliqueColumns(CliqueColumns& src, bool reordered=false);
 
   // Add the entries of the src CliqueColumns into the entries of this with the help
   // of a row mapping from the src CliqueColumns to this one
   // This is for the possible future extension of spliting the workspace matrix into
   // 2 parts, but only needing 1 scatterMap
-  void addCliqueColumns(const CliqueColumns& src, const std::vector<Scatter>& scatterMap);
+  void addCliqueColumns(CliqueColumns& src, const std::vector<Scatter>& scatterMap);
 
   friend std::ostream& operator<<(std::ostream& os, const CliqueColumns& cliqueColumns);
  

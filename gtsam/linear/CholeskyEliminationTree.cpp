@@ -322,6 +322,7 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
   // cout << endl;
 
   bool mergeFlag = false;
+  bool extendFlag = true;
   if(clique->nodes.front()->key != 0 &&
       clique->children.size() == 1) {
     // Clique 0 cannot be merged and will always be root
@@ -335,11 +336,25 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
       clique = childClique;
       mergeFlag = true;
     }
+    // gemmini-integrate: trying to merge more cliques together
+    else if(childClique->marked() 
+        && childClique->cliqueSize() < 4) {
+      childClique->mergeClique(clique);
+      // Need to update clique pointer to current clique, which is the child clique
+      assert(clique.unique());
+      clique.reset();
+      clique = childClique;
+      mergeFlag = true;
+      extendFlag = true;    // Need to extend child's block indices since they don't exactly match
+    }
   }
 
   // Need to popoluate our own blockIndices
   if(!mergeFlag) {
     clique->populateBlockIndices(colStructure);
+  }
+  else if(extendFlag) {
+    clique->extendBlockIndices(colStructure);
   }
 
   // Find parent after merging cliques
@@ -1274,6 +1289,7 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
   if(llt.info() == Eigen::NumericalIssue) {
     cout << "Diagonal block not positive definite!" << endl;
     clique->printClique(cout);
+    cout << "D = \n" << D << endl << endl;
     exit(1);
   }
   auto L = D.triangularView<Eigen::Lower>();

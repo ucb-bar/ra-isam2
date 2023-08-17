@@ -30,7 +30,7 @@ bool CliqueColumns::merge(const CliqueColumns& other) {
   return false;
 }
 
-std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(const CliqueColumns& src) {
+std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(CliqueColumns& src) {
   if(!src.allocated()) {
     return std::vector<Scatter>();
   }
@@ -41,6 +41,7 @@ std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(const CliqueCol
   std::vector<Scatter> scatterMap;
 
   size_t lastDestRow = -1;
+  size_t lastDestMatch = 0;
 
   while(i1 < blockIndices_->size() && i2 < src.blockIndices_->size()) {
     RemappedKey k1 = std::get<BLOCK_INDEX_KEY>(blockIndices_->at(i1));
@@ -61,9 +62,24 @@ std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(const CliqueCol
       lastDestRow = destRow + height;
 
       i1++; i2++;
+      lastDestMatch = i1;
     }
     else {
       i1++;
+      // If cannot find match for src index, just skip it
+      if(i1 == blockIndices_->size()) {
+
+        // auto&[key, row, height] = src.blockIndices_->at(i2);
+        // auto src_m = src.matrix();
+        // size_t width = src_m.cols();
+        // cout << "unused key " << key << " " << row << " " << height << endl;
+        // Eigen::Block<Eigen::Map<ColMajorMatrix>> unused_row(src_m, row, 0, height, width);
+        // cout << "key = " << key << " unused row = \n" << unused_row << endl << endl;
+
+        i2++;
+        i1 = lastDestMatch;
+        lastDestRow = -1;
+      }
     }
   }
 
@@ -71,6 +87,17 @@ std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(const CliqueCol
   assert(i2 == src.blockIndices_->size());
 
   if(i1 != blockIndices_->size() || i2 != src.blockIndices_->size()) {
+    cout << "blockIndices: ";
+    for(auto t : (*blockIndices_)) {
+      cout << "[" << get<0>(t) << " " << get<1>(t) << " " << get<2>(t) << "] ";
+    }
+    cout << endl;
+    cout << "src blockIndices: ";
+    for(auto t : (*src.blockIndices_)) {
+      cout << "[" << get<0>(t) << " " << get<1>(t) << " " << get<2>(t) << "] ";
+    }
+    cout << endl;
+    cout << "src = \n" << src << endl;
     throw std::runtime_error("BlockIndices do not match!");
   }
 
@@ -78,7 +105,7 @@ std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(const CliqueCol
 }
 
 std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMapReordered(
-    const CliqueColumns& src) {
+    CliqueColumns& src) {
 
   if(!src.allocated()) {
     return std::vector<Scatter>();
@@ -111,7 +138,7 @@ std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMapReordered(
 
 // Add the entries of the CliqueColumn src into the entries of this. As the src CliqueColumns blockIndices is the subset 
 // of this->blockIndices, a scatter operation is needed.
-void CliqueColumns::addCliqueColumns(const CliqueColumns& src, bool reordered) {
+void CliqueColumns::addCliqueColumns(CliqueColumns& src, bool reordered) {
   if(!src.allocated()) {
     return;
   }
@@ -136,7 +163,7 @@ void CliqueColumns::addCliqueColumns(const CliqueColumns& src, bool reordered) {
 // This is for the possible future extension of spliting the workspace matrix into
 // 2 parts, but only needing 1 scatterMap
 void CliqueColumns::addCliqueColumns(
-    const CliqueColumns& src, const std::vector<Scatter>& scatterMap) {
+    CliqueColumns& src, const std::vector<Scatter>& scatterMap) {
   // We can experiment with how exactly to do the copying
   // But in terms of hw compatibility, seems like we want to copy over col by col
   // Now use the scatterMap to copy over entries
