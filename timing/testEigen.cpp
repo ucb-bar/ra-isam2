@@ -20,7 +20,7 @@ void call_matmul(
          transpose_A, transpose_B);
 }
 
-using RowMajorMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>; 
+using RowMajorMatrix = Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>; 
 
 int main() {
   RowMajorMatrix m(3, 3);
@@ -44,7 +44,7 @@ int main() {
 
   auto m_map = Eigen::Map<RowMajorMatrix>(&m(0, 0), 3, 3);
 
-    call_matmul(2, 2, 2, m_map, n, C, 3, 3, 3, 1, 1, false, false);
+  call_matmul(2, 2, 2, m_map, n, C, 3, 3, 3, 1, 1, false, false);
   cout << "m = \n" << m << endl << endl;
   cout << "n = \n" << n << endl << endl;
   cout << "C = \n" << C << endl;

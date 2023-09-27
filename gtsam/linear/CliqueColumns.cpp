@@ -67,6 +67,7 @@ std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(CliqueColumns& 
     else {
       i1++;
       // If cannot find match for src index, just skip it
+      // This is caused by merging cliques together that don't have the same nonzero structure
       if(i1 == blockIndices_->size()) {
 
         // auto&[key, row, height] = src.blockIndices_->at(i2);
