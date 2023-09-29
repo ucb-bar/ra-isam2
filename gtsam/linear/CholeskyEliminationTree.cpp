@@ -1293,6 +1293,7 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
     cout << "D = \n" << D << endl << endl;
     exit(1);
   }
+
   auto L = D.triangularView<Eigen::Lower>();
   auto B = block(m, bWidth, 0, bHeight, bWidth);
   auto C = block(m, bWidth, bWidth, bHeight, bHeight);
@@ -1301,45 +1302,11 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
 
   if(bHeight != -1) {
     // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
-    // static int debug_count = 0;
-    // cout << "m before = \n" << m << endl << endl;
-
-    static ofstream syrk_sample_fout("syrk_sampled.txt");
-    static int syrk_sampled = 0;
-    const int syrk_sample_rate = 5000 / 30;
-    const int syrk_sample_max = 30;
-    bool record = false;
-    if(syrk_sampled < syrk_sample_max) {
-      int rand_val = rand() % syrk_sample_rate;
-      if(rand_val == 0) {
-        record = true;
-        syrk_sampled++;
-        
-        syrk_sample_fout << "MATRIX_INPUTS\n";
-        syrk_sample_fout << "Matrix\n";
-        syrk_sample_fout << "m_full " << m.transpose().rows() << " " << m.transpose().cols() << "\n" << m.transpose() << endl << endl;
-        syrk_sample_fout << "SYRK_INPUTS\n";
-        syrk_sample_fout << bHeight << " " << bHeight << " " << bWidth << " " << bWidth << " " << 0 << " " << bWidth << " " << 0 << " " << bWidth << " " << bWidth << " " << totalHeight << " " << totalHeight << " " << totalHeight << " " << -1 << " " << 1 << " true false" << endl << endl;
-      }
-    }
-
     syrk(bHeight, bHeight, bWidth,
            &m(bWidth, 0), &m(bWidth, 0), &m(bWidth, bWidth),
            totalHeight, totalHeight, totalHeight,
            -1, 1, 
            true, false);
-
-    if(record) {
-      syrk_sample_fout << "SYRK_OUTPUTS\n";
-      syrk_sample_fout << "Matrix\n";
-      syrk_sample_fout << "m_correct " << m.transpose().rows() << " " << m.transpose().cols() << "\n" << m.transpose() << endl << endl;
-    }
-
-    // cout << "m after = \n" << m << endl << endl;
-    // debug_count++;
-    // if(debug_count >= 10) {
-    //     exit(1);
-    // }
 
     // C.selfadjointView<Eigen::Lower>().rankUpdate(B, -1);
   }
@@ -1472,56 +1439,13 @@ void CholeskyEliminationTree::backsolveClique(
       gatherX.block(row, 0, height, 1) = delta_ptr->at(unmappedKey);
     }
 
-    static ofstream gemv_sample_fout("gemv_sampled.txt");
-    static int gemv_sampled = 0;
-    const int gemv_sample_rate = 50;
-    const int gemv_sample_max = 100;
-    bool record = false;
-    if(gemv_sampled < gemv_sample_max) {
-      int rand_val = rand() % gemv_sample_rate;
-      if(rand_val == 0) {
-        record = true;
-        gemv_sampled++;
-        
-        gemv_sample_fout << "MATRIX_INPUTS\n";
-        gemv_sample_fout << "Matrix\n";
-        gemv_sample_fout << "A_full " << m.transpose().rows() << " " << m.transpose().cols() << "\n" << m.transpose() << endl << endl;
-        gemv_sample_fout << "rhs\n";
-        gemv_sample_fout << "x_full " << gatherX.rows() << " " << gatherX.cols() << "\n" << gatherX << endl << endl;
-        gemv_sample_fout << "lhs\n";
-        gemv_sample_fout << "y_full " << delta.rows() << " " << delta.cols() << "\n" << delta << endl << endl;
-        gemv_sample_fout << "GEMV_INPUTS\n";
-        gemv_sample_fout << diagWidth << " " << subdiagHeight - 1 << " " << diagWidth << " " << 0 << " " << 0 << " " << 0 << " " << totalHeight << " " << -1 << endl << endl;
-      }
-    }
-
     // Vector delta_copy = delta;
     gemv(diagWidth, subdiagHeight - 1, 
          &m(diagWidth, 0), &gatherX(0), &delta(0), 
          totalHeight, 
          -1);
 
-    if(record) {
-      gemv_sample_fout << "GEMV_OUTPUTS\n";
-      gemv_sample_fout << "lhs\n";
-      gemv_sample_fout << "y_correct " << delta.rows() << " " << delta.cols() << "\n" << delta << endl << endl;
-    }
-
     // auto B = block(m, diagWidth, 0, subdiagHeight - 1, diagWidth); // sub-diagonal blocks
-    // vector<GEMMINI_TYPE> B_float((subdiagHeight - 1) * diagWidth, 0);
-    // gather(B, B_float.data());
-    // vector<GEMMINI_TYPE> gatherX_float(subdiagHeight - 1, 0);
-    // gather(gatherX, gatherX_float.data());
-    // vector<GEMMINI_TYPE> delta_float(diagWidth, 0);
-    // gather(delta, delta_float.data());
-    // transpose_gemv(subdiagHeight - 1, diagWidth, 
-    //                -1,
-    //                B_float.data(), gatherX_float.data(), delta_float.data());
-
-    // delta.setZero();
-    // scatter_add(diagWidth, 1, delta_float.data(), 
-    //             0, 0, diagWidth, 1,
-    //             delta);
     // delta -= B.transpose() * gatherX;
 
     // cout << "delta = " << delta << endl;;
