@@ -20,7 +20,7 @@ void call_matmul(
          transpose_A, transpose_B);
 }
 
-using RowMajorMatrix = Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>; 
+using RowMajorMatrix = Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>; 
 
 int main() {
   RowMajorMatrix m(3, 3);

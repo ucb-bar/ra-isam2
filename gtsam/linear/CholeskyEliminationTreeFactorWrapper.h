@@ -241,7 +241,6 @@ public:
     size_t height = Ab.rows();
     size_t width = Ab.cols();
 
-    
     std::vector<GEMMINI_TYPE> Ab_float(height * width, 0);
 
     // Allocate a large scratch space
@@ -271,6 +270,8 @@ public:
         }
 
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
+
+        Eigen::Map<ColMajorMatrix> C_matrix(C_float.data(), width, width);
 
         if(srcCol2 >= srcCol1) {
           scatter_add(width, width, C_float.data(), srcCol2, srcCol1, srcW2, srcW1, destBlock);

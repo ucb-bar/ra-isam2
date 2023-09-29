@@ -1,8 +1,11 @@
 #include <gtsam/linear/gemmini_functions.h>
 #include <iostream>
 
+#define MATRIX_GEMMINI_TYPE Eigen::MatrixXd
+
 using namespace gtsam;
 using namespace std;
+
 
 int main() {
   Matrix m(5, 5);
@@ -14,20 +17,20 @@ int main() {
 
   cout << m << endl;
 
-  vector<float> m_float(25, 0);
+  vector<GEMMINI_TYPE> m_float(25, 0);
   gather(m, m_float.data());
 
-  for(float f : m_float) {
+  for(GEMMINI_TYPE f : m_float) {
     cout << f << " ";
   }
   cout << endl;
 
-  vector<float> C_float(25, 0);
+  vector<GEMMINI_TYPE> C_float(25, 0);
 
   syrk(5, 5, 1, m_float.data(), C_float.data());
 
 
-  Eigen::Map<Eigen::MatrixXf> C(C_float.data(), 5, 5);
+  Eigen::Map<MATRIX_GEMMINI_TYPE> C(C_float.data(), 5, 5);
 
   cout << C << endl;
 
@@ -39,10 +42,10 @@ int main() {
 
   cout << m << endl;
 
-  vector<float> n_float(25, 0);
+  vector<GEMMINI_TYPE> n_float(25, 0);
   transpose_gather(m, n_float.data());
 
-  Eigen::Map<Eigen::MatrixXf> B(n_float.data(), 5, 5);
+  Eigen::Map<MATRIX_GEMMINI_TYPE> B(n_float.data(), 5, 5);
   cout << B << endl;
 
 }
