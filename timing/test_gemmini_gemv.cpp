@@ -1,5 +1,5 @@
 #include <gtsam/linear/gemmini_functions.h>
-#include "../python/experiments/test_matrices/gemv_test0.h"
+#include "gemv_test0.h"
 #include <iostream>
 
 using namespace gtsam;
