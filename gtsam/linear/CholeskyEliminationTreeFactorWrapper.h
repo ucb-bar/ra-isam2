@@ -237,22 +237,28 @@ public:
     if(skip) { return; }
 
     const Matrix& Ab = jf->matrixObject().matrix();
-    // const VerticalBlockMatrix& Ab = jf->matrixObject();
     size_t height = Ab.rows();
     size_t width = Ab.cols();
 
-    std::vector<GEMMINI_TYPE> Ab_float(height * width, 0);
+#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+    typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
+    const GemminiMatrix Ab_gemmini = Ab.cast<GEMMINI_TYPE>();
+    GemminiMatrix m_gemmini = m.template cast<GEMMINI_TYPE>();
+#else
+    const auto& Ab_gemmini = Ab;
+    auto& m_gemmini = m;
+#endif
 
     // Allocate a large scratch space
-    std::vector<GEMMINI_TYPE> C_float(width * width, 0);
-    // std::vector<GEMMINI_TYPE> C_float_copy(width * width, 0);
+    std::vector<GEMMINI_TYPE> C_gemmini(width * width, 0);
 
     // We want to get H^T = BB^T, where B = A^T
     syrk(width, width, height,
-           &Ab(0, 0), &Ab(0, 0), C_float.data(),
+           &Ab_gemmini(0, 0), &Ab_gemmini(0, 0), C_gemmini.data(),
            height, height, width,
            sign, 1, 
            false, true);
+    
     
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
@@ -269,18 +275,21 @@ public:
           continue;
         }
 
-        Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
-
-        Eigen::Map<ColMajorMatrix> C_matrix(C_float.data(), width, width);
+        Eigen::Block<GemminiMatrix> destBlock(m_gemmini, destR2, destR1, srcW2, srcW1);
 
         if(srcCol2 >= srcCol1) {
-          scatter_add(width, width, C_float.data(), srcCol2, srcCol1, srcW2, srcW1, destBlock);
+          scatter_add(width, width, C_gemmini.data(), srcCol2, srcCol1, srcW2, srcW1, destBlock);
         }
         else {
-          transpose_scatter_add(width, width, C_float.data(), srcCol1, srcCol2, srcW1, srcW2, destBlock);
+          transpose_scatter_add(width, width, C_gemmini.data(), srcCol1, srcCol2, srcW1, srcW2, destBlock);
         }
       }
     }
+
+// Cast back to doubles
+#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+    m = m_gemmini.cast<double>();
+#endif
   }
 
   template<typename MATRIX, typename INFO, typename PREDICATE>
