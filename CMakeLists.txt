@@ -33,8 +33,6 @@ include(GtsamBuildTypes)
 include(GtsamTesting)
 include(GtsamPrinting)
 
-# add_compile_options("-complete_nonsense")
-
 # guard against in-source builds
 if(${GTSAM_SOURCE_DIR} STREQUAL ${GTSAM_BINARY_DIR})
   message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there. You may need to remove CMakeCache.txt. ")
@@ -42,12 +40,8 @@ endif()
 
 include(cmake/HandleGeneralOptions.cmake)   # CMake build options
 
-# Roger fix 
+# Roger fix
 include_directories(${CMAKE_INSTALL_PREFIX})
-set(abs_top_srcdir "/scratch/roger_hsiao/gemmini-rocc-tests")
-set(BENCH_COMMON "${abs_top_srcdir}/riscv-tests/benchmarks/common")
-set(GEMMINI_HEADERS "${abs_top_srcdir}/include/gemmini.h ${abs_top_srcdir}/include/gemmini_params.h ${abs_top_srcdir}/include/gemmini_testutils.h")
-include_directories(${abs_top_srcdir}/include ${abs_top_srcdir}/riscv-tests ${abs_top_srcdir}/riscv-tests/env ${abs_top_srcdir} ${BENCH_COMMON})
 
 # Libraries:
 include(cmake/HandleBoost.cmake)            # Boost

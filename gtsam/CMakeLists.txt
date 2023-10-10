@@ -54,9 +54,9 @@ install(FILES ${gtsam_core_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gtsa
 
 # Include gemmini flags
 add_definitions("-DPREALLOCATE=1 -DMULTITHREAD=1 -DID_STRING=${ID_STRING} -DPRINT_TILE=0")
-set(CFLAGS ${CFLAGS} -mcmodel=medany -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -fno-tree-loop-distribute-patterns -march=rv64gc -Wa,-march=rv64gc -lm -lgcc)
+# set(CFLAGS ${CFLAGS} -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -fno-tree-loop-distribute-patterns -lm -lgcc)
 
-set_source_files_properties("${GTSAM_SOURCE_DIR}/gtsam/linear/gemmini_functions_gemm.cpp" PROPERTIES COMPILE_OPTIONS "${CFLAGS}")
+# set_source_files_properties("${GTSAM_SOURCE_DIR}/gtsam/linear/gemmini_functions_gemm.cpp" PROPERTIES COMPILE_OPTIONS "${CFLAGS}")
 
 # assemble core libaries
 foreach(subdir ${gtsam_subdirs})

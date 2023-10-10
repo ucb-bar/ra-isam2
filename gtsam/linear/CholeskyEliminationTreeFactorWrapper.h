@@ -10,7 +10,6 @@
 #include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/nonlinear/NonlinearFactor.h>
-#include <gtsam/linear/gemmini_functions.h>
 #include <utility>
 
 namespace gtsam {
@@ -240,14 +239,13 @@ public:
     size_t height = Ab.rows();
     size_t width = Ab.cols();
 
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
     const GemminiMatrix Ab_gemmini = Ab.cast<GEMMINI_TYPE>();
     GemminiMatrix m_gemmini = m.template cast<GEMMINI_TYPE>();
-#else
-    const auto& Ab_gemmini = Ab;
-    auto& m_gemmini = m;
-#endif
+// #else
+//     const auto& Ab_gemmini = Ab;
+//     auto& m_gemmini = m;
+// #endif
 
     // Allocate a large scratch space
     std::vector<GEMMINI_TYPE> C_gemmini(width * width, 0);
@@ -287,9 +285,9 @@ public:
     }
 
 // Cast back to doubles
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
     m = m_gemmini.cast<double>();
-#endif
+// #endif
   }
 
   template<typename MATRIX, typename INFO, typename PREDICATE>

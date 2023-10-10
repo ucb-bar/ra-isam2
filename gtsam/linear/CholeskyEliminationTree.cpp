@@ -14,7 +14,6 @@
 #include <gtsam/linear/CholeskyEliminationTreeFactorWrapper.h>
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
 #include <gtsam/linear/CliqueColumns.h>
-#include <gtsam/linear/gemmini_functions.h>
 #include <gtsam/3rdparty/CCOLAMD/Include/ccolamd.h>
 #include <Eigen/Dense>
 #include <Eigen/Core>
@@ -1057,11 +1056,11 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
 
   if(processGrouped) {
 // We need to manually typecast the double matrix to gemmini types
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> m_gemmini = m.cast<GEMMINI_TYPE>();
-#else
-    auto& m_gemmini = m;
-#endif
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+    GemminiMatrix m_gemmini = m.cast<GEMMINI_TYPE>();
+// #else
+//     auto& m_gemmini = m;
+// #endif
 
     // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
     syrk(subdiagHeight, subdiagHeight, diagWidth,
@@ -1071,11 +1070,12 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
            true, false);
 
 // Cast C back to doubles
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    C = Eigen::Block<Eigen::MatrixXf>(m_gemmini, 
-                                      diagWidth, diagWidth, 
-                                      subdiagHeight, subdiagHeight).cast<double>();
-#endif
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+    Eigen::Block<GemminiMatrix> C_block(m_gemmini, 
+                                        diagWidth, diagWidth, 
+                                        subdiagHeight, subdiagHeight);
+    C = C_block.cast<double>();
+// #endif
 
     // C.selfadjointView<Eigen::Lower>().rankUpdate(B, sign);
 
@@ -1303,11 +1303,11 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
 
   if(bHeight != -1) {
 // We need to manually typecast the double matrix to gemmini types
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
     Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> m_gemmini = m.cast<GEMMINI_TYPE>();
-#else
-    auto& m_gemmini = m;
-#endif
+// #else
+//     auto& m_gemmini = m;
+// #endif
 
     // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
     syrk(bHeight, bHeight, bWidth,
@@ -1317,11 +1317,12 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
            true, false);
 
 // Cast C back to doubles
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    C = Eigen::Block<Eigen::MatrixXf>(m_gemmini, 
-                                      bWidth, bWidth, 
-                                      bHeight, bHeight).cast<double>();
-#endif
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+    Eigen::Block<GemminiMatrix> C_block(m_gemmini, 
+                                        bWidth, bWidth, 
+                                        bHeight, bHeight);
+    C = C_block.cast<double>();
+// #endif
 
     // C.selfadjointView<Eigen::Lower>().rankUpdate(B, -1);
   }
@@ -1442,11 +1443,11 @@ void CholeskyEliminationTree::backsolveClique(
   Vector delta = block(m, totalHeight - 1, 0, 1, diagWidth).transpose();
 
   if(subdiagHeight > 1) {
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
     Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> gatherX(subdiagHeight - 1);
-#else 
-    Eigen::Vector gatherX(subdiagHeight - 1);
-#endif
+// #else 
+//     Vector gatherX(subdiagHeight - 1);
+// #endif
 
     // Gather deltas this clique depends on, don't need last row
     for(int i = cliqueSize; i < blockIndices.size() - 1; i++) {
@@ -1455,20 +1456,20 @@ void CholeskyEliminationTree::backsolveClique(
 
       row -= diagWidth;
 
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
       gatherX.block(row, 0, height, 1) = delta_ptr->at(unmappedKey).cast<GEMMINI_TYPE>();
-#else 
-      gatherX.block(row, 0, height, 1) = delta_ptr->at(unmappedKey);
-#endif
+// #else 
+//       gatherX.block(row, 0, height, 1) = delta_ptr->at(unmappedKey);
+// #endif
     }
 
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
     const Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> m_gemmini = m.cast<GEMMINI_TYPE>();
     Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> delta_gemmini = delta.cast<GEMMINI_TYPE>();
-#else 
-    const auto& m_gemmini = m;
-    auto& delta_gemmini = delta;
-#endif
+// #else 
+//     const auto& m_gemmini = m;
+//     auto& delta_gemmini = delta;
+// #endif
 
     // Vector delta_copy = delta;
     gemv(diagWidth, subdiagHeight - 1, 
@@ -1477,9 +1478,9 @@ void CholeskyEliminationTree::backsolveClique(
          -1);
 
 // Cast back to doubles
-#if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
+// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
     delta = delta_gemmini.cast<double>();
-#endif
+// #endif
 
     // auto B = block(m, diagWidth, 0, subdiagHeight - 1, diagWidth); // sub-diagonal blocks
     // delta -= B.transpose() * gatherX;

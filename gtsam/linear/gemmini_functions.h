@@ -20,10 +20,12 @@ typedef float GEMMINI_TYPE;
 #include <iostream>
 
 extern "C" {
-#include "gemmini.h"
+#include "gemmini_no_gemm.h"
 }
 
 namespace gtsam {
+
+typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
 
 // Perform C += A_scale_factor * A^(transpose_A * T) * B_scale_factor * B^(transpose_B * T)
 // Assume A, B, C are stored in row-major order
