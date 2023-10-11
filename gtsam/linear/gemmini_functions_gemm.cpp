@@ -18,17 +18,16 @@ void matmul(
   scale_t A_scale_factor, scale_t B_scale_factor,
   bool transpose_A, bool transpose_B) {
 
-  
   tiled_matmul_auto(dim_I, dim_J, dim_K,
-                    A, B, NULL, C,
-                    stride_A, stride_B, 0, stride_C,
-                    A_scale_factor, B_scale_factor, 0,
-                    0, 0, 0,
+                    A, B, C, C,
+                    stride_A, stride_B, stride_C, stride_C,
+                    A_scale_factor, B_scale_factor, 1,
+                    0, 1, 0,
                     false,
                     transpose_A, transpose_B,
-                    false, true,
+                    false, false,
                     0,
-                    OS);
+                    CPU);
 
   // size_t stride_Ai, stride_Ak, stride_Bk, stride_Bj, stride_Ci = stride_C, stride_Cj = 1;
   // if(transpose_A) {
@@ -79,6 +78,19 @@ void syrk(
   scale_t A_scale_factor, scale_t B_scale_factor,
   bool transpose_A, bool transpose_B) {
   size_t stride_Ai, stride_Ak, stride_Bk, stride_Bj, stride_Ci = stride_C, stride_Cj = 1;
+
+  tiled_matmul_auto(dim_I, dim_J, dim_K,
+                    A, B, C, C,
+                    stride_A, stride_B, stride_C, stride_C,
+                    A_scale_factor, B_scale_factor, 1,
+                    0, 1, 0,
+                    false,
+                    transpose_A, transpose_B,
+                    false, false,
+                    0,
+                    CPU);
+
+  /*
   if(transpose_A) {
     stride_Ai = 1;
     stride_Ak = stride_A;
@@ -114,6 +126,7 @@ void syrk(
     Ai += stride_Ai;
     Ci += stride_Ci;
   }
+  */
 }
 
 // Perform y += A_scale_factor A * x

@@ -1295,6 +1295,21 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
     exit(1);
   }
 
+  // vector<int> check_clique = {16, 21, 6, 15, 18, 12, 9};
+  // if(clique->cliqueSize() == check_clique.size()) {
+  //     bool check_clique_flag = true;
+  //     for(int i = 0; i < clique->cliqueSize(); i++) {
+  //         if(clique->nodes[i]->key != check_clique[i]) {
+  //             check_clique_flag = false;
+  //             break;
+  //         }
+  //     }
+  //     if(check_clique_flag) {
+  //         cout << "Exit here" << endl;
+  //         exit(0);
+  //     }
+  // }
+
   auto L = D.triangularView<Eigen::Lower>();
   auto B = block(m, bWidth, 0, bHeight, bWidth);
   auto C = block(m, bWidth, bWidth, bHeight, bHeight);

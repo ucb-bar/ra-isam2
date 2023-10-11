@@ -9,7 +9,7 @@
 #ifndef GEMMINI_FUNCTIONS_H
 #define GEMMINI_FUNCTIONS_H
 
-#define GEMMINI_TYPE double
+#define GEMMINI_TYPE float
 #define elem_t GEMMINI_TYPE
 #define scale_t GEMMINI_TYPE
 
@@ -55,6 +55,7 @@ inline void matmul(
       const elem_t* Bkj = Bj;
       for(size_t k = 0; k < dim_K; k++) {
         *Cij += A_scale_factor * (*Aik) * B_scale_factor * (*Bkj);
+        std::cout << i << " " << j << " " << k << " " <<  (*Aik) << " " << (*Bkj) << " " << *Cij << std::endl;
         Aik += stride_Ak;
         Bkj += stride_Bk;
       }

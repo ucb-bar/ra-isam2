@@ -256,6 +256,9 @@ public:
            height, height, width,
            sign, 1, 
            false, true);
+
+    // Eigen::Map<GemminiMatrix> C_matrix(C_gemmini.data(), width, width);
+    // std::cout << "C after syrk = \n" << C_matrix << std::endl;
     
     
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
