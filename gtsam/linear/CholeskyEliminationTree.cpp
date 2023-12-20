@@ -54,7 +54,7 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
     addNewNode(key, dim);
     
     // Add regularization factor because problem is too ill conditioned
-    double lambda = 100000; // This needs to be a large number since the Hessian factor takes in the covariance matrix
+    double lambda = 1e12; // This needs to be a large number since the Hessian factor takes in the covariance matrix
     Vector mu = Matrix::Zero(dim, 1);
     Matrix sigma = lambda * Matrix::Identity(dim, dim);
     HessianFactor::shared_ptr regularization_factor 
