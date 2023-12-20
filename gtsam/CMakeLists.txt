@@ -1,5 +1,6 @@
 project(gtsam LANGUAGES CXX)
 
+
 # We split the library in to separate subfolders, each containing
 # tests, timing, and an optional convenience library.
 # The following variable is the master list of subdirs to add
@@ -15,7 +16,7 @@ set (gtsam_subdirs
     sam
     sfm
     slam
-	  navigation
+    navigation
 )
 
 set(gtsam_srcs)
@@ -50,6 +51,12 @@ endif()
 # Common headers
 file(GLOB gtsam_core_headers "*.h")
 install(FILES ${gtsam_core_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gtsam)
+
+# Include gemmini flags
+add_definitions("-DPREALLOCATE=1 -DMULTITHREAD=1 -DID_STRING=${ID_STRING} -DPRINT_TILE=0")
+# set(CFLAGS ${CFLAGS} -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -fno-tree-loop-distribute-patterns -lm -lgcc)
+
+# set_source_files_properties("${GTSAM_SOURCE_DIR}/gtsam/linear/gemmini_functions_gemm.cpp" PROPERTIES COMPILE_OPTIONS "${CFLAGS}")
 
 # assemble core libaries
 foreach(subdir ${gtsam_subdirs})
@@ -92,6 +99,7 @@ if(GTSAM_SUPPORT_NESTED_DISSECTION)
     # target metis-gtsam-if is defined in both cases: embedded metis or system version:
     list(APPEND GTSAM_ADDITIONAL_LIBRARIES metis-gtsam-if)
 endif()
+
 
 # Versions
 set(gtsam_version   ${GTSAM_VERSION_MAJOR}.${GTSAM_VERSION_MINOR}.${GTSAM_VERSION_PATCH})
@@ -180,6 +188,8 @@ install(
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+
 
 list(APPEND GTSAM_EXPORTED_TARGETS gtsam)
 set(GTSAM_EXPORTED_TARGETS "${GTSAM_EXPORTED_TARGETS}" PARENT_SCOPE)

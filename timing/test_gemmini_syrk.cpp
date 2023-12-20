@@ -11,8 +11,17 @@ int main() {
          stride_A, stride_B, stride_C,
          scale_factor_A, scale_factor_B,
          transpose_A, transpose_B);
-    for(int i = 0; i < m_full_rows * m_full_cols; i++) {
-      cout << m_full[i] - m_correct[i] << " ";
+    for(int j = 0; j < m_full_cols; j++) {
+        for(int i = j; i < m_full_rows; i++) {
+            float test = m_full[i + j * m_full_rows];
+            float cor = m_correct[i + j * m_full_rows];
+            cout << i << " " << j << " " << test - cor << " " << test << " " << cor << endl;
+        }
     }
     cout << endl;
+
+    
+    // Eigen::Map<Eigen::MatrixXf> m(m_full, m_full_rows, m_full_cols);
+    // Eigen::Block<Eigen::Map<Eigen::MatrixXf>> C(m, C_r1, C_c1, C-)
+    // cout << "C = \n" << m << endl;
 }

@@ -11,7 +11,6 @@ void call_matmul(
   size_t stride_A, size_t stride_B, size_t stride_C,
   scale_t A_scale_factor, scale_t B_scale_factor,
   bool transpose_A, bool transpose_B) {
-  
 
   matmul(dim_I, dim_J, dim_K, 
          &A(0, 0), &B(0, 0), &C(0, 0), 

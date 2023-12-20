@@ -18,6 +18,8 @@
 #include <iostream>
 #include <boost/optional.hpp>
 
+#include <gtsam/linear/gemmini_functions.h>
+
 namespace gtsam {
 
 class GTSAM_EXPORT CholeskyEliminationTree {
