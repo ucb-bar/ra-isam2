@@ -5,6 +5,7 @@
 * @date    Feb. 8, 2023
 */
 
+#include "gtsam/linear/GemminiTypes.h"
 #include "gtsam/nonlinear/NonlinearFactor.h"
 #include <gtsam/base/types.h>
 #include <gtsam/inference/Ordering.h>
@@ -28,10 +29,10 @@ using namespace std;
 namespace gtsam {
 
 // Convenience function
-inline Eigen::Block<Eigen::Map<ColMajorMatrix>> block(
-    Eigen::Map<ColMajorMatrix> m, 
+inline Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>> block(
+    Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>> m, 
     size_t r, size_t c, size_t h, size_t w) {
-    return Eigen::Block<Eigen::Map<ColMajorMatrix>>(m, r, c, h, w);
+    return Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>>(m, r, c, h, w);
 }
 
 CholeskyEliminationTree::CholeskyEliminationTree() : orderingLess_(this) {
@@ -850,7 +851,7 @@ void CholeskyEliminationTree::allocateAndGatherClique(sharedClique clique, bool 
     // Gather columns from wherever they is living now
     // Need to do a scatter operation based on the old blockIndices on to the new one
     // The clique who owns the data shall be responsible for the blockIndices
-    double* matrixData = workspace_.get_ptrs(clique->workspaceIndex)[0];
+    GEMMINI_TYPE* matrixData = workspace_.get_ptrs(clique->workspaceIndex)[0];
     CliqueColumns workspaceColumn(matrixData, &blockIndices);
 
     for(auto& gatherSource : clique->gatherSources) {
@@ -1040,9 +1041,9 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
 
   assert(m.rows() == totalHeight && m.cols() == totalHeight);
 
-  auto B = Eigen::Block<Eigen::Map<ColMajorMatrix>>
+  auto B = Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>>
             (m, diagWidth, 0, subdiagHeight, diagWidth);
-  auto C = Eigen::Block<Eigen::Map<ColMajorMatrix>>
+  auto C = Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>>
             (m, diagWidth, diagWidth, subdiagHeight, subdiagHeight);
 
   assert(get<BLOCK_INDEX_KEY>(blockIndices.back()) == 0);
@@ -1055,27 +1056,12 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
   // }
 
   if(processGrouped) {
-// We need to manually typecast the double matrix to gemmini types
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    GemminiMatrix m_gemmini = m.cast<GEMMINI_TYPE>();
-// #else
-//     auto& m_gemmini = m;
-// #endif
-
     // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
     syrk(subdiagHeight, subdiagHeight, diagWidth,
-           &m_gemmini(diagWidth, 0), &m_gemmini(diagWidth, 0), &m_gemmini(diagWidth, diagWidth),
+           &m(diagWidth, 0), &m(diagWidth, 0), &m(diagWidth, diagWidth),
            totalHeight, totalHeight, totalHeight,
            sign, 1, 
            true, false);
-
-// Cast C back to doubles
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    Eigen::Block<GemminiMatrix> C_block(m_gemmini, 
-                                        diagWidth, diagWidth, 
-                                        subdiagHeight, subdiagHeight);
-    C = C_block.cast<double>();
-// #endif
 
     // C.selfadjointView<Eigen::Lower>().rankUpdate(B, sign);
 
@@ -1134,12 +1120,12 @@ void CholeskyEliminationTree::restoreClique(sharedClique clique) {
 void CholeskyEliminationTree::resetCliqueColumns(sharedClique clique) {
   if(clique->isLastRow()) { return; }
 
-  Eigen::Map<ColMajorMatrix> m = workspace_.get_matrices(clique->workspaceIndex)[0];
+  Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>> m = workspace_.get_matrices(clique->workspaceIndex)[0];
 
   size_t totalHeight = clique->height();
   size_t diagWidth = clique->width();
 
-  auto DB = Eigen::Block<Eigen::Map<ColMajorMatrix>>(m, 0, 0, totalHeight, diagWidth);
+  auto DB = Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>>(m, 0, 0, totalHeight, diagWidth);
   DB.setZero();
 }
 
@@ -1227,8 +1213,11 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
       // Handle edits first
       // Subtract Hessian of the cachedLinearFactor from the workspace
       if(factorStatus == RELINEARIZE || factorStatus == REMOVING) {
-        sharedLinearFactor linearFactor = factorWrapper->getLinearFactor();
-        assert(linearFactor != nullptr);
+        // sharedLinearFactor linearFactor = factorWrapper->getLinearFactor();
+        // assert(linearFactor != nullptr);
+
+        const auto& cachedMatrix = factorWrapper->getCachedMatrix();
+        assert(cachedMatrix.rows() != 0 && cachedMatrix.cols() != 0);
 
         info.construct(factorWrapper->remappedKeys(), infoMap);
 
@@ -1286,8 +1275,8 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
   // m.triangularView<Eigen::StrictlyUpper>().setZero();
   // cout << "Before eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
 
-  Eigen::Block<Eigen::Map<ColMajorMatrix>> D = block(m, 0, 0, bWidth, bWidth);
-  Eigen::LLT<Eigen::Ref<Eigen::Block<Eigen::Map<ColMajorMatrix>>>> llt(D);
+  Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>> D = block(m, 0, 0, bWidth, bWidth);
+  Eigen::LLT<Eigen::Ref<Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>>>> llt(D);
   if(llt.info() == Eigen::NumericalIssue) {
     cout << "Diagonal block not positive definite!" << endl;
     clique->printClique(cout);
@@ -1317,27 +1306,13 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
   L.solveInPlace(B.transpose());
 
   if(bHeight != -1) {
-// We need to manually typecast the double matrix to gemmini types
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> m_gemmini = m.cast<GEMMINI_TYPE>();
-// #else
-//     auto& m_gemmini = m;
-// #endif
 
     // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
     syrk(bHeight, bHeight, bWidth,
-           &m_gemmini(bWidth, 0), &m_gemmini(bWidth, 0), &m_gemmini(bWidth, bWidth),
+           &m(bWidth, 0), &m(bWidth, 0), &m(bWidth, bWidth),
            totalHeight, totalHeight, totalHeight,
            -1, 1, 
            true, false);
-
-// Cast C back to doubles
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    Eigen::Block<GemminiMatrix> C_block(m_gemmini, 
-                                        bWidth, bWidth, 
-                                        bHeight, bHeight);
-    C = C_block.cast<double>();
-// #endif
 
     // C.selfadjointView<Eigen::Lower>().rankUpdate(B, -1);
   }
@@ -1373,7 +1348,7 @@ void CholeskyEliminationTree::scatterClique(sharedClique clique) {
   if(clique->marked()) {
     auto m_ptr = workspace_.get_ptrs(clique->workspaceIndex)[0];
     size_t r = clique->height(), c = clique->width();
-    std::shared_ptr<vector<double>> matrixSource = std::make_shared<vector<double>>(r * c);
+    std::shared_ptr<vector<GEMMINI_TYPE>> matrixSource = std::make_shared<vector<GEMMINI_TYPE>>(r * c);
     std::shared_ptr<BlockIndexVector> blockIndicesSource 
       = std::make_shared<BlockIndexVector>(clique->blockIndices);
 
@@ -1382,7 +1357,7 @@ void CholeskyEliminationTree::scatterClique(sharedClique clique) {
     // cout << "m rows = " << m.rows() << " m cols = " << m.cols() << " r = " << r << " c = " << c << endl;
     // assert(r == m.rows() && c <= m.cols());
 
-    memcpy(matrixSource->data(), m_ptr, sizeof(double) * r * c);
+    memcpy(matrixSource->data(), m_ptr, sizeof(GEMMINI_TYPE) * r * c);
 
     clique->gatherSources.clear();
     clique->gatherSources.push_back(LocalCliqueColumns(matrixSource, 
@@ -1455,7 +1430,8 @@ void CholeskyEliminationTree::backsolveClique(
   size_t subdiagHeight = clique->subdiagonalHeight();
 
   // Copy over L^-1 Atb row into delta
-  Vector delta = block(m, totalHeight - 1, 0, 1, diagWidth).transpose();
+  Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> delta 
+    = block(m, totalHeight - 1, 0, 1, diagWidth).transpose();
 
   if(subdiagHeight > 1) {
 // #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
@@ -1471,31 +1447,13 @@ void CholeskyEliminationTree::backsolveClique(
 
       row -= diagWidth;
 
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
       gatherX.block(row, 0, height, 1) = delta_ptr->at(unmappedKey).cast<GEMMINI_TYPE>();
-// #else 
-//       gatherX.block(row, 0, height, 1) = delta_ptr->at(unmappedKey);
-// #endif
     }
 
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    const Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> m_gemmini = m.cast<GEMMINI_TYPE>();
-    Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> delta_gemmini = delta.cast<GEMMINI_TYPE>();
-// #else 
-//     const auto& m_gemmini = m;
-//     auto& delta_gemmini = delta;
-// #endif
-
-    // Vector delta_copy = delta;
     gemv(diagWidth, subdiagHeight - 1, 
-         &m_gemmini(diagWidth, 0), &gatherX(0), &delta_gemmini(0), 
+         &m(diagWidth, 0), &gatherX(0), &delta(0), 
          totalHeight, 
          -1);
-
-// Cast back to doubles
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    delta = delta_gemmini.cast<double>();
-// #endif
 
     // auto B = block(m, diagWidth, 0, subdiagHeight - 1, diagWidth); // sub-diagonal blocks
     // delta -= B.transpose() * gatherX;
@@ -1515,8 +1473,9 @@ void CholeskyEliminationTree::backsolveClique(
     auto[key, row, height] = blockIndices[i];
     Key unmappedKey = unmapKey(key);
 
-    Vector delta_diff = delta.block(row, 0, height, 1) - delta_ptr->at(unmappedKey);
-    delta_ptr->at(unmappedKey) = delta.block(row, 0, height, 1);
+    Eigen::Matrix<double, Eigen::Dynamic, 1> delta_double = delta.block(row, 0, height, 1).cast<double>();
+    Vector delta_diff = delta_double - delta_ptr->at(unmappedKey);
+    delta_ptr->at(unmappedKey) = delta_double;
 
     if(valuesChanged(delta_diff, tol)) {
       nodes_.at(key)->backsolve = true;
@@ -1699,7 +1658,7 @@ void CholeskyEliminationTree::marginalizeClique(
   SymmetricBlockMatrix factorMatrix(dimensions, true);
   factorMatrix.matrix().setZero();
   assert(B.rows() == factorMatrix.selfadjointView().rows());
-  factorMatrix.selfadjointView().rankUpdate(B, -1);
+  factorMatrix.selfadjointView().rankUpdate(B.cast<double>(), -1);
 
   // Make HessianFactor
   HessianFactor::shared_ptr marginalFactor = boost::make_shared<HessianFactor>(unmappedKeys, factorMatrix);

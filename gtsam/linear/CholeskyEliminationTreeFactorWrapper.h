@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <gtsam/linear/gemmini_functions.h>
 #include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/nonlinear/NonlinearFactor.h>
@@ -49,7 +50,10 @@ public:
   sharedFactor nonlinearFactor_ = nullptr;
 
   // ColMajorMatrix cachedLinearFactor;
-  sharedLinearFactor cachedLinearFactor = nullptr;
+  // sharedLinearFactor cachedLinearFactor = nullptr;
+  enum LinearFactorType { NONE, JACOBIAN, HESSIAN }; 
+  LinearFactorType linearFactorType_ = NONE;
+  ColMajorMatrix<GEMMINI_TYPE> cachedLinearMatrix_;
 
   RemappedKeyVector remappedKeys_;
 
@@ -63,13 +67,15 @@ public:
                 CholeskyEliminationTree* etree_in) 
   : etree(etree_in),
     factorIndex_(factorIndex_in),
-    nonlinearFactor_(nonlinearFactor_in),
-    cachedLinearFactor(cachedLinearFactor_in) {
+    nonlinearFactor_(nonlinearFactor_in) { //,
+    // cachedLinearFactor(cachedLinearFactor_in) {
     if(nonlinearFactor_ == nullptr) {
 
+      assert(cachedLinearFactor_in != nullptr);
       status_ = LINEAR;
+      setCachedLinearMatrix(cachedLinearFactor_in);
       // factorDim = cachedLinearFactor->dim();
-      for(Key unmappedKey : cachedLinearFactor->keys()) {
+      for(Key unmappedKey : cachedLinearFactor_in->keys()) {
         remappedKeys_.push_back(etree->getRemapKey(unmappedKey));
       }
     }
@@ -127,6 +133,10 @@ public:
     return 0; 
   }
 
+  // Copy the matrix in the linear factor into the cachedLinearMatrix
+  // and set linearFactorType to be JACOBIAN or HESSIAN
+  void setCachedLinearMatrix(sharedLinearFactor linearFactor);
+
   const FactorStatus& status() const { return status_; }
 
   void setStatusRemoved() {
@@ -135,7 +145,7 @@ public:
     }
     else {
       assert(0);
-      throw std::runtime_error("Removing factor that is not REMOVING or UNLINEARIZED! Factor status" + status_);
+      throw std::runtime_error("Removing factor that is not REMOVING or UNLINEARIZED! Factor status");
     }
   }
 
@@ -163,7 +173,9 @@ public:
 
     assert(status_ != REMOVING && status_ != REMOVED);
     if(status_ == UNLINEARIZED || status_ == RELINEARIZE) {
-      cachedLinearFactor = nonlinearFactor_->linearize(theta);
+      auto cachedLinearFactor = nonlinearFactor_->linearize(theta);
+      setCachedLinearMatrix(cachedLinearFactor);
+
       status_ = LINEARIZED;
       
       return true;
@@ -173,9 +185,11 @@ public:
 
   sharedFactor nonlinearFactor() { return nonlinearFactor_; }
 
-  sharedLinearFactor getLinearFactor() {
-    return cachedLinearFactor;
-  }
+  // sharedLinearFactor getLinearFactor() {
+  //   return cachedLinearFactor;
+  // }
+
+  ColMajorMatrix<GEMMINI_TYPE>& getCachedMatrix() { return cachedLinearMatrix_; }
 
   void addNewKeys(const std::vector<RemappedKey>& newKeys) {
     assert(status_ != REMOVING && status_ != REMOVED);
@@ -210,13 +224,12 @@ public:
   // false otherwise
   bool marginalizeKeys();
 
-  const JacobianFactor* toJacobianFactor() const;
+  // const JacobianFactor* toJacobianFactor() const;
 
-  const HessianFactor* toHessianFactor() const;
+  // const HessianFactor* toHessianFactor() const;
 
   template<typename MATRIX, typename INFO, typename PREDICATE>
   void updateHessianJacobian(
-      const JacobianFactor* jf, 
       MATRIX& m, 
       double sign, 
       const INFO& info,
@@ -235,27 +248,19 @@ public:
     }
     if(skip) { return; }
 
-    const Matrix& Ab = jf->matrixObject().matrix();
+    const auto& Ab = cachedLinearMatrix_;
     size_t height = Ab.rows();
     size_t width = Ab.cols();
 
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    const GemminiMatrix Ab_gemmini = Ab.cast<GEMMINI_TYPE>();
-    GemminiMatrix m_gemmini = m.template cast<GEMMINI_TYPE>();
-// #else
-//     const auto& Ab_gemmini = Ab;
-//     auto& m_gemmini = m;
-// #endif
-
     // Allocate a large scratch space
-    std::vector<GEMMINI_TYPE> C_gemmini(width * width, 0);
+    std::vector<GEMMINI_TYPE> C(width * width, 0);
 
     // We want to get H^T = BB^T, where B = A^T
     syrk(width, width, height,
-           &Ab_gemmini(0, 0), &Ab_gemmini(0, 0), C_gemmini.data(),
-           height, height, width,
-           sign, 1, 
-           false, true);
+         &Ab(0, 0), &Ab(0, 0), C.data(),
+         height, height, width,
+         sign, 1, 
+         false, true);
 
     // Eigen::Map<GemminiMatrix> C_matrix(C_gemmini.data(), width, width);
     // std::cout << "C after syrk = \n" << C_matrix << std::endl;
@@ -276,31 +281,26 @@ public:
           continue;
         }
 
-        Eigen::Block<GemminiMatrix> destBlock(m_gemmini, destR2, destR1, srcW2, srcW1);
+        Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         if(srcCol2 >= srcCol1) {
-          scatter_add(width, width, C_gemmini.data(), srcCol2, srcCol1, srcW2, srcW1, destBlock);
+          scatter_add(width, width, C.data(), srcCol2, srcCol1, srcW2, srcW1, destBlock);
         }
         else {
-          transpose_scatter_add(width, width, C_gemmini.data(), srcCol1, srcCol2, srcW1, srcW2, destBlock);
+          transpose_scatter_add(width, width, C.data(), srcCol1, srcCol2, srcW1, srcW2, destBlock);
         }
       }
     }
 
-// Cast back to doubles
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
-    m = m_gemmini.cast<double>();
-// #endif
   }
 
   template<typename MATRIX, typename INFO, typename PREDICATE>
   void updateHessianHessian(
-      const HessianFactor* hf,
       MATRIX& m, 
       double sign, 
       const INFO& info,
       const PREDICATE& pred) {
-    const auto& AbtAb = hf->info().matrix();
+    const auto& AbtAb = cachedLinearMatrix_;
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
       const auto&[lowerKey, srcCol1, srcW1] = blockIndices_.at(i);
@@ -320,13 +320,13 @@ public:
 
         if(srcCol2 >= srcCol1) {
           // Note: We need to access the upper triangular part of the Hessian matrix
-          Eigen::Block<const Matrix> AbtAb_ij(AbtAb, srcCol1, srcCol2, srcW1, srcW2);
+          Eigen::Block<const GemminiMatrix> AbtAb_ij(AbtAb, srcCol1, srcCol2, srcW1, srcW2);
 
           destBlock.noalias() += sign * AbtAb_ij.transpose();
         }
         else {
           // Note: We need to access the upper triangular part of the Hessian matrix
-          Eigen::Block<const Matrix> AbtAb_ij(AbtAb, srcCol2, srcCol1, srcW2, srcW1);
+          Eigen::Block<const GemminiMatrix> AbtAb_ij(AbtAb, srcCol2, srcCol1, srcW2, srcW1);
 
           destBlock.noalias() += sign * AbtAb_ij;
         }
@@ -346,11 +346,11 @@ public:
 
     // std::cout << "Updating hessian for " << *this << " sign = " << sign << std::endl;
 
-    if(const JacobianFactor* jf = toJacobianFactor()) {
-      updateHessianJacobian(jf, m, sign, info, pred);
+    if(linearFactorType_ == JACOBIAN) {
+      updateHessianJacobian(m, sign, info, pred);
     }
-    else if(const HessianFactor* hf = toHessianFactor()) {
-      updateHessianHessian(hf, m, sign, info, pred);   
+    else if(linearFactorType_ == HESSIAN) {
+      updateHessianHessian(m, sign, info, pred);   
     }
     else {
       throw std::runtime_error("Factor cannot be dynamically cast");

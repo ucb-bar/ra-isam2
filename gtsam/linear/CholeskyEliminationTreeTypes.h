@@ -15,7 +15,9 @@
 namespace gtsam {
     
   typedef Key RemappedKey;
-  typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> ColMajorMatrix;
+  // typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> ColMajorMatrix;
+  template <typename T=double>
+  using ColMajorMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
   typedef Eigen::VectorXd Vector;
   typedef std::tuple<RemappedKey, size_t, size_t> KeyRowHeight;
   typedef std::tuple<size_t, size_t> RowHeight;

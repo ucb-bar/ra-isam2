@@ -23,7 +23,7 @@ int main() {
                 + get<BLOCK_INDEX_HEIGHT>(blockIndices->back());
     size_t w1 = get<BLOCK_INDEX_ROW>(blockIndices->at(endIndex)) 
                 + get<BLOCK_INDEX_HEIGHT>(blockIndices->at(endIndex));
-    shared_ptr<vector<double>> matrixSource = make_shared<vector<double>>(h1 * w1, 0);
+    shared_ptr<vector<GEMMINI_TYPE>> matrixSource = make_shared<vector<GEMMINI_TYPE>>(h1 * w1, 0);
 
     LocalCliqueColumns cliqueColumns(matrixSource, blockIndices, startIndex, endIndex);
 
@@ -57,7 +57,7 @@ int main() {
     size_t w2 = get<BLOCK_INDEX_ROW>(blockIndices2->back()) 
                 + get<BLOCK_INDEX_HEIGHT>(blockIndices2->back());
 
-    shared_ptr<vector<double>> matrixSource2 = make_shared<vector<double>>(h2 * w2, 0);
+    shared_ptr<vector<GEMMINI_TYPE>> matrixSource2 = make_shared<vector<GEMMINI_TYPE>>(h2 * w2, 0);
     // size_t startIndex = 0, endIndex = 3;
 
     size_t height1 = get<BLOCK_INDEX_ROW>(blockIndices->back()) + 1;

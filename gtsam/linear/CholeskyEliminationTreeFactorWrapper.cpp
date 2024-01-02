@@ -6,9 +6,11 @@
 */
 
 #include "CholeskyEliminationTree.h"
+#include "gtsam/linear/gemmini_functions.h"
 #include <gtsam/linear/CholeskyEliminationTreeFactorWrapper.h>
 #include <gtsam/linear/CholeskyEliminationTreeClique.h>
 #include <gtsam/linear/CholeskyEliminationTreeNode.h>
+#include <gtsam/linear/JacobianFactor.h>
 #include <iostream>
 #include <cassert>
 
@@ -71,13 +73,24 @@ bool CholeskyEliminationTree::FactorWrapper::hasMarginalizedKeys() const {
   return false;
 }
 
-const JacobianFactor* CholeskyEliminationTree::FactorWrapper::toJacobianFactor() const {
-  return dynamic_cast<const JacobianFactor*>(cachedLinearFactor.get());
+void CholeskyEliminationTree::FactorWrapper::setCachedLinearMatrix(sharedLinearFactor linearFactor) {
+  if(const JacobianFactor* jf = dynamic_cast<const JacobianFactor*>(linearFactor.get())) {
+    linearFactorType_ = JACOBIAN;
+    cachedLinearMatrix_ = jf->matrixObject().matrix().template cast<GEMMINI_TYPE>();
+  }
+  else if(const HessianFactor* hf = dynamic_cast<const HessianFactor*>(linearFactor.get())) {
+    linearFactorType_ = JACOBIAN;
+    cachedLinearMatrix_ = hf->info().matrix().template cast<GEMMINI_TYPE>();
+  }
 }
 
-const HessianFactor* CholeskyEliminationTree::FactorWrapper::toHessianFactor() const {
-  return dynamic_cast<const HessianFactor*>(cachedLinearFactor.get());
-}
+// const JacobianFactor* CholeskyEliminationTree::FactorWrapper::toJacobianFactor() const {
+//   return dynamic_cast<const JacobianFactor*>(cachedLinearFactor.get());
+// }
+// 
+// const HessianFactor* CholeskyEliminationTree::FactorWrapper::toHessianFactor() const {
+//   return dynamic_cast<const HessianFactor*>(cachedLinearFactor.get());
+// }
 
 ostream& operator<<(ostream& os, const CholeskyEliminationTree::FactorWrapper& factorWrapper) {
   os << "Factor: " << factorWrapper.factorIndex() 

@@ -9,14 +9,7 @@
 #ifndef GEMMINI_FUNCTIONS_H
 #define GEMMINI_FUNCTIONS_H
 
-#define GEMMINI_IS_FLOAT  0
-#define GEMMINI_IS_DOUBLE 1
-#define GEMMINI_TYPE_CHECK GEMMINI_FLOAT
-typedef float GEMMINI_TYPE;
-typedef GEMMINI_TYPE elem_t;
-typedef GEMMINI_TYPE scale_t;
-// #define elem_t GEMMINI_TYPE
-// #define scale_t GEMMINI_TYPE
+#include <gtsam/linear/GemminiTypes.h>>
 
 #include <gtsam/base/Matrix.h>
 #include <iostream>
@@ -26,8 +19,6 @@ extern "C" {
 }
 
 namespace gtsam {
-
-typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
 
 // Perform C += A_scale_factor * A^(transpose_A * T) * B_scale_factor * B^(transpose_B * T)
 // Assume A, B, C are stored in row-major order

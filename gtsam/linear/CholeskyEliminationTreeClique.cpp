@@ -108,7 +108,7 @@ void CholeskyEliminationTree::Clique::reorderClique() {
     if(!gatherSources.empty()) {
       size_t r = height();
       size_t c = width();
-      auto matrixSource = std::make_shared<vector<double>>(r * c, 0);
+      auto matrixSource = std::make_shared<vector<GEMMINI_TYPE>>(r * c, 0);
       auto blockIndicesSource = std::make_shared<BlockIndexVector>(blockIndices);
 
       LocalCliqueColumns newCliqueColumns(matrixSource,
