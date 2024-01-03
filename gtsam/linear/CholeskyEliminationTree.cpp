@@ -5,8 +5,6 @@
 * @date    Feb. 8, 2023
 */
 
-#include "gtsam/linear/GemminiTypes.h"
-#include "gtsam/nonlinear/NonlinearFactor.h"
 #include <gtsam/base/types.h>
 #include <gtsam/inference/Ordering.h>
 #include <gtsam/linear/CholeskyEliminationTree.h>

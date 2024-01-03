@@ -7,15 +7,9 @@
 
 #pragma once
 
-#define GEMMINI_IS_FLOAT  0
-#define GEMMINI_IS_DOUBLE 1
-#define GEMMINI_TYPE_CHECK GEMMINI_FLOAT
-typedef float GEMMINI_TYPE;
-typedef GEMMINI_TYPE elem_t;
-typedef GEMMINI_TYPE scale_t;
-// #define elem_t GEMMINI_TYPE
-// #define scale_t GEMMINI_TYPE
-
+#include <gtsam/linear/gemmini_params.h>
 #include <gtsam/base/Matrix.h>
+
+using GEMMINI_TYPE = elem_t;
 
 typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
