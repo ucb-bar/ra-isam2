@@ -235,4 +235,18 @@ public:
   void testFactorWrapper(const Values& theta);
 };
 
+template<typename MATRIX>
+bool hasNaN(const MATRIX& matrix) {
+    // Iterate through each entry in the matrix
+    for (int i = 0; i < matrix.rows(); ++i) {
+        for (int j = 0; j < matrix.cols(); ++j) {
+            // Check if the entry is NaN
+            if (std::isnan(matrix(i, j))) {
+                return true;  // Found NaN, return true
+            }
+        }
+    }
+    return false;  // No NaN found
+}
+
 } // namespace gtsam

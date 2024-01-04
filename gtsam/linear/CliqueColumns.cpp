@@ -74,7 +74,7 @@ std::vector<CliqueColumns::Scatter> CliqueColumns::getScatterMap(CliqueColumns& 
         // auto src_m = src.matrix();
         // size_t width = src_m.cols();
         // cout << "unused key " << key << " " << row << " " << height << endl;
-        // Eigen::Block<Eigen::Map<ColMajorMatrix>> unused_row(src_m, row, 0, height, width);
+        // Eigen::Block<Eigen::Map<ColMajorMatrix<>>> unused_row(src_m, row, 0, height, width);
         // cout << "key = " << key << " unused row = \n" << unused_row << endl << endl;
 
         i2++;
@@ -168,8 +168,8 @@ void CliqueColumns::addCliqueColumns(
   // We can experiment with how exactly to do the copying
   // But in terms of hw compatibility, seems like we want to copy over col by col
   // Now use the scatterMap to copy over entries
-  double* destPtr = matrixData_;
-  double* srcPtr = src.matrixData_;
+  GEMMINI_TYPE* destPtr = matrixData_;
+  GEMMINI_TYPE* srcPtr = src.matrixData_;
 
   // if the CliqueColumns does not have startIndex_ 0, there is an offset
   // between its column index and row index. The columns will have the full range of
@@ -209,7 +209,7 @@ void CliqueColumns::addCliqueColumns(
 }
 
 std::ostream& operator<<(std::ostream& os, const CliqueColumns& cliqueColumns) {
-  Eigen::Map<ColMajorMatrix> m(cliqueColumns.matrixData_, cliqueColumns.rows_, cliqueColumns.cols_);
+  Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>> m(cliqueColumns.matrixData_, cliqueColumns.rows_, cliqueColumns.cols_);
   os << m;
   return os; 
 }

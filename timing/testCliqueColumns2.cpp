@@ -7,7 +7,7 @@ using namespace std;
 using namespace gtsam;
 
 int main() {
-    vector<double> data(10000, 0);
+    vector<GEMMINI_TYPE> data(10000, 0);
 
     shared_ptr<BlockIndexVector> blockIndices = make_shared<BlockIndexVector>();
     vector<tuple<size_t, size_t>> keyWidthPairs({{1, 2}, {2, 3}, {4, 2}, {5, 2}, {6, 2}, {0, 1}});
@@ -49,7 +49,7 @@ int main() {
     // size_t startIndex = 0, endIndex = 3;
 
     size_t height1 = get<BLOCK_INDEX_ROW>(blockIndices->back()) + 1;
-    CliqueColumns cliqueColumns2(data.data() + sizeof(double) * height1 * height1, blockIndices2.get(), startIndex, endIndex);
+    CliqueColumns cliqueColumns2(data.data() + sizeof(GEMMINI_TYPE) * height1 * height1, blockIndices2.get(), startIndex, endIndex);
 
     cout << "childClique:\n" << cliqueColumns << endl << endl;
     cout << "parentClique:\n" << cliqueColumns2 << endl << endl;

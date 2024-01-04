@@ -10,6 +10,7 @@
 #include <cstddef>
 // #include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
+#include <gtsam/linear/gemmini_functions.h>
 #include <utility>
 #include <vector>
 #include <unordered_set>
@@ -35,15 +36,15 @@ public:
 
 protected:
   // Pointer to the underlying data of the matrix. Construct an Eigen::Map whenever a view of the matrix is needed
-  double* origMatrixData_ = nullptr;
-  double* matrixData_ = nullptr;     // Pointer to the start of this column
+  GEMMINI_TYPE* origMatrixData_ = nullptr;
+  GEMMINI_TYPE* matrixData_ = nullptr;     // Pointer to the start of this column
   size_t rows_ = 0, cols_ = 0;
 
   BlockIndexVector* blockIndices_;
 
   size_t startIndex_ = 0, endIndex_ = -1;
 
-  inline void vectorAdd(double* dest, double* src, size_t len) {
+  inline void vectorAdd(GEMMINI_TYPE* dest, GEMMINI_TYPE* src, size_t len) {
     for(size_t i = 0; i < len; i++) {
       *(dest + i) += *(src + i);
     }
@@ -53,7 +54,7 @@ public:
 
   CliqueColumns() {}
 
-  CliqueColumns(double* origMatrixData_in, 
+  CliqueColumns(GEMMINI_TYPE* origMatrixData_in, 
                 BlockIndexVector* blockIndices_in,
                 size_t startIndex_in,
                 size_t endIndex_in) 
@@ -72,13 +73,13 @@ public:
     matrixData_ = origMatrixData_ + rows_ * c1;
   }
 
-  CliqueColumns(double* matrixData_in, 
+  CliqueColumns(GEMMINI_TYPE* matrixData_in, 
                 BlockIndexVector* blockIndices_in,
                 size_t startIndex_in)
   : CliqueColumns(matrixData_in, blockIndices_in, startIndex_in, blockIndices_in->size()) {}
 
 
-  CliqueColumns(double* matrixData_in, 
+  CliqueColumns(GEMMINI_TYPE* matrixData_in, 
                 BlockIndexVector* blockIndices_in) 
   : CliqueColumns(matrixData_in, blockIndices_in, 0, blockIndices_in->size()) {}
 
@@ -105,8 +106,8 @@ public:
     return endIndex_;
   }
 
-  Eigen::Map<ColMajorMatrix> matrix() {
-    return Eigen::Map<ColMajorMatrix>(matrixData_, rows_, cols_);
+  Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>> matrix() {
+    return Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>(matrixData_, rows_, cols_);
   }
 
   CliqueColumns split(size_t splitIndex);
@@ -145,11 +146,11 @@ class LocalCliqueColumns : public CliqueColumns {
  * */
 
 private:
-    std::shared_ptr<std::vector<double>> matrixSource_ = nullptr;
+    std::shared_ptr<std::vector<GEMMINI_TYPE>> matrixSource_ = nullptr;
     std::shared_ptr<BlockIndexVector> blockIndicesSource_ = nullptr;
 
 public:
-    LocalCliqueColumns(std::shared_ptr<std::vector<double>> matrixSource_in, 
+    LocalCliqueColumns(std::shared_ptr<std::vector<GEMMINI_TYPE>> matrixSource_in, 
                        std::shared_ptr<BlockIndexVector> blockIndicesSource_in,
                        size_t startIndex_in, 
                        size_t endIndex_in) 
@@ -157,7 +158,7 @@ public:
                     startIndex_in, endIndex_in),
       matrixSource_(matrixSource_in), blockIndicesSource_(blockIndicesSource_in) {}
 
-    LocalCliqueColumns(std::shared_ptr<std::vector<double>> matrixSource_in, 
+    LocalCliqueColumns(std::shared_ptr<std::vector<GEMMINI_TYPE>> matrixSource_in, 
                        std::shared_ptr<BlockIndexVector> blockIndicesSource_in,
                        size_t startIndex_in)
     : LocalCliqueColumns(matrixSource_in, blockIndicesSource_in, 
@@ -203,7 +204,7 @@ public:
       auto oldMatrix = matrix();
       auto oldRows = rows_;
       auto oldCols = cols_;
-      auto newMatrixSource = std::make_shared<std::vector<double>>(rows_ * cols_, 0);
+      auto newMatrixSource = std::make_shared<std::vector<GEMMINI_TYPE>>(rows_ * cols_, 0);
       auto newBlockIndicesSource = std::make_shared<BlockIndexVector>();
       auto itOffset = blockIndicesSource_->begin() + startIndex_;
       const size_t rowOffset = std::get<BLOCK_INDEX_ROW>(*itOffset);
@@ -220,10 +221,10 @@ public:
       assert(rows_ == oldRows - rowOffset);
 
       auto newMatrix = matrix();
-      Eigen::Block<Eigen::Map<ColMajorMatrix>> oldBlock(oldMatrix, rowOffset, 0, 
-                                                        rows_, cols_);
-      Eigen::Block<Eigen::Map<ColMajorMatrix>> newBlock(newMatrix, 0, 0, 
-                                                        rows_, cols_);
+      Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>> 
+        oldBlock(oldMatrix, rowOffset, 0, rows_, cols_);
+      Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>> 
+        newBlock(newMatrix, 0, 0, rows_, cols_);
       newBlock = oldBlock;
 
       assert(ownsData());
