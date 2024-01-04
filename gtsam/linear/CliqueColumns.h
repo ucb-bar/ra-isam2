@@ -10,7 +10,7 @@
 #include <cstddef>
 // #include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
-#include <gtsam/linear/GemminiTypes.h>>
+#include <gtsam/linear/gemmini_functions.h>
 #include <utility>
 #include <vector>
 #include <unordered_set>

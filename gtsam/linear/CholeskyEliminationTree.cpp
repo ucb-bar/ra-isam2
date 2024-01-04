@@ -52,7 +52,7 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
     addNewNode(key, dim);
     
     // Add regularization factor because problem is too ill conditioned
-    double lambda = 1e12; // This needs to be a large number since the Hessian factor takes in the covariance matrix
+    double lambda = 1e6; // This needs to be a large number since the Hessian factor takes in the covariance matrix
     Vector mu = Matrix::Zero(dim, 1);
     Matrix sigma = lambda * Matrix::Identity(dim, dim);
     HessianFactor::shared_ptr regularization_factor 
@@ -1061,8 +1061,6 @@ void CholeskyEliminationTree::editOrReconstructFromClique(
            sign, 1, 
            true, false);
 
-    // C.selfadjointView<Eigen::Lower>().rankUpdate(B, sign);
-
     auto destIt = destCols.begin();
     auto destEnd = destCols.end();
 
@@ -1211,11 +1209,7 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
       // Handle edits first
       // Subtract Hessian of the cachedLinearFactor from the workspace
       if(factorStatus == RELINEARIZE || factorStatus == REMOVING) {
-        // sharedLinearFactor linearFactor = factorWrapper->getLinearFactor();
-        // assert(linearFactor != nullptr);
-
-        const auto& cachedMatrix = factorWrapper->getCachedMatrix();
-        assert(cachedMatrix.rows() != 0 && cachedMatrix.cols() != 0);
+        assert(factorWrapper->getLinearFactorType() != NONE);
 
         info.construct(factorWrapper->remappedKeys(), infoMap);
 
@@ -1304,15 +1298,12 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
   L.solveInPlace(B.transpose());
 
   if(bHeight != -1) {
-
     // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
     syrk(bHeight, bHeight, bWidth,
            &m(bWidth, 0), &m(bWidth, 0), &m(bWidth, bWidth),
            totalHeight, totalHeight, totalHeight,
            -1, 1, 
            true, false);
-
-    // C.selfadjointView<Eigen::Lower>().rankUpdate(B, -1);
   }
 
   // // DEBUG
@@ -1346,7 +1337,8 @@ void CholeskyEliminationTree::scatterClique(sharedClique clique) {
   if(clique->marked()) {
     auto m_ptr = workspace_.get_ptrs(clique->workspaceIndex)[0];
     size_t r = clique->height(), c = clique->width();
-    std::shared_ptr<vector<GEMMINI_TYPE>> matrixSource = std::make_shared<vector<GEMMINI_TYPE>>(r * c);
+    std::shared_ptr<vector<GEMMINI_TYPE>> matrixSource 
+      = std::make_shared<vector<GEMMINI_TYPE>>(r * c);
     std::shared_ptr<BlockIndexVector> blockIndicesSource 
       = std::make_shared<BlockIndexVector>(clique->blockIndices);
 
@@ -1428,15 +1420,10 @@ void CholeskyEliminationTree::backsolveClique(
   size_t subdiagHeight = clique->subdiagonalHeight();
 
   // Copy over L^-1 Atb row into delta
-  Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> delta 
-    = block(m, totalHeight - 1, 0, 1, diagWidth).transpose();
+  GemminiVector delta = block(m, totalHeight - 1, 0, 1, diagWidth).transpose();
 
   if(subdiagHeight > 1) {
-// #if defined(GEMMINI_TYPE_CHECK) && GEMMINI_TYPE_CHECK != GEMMINI_IS_DOUBLE
     Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> gatherX(subdiagHeight - 1);
-// #else 
-//     Vector gatherX(subdiagHeight - 1);
-// #endif
 
     // Gather deltas this clique depends on, don't need last row
     for(int i = cliqueSize; i < blockIndices.size() - 1; i++) {
@@ -1458,7 +1445,6 @@ void CholeskyEliminationTree::backsolveClique(
 
     // cout << "delta = " << delta << endl;;
     // cout << "delta copy = " << delta_copy << endl;
-
   }
   
   // Solve diagonal
@@ -1466,14 +1452,15 @@ void CholeskyEliminationTree::backsolveClique(
   auto LT = D.transpose().triangularView<Eigen::Upper>();
   LT.solveInPlace(delta);
 
+  Vector delta_double = delta.cast<double>();
+
   // Copy delta back into delta_ptr
   for(int i = 0; i < cliqueSize; i++) {
     auto[key, row, height] = blockIndices[i];
     Key unmappedKey = unmapKey(key);
 
-    Eigen::Matrix<double, Eigen::Dynamic, 1> delta_double = delta.block(row, 0, height, 1).cast<double>();
-    Vector delta_diff = delta_double - delta_ptr->at(unmappedKey);
-    delta_ptr->at(unmappedKey) = delta_double;
+    Vector delta_diff = delta_double.block(row, 0, height, 1) - delta_ptr->at(unmappedKey);
+    delta_ptr->at(unmappedKey) = delta_double.block(row, 0, height, 1);
 
     if(valuesChanged(delta_diff, tol)) {
       nodes_.at(key)->backsolve = true;

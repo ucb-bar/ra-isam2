@@ -13,8 +13,7 @@
 #include <utility>
 #include <tuple>
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
-#include <gtsam/linear/GemminiTypes.h>
-
+#include <gtsam/linear/gemmini_functions.h>
 
 namespace gtsam {
 
