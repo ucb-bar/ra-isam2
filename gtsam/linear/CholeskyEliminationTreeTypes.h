@@ -12,6 +12,10 @@
 #include <gtsam/base/Matrix.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 
+extern "C" {
+#include <gtsam/linear/gemmini_functions.h>
+}
+
 namespace gtsam {
     
   typedef Key RemappedKey;
@@ -33,5 +37,8 @@ namespace gtsam {
   static constexpr size_t BLOCK_INDEX_KEY = 0;
   static constexpr size_t BLOCK_INDEX_ROW = 1;
   static constexpr size_t BLOCK_INDEX_HEIGHT = 2;
+
+  typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
+  typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> GemminiVector;
 
 } // namespace gtsam

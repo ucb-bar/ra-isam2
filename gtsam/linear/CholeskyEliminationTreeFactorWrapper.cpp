@@ -5,8 +5,6 @@
 * @date    Mar. 16, 2023
 */
 
-#include "CholeskyEliminationTree.h"
-#include "gtsam/linear/gemmini_functions.h"
 #include <gtsam/linear/CholeskyEliminationTreeFactorWrapper.h>
 #include <gtsam/linear/CholeskyEliminationTreeClique.h>
 #include <gtsam/linear/CholeskyEliminationTreeNode.h>

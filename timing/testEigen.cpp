@@ -1,5 +1,9 @@
-#include <gtsam/linear/gemmini_functions.h>
 #include <iostream>
+#include <gtsam/base/Matrix.h>
+
+extern "C" {
+#include <gtsam/linear/gemmini_functions.h>
+}
 
 using namespace gtsam;
 using namespace std;

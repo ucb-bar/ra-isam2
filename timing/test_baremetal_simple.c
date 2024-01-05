@@ -77,7 +77,7 @@ int main() {
   float* B = m_result + diag_width;
   float* C = m_result + diag_width * height + diag_width;
   int stride_B = height, stride_C = height;
-  float* scale_factor_A = -1, scale_factor_B = 1;
+  float scale_factor_A = -1, scale_factor_B = 1;
   bool transpose_A = false, transpose_B = true;
 
   matmul(dim_I, dim_J, dim_K,

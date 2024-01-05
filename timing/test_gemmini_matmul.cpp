@@ -1,7 +1,9 @@
-#include <gtsam/linear/gemmini_functions.h>
 #include <iostream>
 
-using namespace gtsam;
+extern "C" {
+#include <gtsam/linear/gemmini_functions.h>
+}
+
 using namespace std;
 
 int main() {

@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <gtsam/linear/gemmini_params.h>
-#include <gtsam/base/Matrix.h>
-
-using GEMMINI_TYPE = elem_t;
-
-typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
-typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> GemminiVector;
+// #include <gtsam/linear/gemmini_params.h>
+// #include <gtsam/base/Matrix.h>
+// 
+// using GEMMINI_TYPE = elem_t;
+// 
+// typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
+// typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> GemminiVector;

@@ -1,7 +1,7 @@
 #pragma once
 
-size_t A_full_rows = 12;
-size_t A_full_cols = 19;
+int A_full_rows = 12;
+int A_full_cols = 19;
 elem_t A_full[228] = {
 	1.41422, 0, 0.0552835, -0.70682, -0.0200718, -0.0251047, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.707003, 0.0119935, 0, 0.00102539, 
 	6.94097e-310, 1.41422, -0.669093, 0.0200718, -0.70682, 0.635996, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0119935, -0.707003, 0, -5.50492e-05, 
@@ -17,8 +17,8 @@ elem_t A_full[228] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.28976, -0.113318, -0.157437, -0.618784, -0.155884, 0.115437, -0.0249124, -0.000356449
 };
 
-size_t x_full_rows = 6;
-size_t x_full_cols = 1;
+int x_full_rows = 6;
+int x_full_cols = 1;
 elem_t x_full[6] = {
 	-0.00207395, 
 	-0.0060456, 
@@ -28,8 +28,8 @@ elem_t x_full[6] = {
 	-0.0141614
 };
 
-size_t y_full_rows = 12;
-size_t y_full_cols = 1;
+int y_full_rows = 12;
+int y_full_cols = 1;
 elem_t y_full[12] = {
 	0.00102539, 
 	-5.50492e-05, 
@@ -45,17 +45,17 @@ elem_t y_full[12] = {
 	-0.000356449
 };
 
-size_t dim_I = 12;
-size_t dim_J = 6;
-size_t A_r1 = 12;
-size_t A_c1 = 0;
-size_t x_c1 = 0;
-size_t y_c1 = 0;
-size_t stride_A = 19;
+int dim_I = 12;
+int dim_J = 6;
+int A_r1 = 12;
+int A_c1 = 0;
+int x_c1 = 0;
+int y_c1 = 0;
+int stride_A = 19;
 scale_t scale_factor_A = -1;
 
-size_t y_correct_rows = 12;
-size_t y_correct_cols = 1;
+int y_correct_rows = 12;
+int y_correct_cols = 1;
 elem_t y_correct[12] = {
 	0.00296452, 
 	0.0438213, 

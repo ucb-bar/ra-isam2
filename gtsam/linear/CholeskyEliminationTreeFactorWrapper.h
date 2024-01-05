@@ -7,11 +7,14 @@
 
 #pragma once
 
-#include <gtsam/linear/gemmini_functions.h>
 #include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/nonlinear/NonlinearFactor.h>
 #include <utility>
+
+extern "C" {
+#include <gtsam/linear/gemmini_functions.h>
+}
 
 namespace gtsam {
 
@@ -262,9 +265,8 @@ public:
          sign, 1, 
          false, true);
 
-    // Eigen::Map<GemminiMatrix> C_matrix(C_gemmini.data(), width, width);
-    // std::cout << "C after syrk = \n" << C_matrix << std::endl;
-    
+    size_t mrows = m.rows();
+    size_t mcols = m.cols();
     
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
@@ -284,10 +286,18 @@ public:
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         if(srcCol2 >= srcCol1) {
-          scatter_add(width, width, C.data(), srcCol2, srcCol1, srcW2, srcW1, destBlock);
+          add_block(C.data(), &m(0, 0), 
+                    width, mrows, 
+                    srcCol2, srcCol1, 
+                    destR2, destR1, 
+                    srcW2, srcW1);
         }
         else {
-          transpose_scatter_add(width, width, C.data(), srcCol1, srcCol2, srcW1, srcW2, destBlock);
+          add_block_transpose(C.data(), &m(0, 0), 
+                              width, mrows, 
+                              srcCol1, srcCol2, 
+                              destR2, destR1, 
+                              srcW1, srcW1);
         }
       }
     }

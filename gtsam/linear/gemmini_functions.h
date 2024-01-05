@@ -6,22 +6,11 @@
 */
 
 
-#ifndef GEMMINI_FUNCTIONS_H
-#define GEMMINI_FUNCTIONS_H
+#pragma once
 
-#include <gtsam/linear/GemminiTypes.h>>
-
-#include <gtsam/base/Matrix.h>
-#include <iostream>
-
-extern "C" {
 #include "gemmini_no_gemm.h"
-}
 
-namespace gtsam {
-
-typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
-typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> GemminiVector;
+#define GEMMINI_TYPE elem_t
 
 // Perform C += A_scale_factor * A^(transpose_A * T) * B_scale_factor * B^(transpose_B * T)
 // Assume A, B, C are stored in row-major order
@@ -50,45 +39,6 @@ void gemv(
   size_t stride_A,
   scale_t A_scale_factor);
 
-// Copy the contents of M into a GEMMINI_TYPE array A
-// M is typically a matrix of doubles, so it must be down-casted
-// A must be preallocated
-template<typename MATRIX>
-void gather(const MATRIX& M, GEMMINI_TYPE* A) {
-  size_t rows = M.rows();
-  size_t cols = M.cols();
-  for(size_t j = 0; j < cols; j++) {
-    GEMMINI_TYPE* A_start = A + j * rows;
-    for(size_t i = 0; i < rows; i++) {
-      *(A_start + i) = (GEMMINI_TYPE) M(i, j);
-    }
-  }
-}
-
-// Copy the contents of M.T into a GEMMINI_TYPE array A
-// M is typically a matrix of doubles, so it must be down-casted
-// A must be preallocated
-template<typename MATRIX>
-void transpose_gather(const MATRIX& M, GEMMINI_TYPE* A) {
-  size_t rows = M.rows();
-  size_t cols = M.cols();
-  size_t stride = cols;
-  for(size_t j = 0; j < cols; j++) {
-    GEMMINI_TYPE* A_start = A + j;
-    for(size_t i = 0; i < rows; i++) {
-      *(A_start) = (GEMMINI_TYPE) M(i, j);
-      A_start += stride;
-    }
-  }
-}
-
-// // Do C += scale * A * B. A, B, C must be preallocated
-// void matmul(
-//     size_t A_rows, size_t A_cols, 
-//     size_t B_rows, size_t B_cols,
-//     GEMMINI_TYPE scale,
-//     const GEMMINI_TYPE* A, const GEMMINI_TYPE* B, GEMMINI_TYPE* C);
-
 // Do C += scale * A.T * B. A, B, C must be preallocated
 void transposed_matmul(
     size_t A_rows, size_t A_cols, 
@@ -96,63 +46,43 @@ void transposed_matmul(
     GEMMINI_TYPE scale,
     const GEMMINI_TYPE* A, const GEMMINI_TYPE* B, GEMMINI_TYPE* C);
 
-// Do C += scale * A.T * A. A, C must be preallocated
-void syrk(
-  size_t A_rows, size_t A_cols,
-  GEMMINI_TYPE scale,
-  const GEMMINI_TYPE* A, GEMMINI_TYPE* C);
+// // Do C += scale * A.T * A. A, C must be preallocated
+// void syrk(
+//   size_t A_rows, size_t A_cols,
+//   GEMMINI_TYPE scale,
+//   const GEMMINI_TYPE* A, GEMMINI_TYPE* C);
 
-// scatter-add the block of A(r, c, w, h) into MATRIX M
-template<typename MATRIX>
-void scatter_add(size_t A_rows, size_t A_cols, 
-  const GEMMINI_TYPE* A, 
-  size_t r, size_t c, size_t h, size_t w,
-  MATRIX& M) {
-  const GEMMINI_TYPE* A_col_start = A + c * A_rows + r;
-  for(size_t j = 0; j < w; j++) {
-    const GEMMINI_TYPE* A_start = A_col_start;
-    for(size_t i = 0; i < h; i++) {
-      M(i, j) += (GEMMINI_TYPE) *A_start;
-      A_start++;
-    }
-    A_col_start += A_rows;
-  }
-}
+// Add the block of A(Ar, Ac, h, w) into the block of M(Mr, Mc, h, w)
+void add_block(
+  const GEMMINI_TYPE* A, GEMMINI_TYPE* M,
+  size_t stride_A, size_t stride_M,
+  size_t Ar, size_t Ac,
+  size_t Mr, size_t Mc,
+  size_t h, size_t w
+  );
 
-// scatter-add the block of A(r, c, w, h).T into MATRIX M
-template<typename MATRIX>
-void transpose_scatter_add(
-  size_t A_rows, size_t A_cols, 
-  const GEMMINI_TYPE* A, 
-  size_t r, size_t c, size_t h, size_t w,
-  MATRIX& M) {
-  const GEMMINI_TYPE* A_col_start = A + c * A_rows + r;
-  for(size_t j = 0; j < h; j++) {
-    const GEMMINI_TYPE* A_start = A_col_start;
-    for(size_t i = 0; i < w; i++) {
-      M(i, j) += (GEMMINI_TYPE) *A_start;
-      A_start += A_rows;
-    }
-    A_col_start++;
-  }
-}
+// Add the block of A(Ar, Ac, h, w).T into the block of M(Mr, Mc, w, h)
+void add_block_transpose(
+  const GEMMINI_TYPE* A, GEMMINI_TYPE* M,
+  size_t stride_A, size_t stride_M,
+  size_t Ar, size_t Ac,
+  size_t Mr, size_t Mc,
+  size_t h, size_t w
+  );
 
-// Do y += scale * Ax
-void gemv(
-  size_t A_rows, size_t A_cols,
-  GEMMINI_TYPE scale,
-  const GEMMINI_TYPE* A, 
-  const GEMMINI_TYPE* x,
-  GEMMINI_TYPE* y);
+// // Do y += scale * Ax
+// void gemv(
+//   size_t A_rows, size_t A_cols,
+//   GEMMINI_TYPE scale,
+//   const GEMMINI_TYPE* A, 
+//   const GEMMINI_TYPE* x,
+//   GEMMINI_TYPE* y);
 
-// Do y += scale * A.Tx
-void transpose_gemv(
-  size_t A_rows, size_t A_cols,
-  GEMMINI_TYPE scale,
-  const GEMMINI_TYPE* A, 
-  const GEMMINI_TYPE* x, 
-  GEMMINI_TYPE* y);
+// // Do y += scale * A.Tx
+// void transpose_gemv(
+//   size_t A_rows, size_t A_cols,
+//   GEMMINI_TYPE scale,
+//   const GEMMINI_TYPE* A, 
+//   const GEMMINI_TYPE* x, 
+//   GEMMINI_TYPE* y);
 
-} // namespace gtsam
-
-#endif

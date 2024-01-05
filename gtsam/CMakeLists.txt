@@ -61,7 +61,7 @@ add_definitions("-DPREALLOCATE=1 -DMULTITHREAD=1 -DID_STRING=${ID_STRING} -DPRIN
 # assemble core libaries
 foreach(subdir ${gtsam_subdirs})
     # Build convenience libraries
-    file(GLOB_RECURSE subdir_srcs "${subdir}/*.cpp" "${subdir}/*.h") # Include header files so they show up in Visual Studio
+    file(GLOB_RECURSE subdir_srcs "${subdir}/*.c" "${subdir}/*.cpp" "${subdir}/*.h") # Include header files so they show up in Visual Studio
     list(REMOVE_ITEM subdir_srcs ${excluded_sources})
 	file(GLOB subdir_test_files "${subdir}/tests/*")
 	list(REMOVE_ITEM subdir_srcs ${subdir_test_files}) # Remove test files from sources compiled into library

@@ -8,15 +8,17 @@
 #pragma once
 
 #include <cstddef>
-// #include <gtsam/linear/CholeskyEliminationTree.h>
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
-#include <gtsam/linear/gemmini_functions.h>
 #include <utility>
 #include <vector>
 #include <unordered_set>
 #include <iostream>
 #include <cassert>
 #include <cstring>
+
+extern "C" {
+#include <gtsam/linear/gemmini_functions.h>
+}
 
 namespace gtsam {
 

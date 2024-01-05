@@ -1,8 +1,10 @@
+extern "C" {
 #include <gtsam/linear/gemmini_functions.h>
+}
+
 #include "gemv_test0.h"
 #include <iostream>
 
-using namespace gtsam;
 using namespace std;
 
 int main() {

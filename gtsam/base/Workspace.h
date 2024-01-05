@@ -5,6 +5,8 @@
 * @date    Apr. 12, 2023
 */
 
+#pragma once
+
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <cassert>
@@ -13,7 +15,10 @@
 #include <utility>
 #include <tuple>
 #include <gtsam/linear/CholeskyEliminationTreeTypes.h>
+
+extern "C" {
 #include <gtsam/linear/gemmini_functions.h>
+}
 
 namespace gtsam {
 

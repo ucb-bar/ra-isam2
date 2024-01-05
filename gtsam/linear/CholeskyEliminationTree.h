@@ -18,7 +18,9 @@
 #include <iostream>
 #include <boost/optional.hpp>
 
+extern "C" {
 #include <gtsam/linear/gemmini_functions.h>
+}
 
 namespace gtsam {
 

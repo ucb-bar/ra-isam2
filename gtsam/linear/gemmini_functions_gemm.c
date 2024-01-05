@@ -6,8 +6,7 @@
 */
 
 #include <gtsam/linear/gemmini_functions.h>
-
-namespace gtsam {
+#include <assert.h>
 
 // Perform C += A_scale_factor * A^(transpose_A * T) * B_scale_factor * B^(transpose_B * T)
 // Assume A, B, C are stored in row-major order
@@ -184,39 +183,39 @@ void transposed_matmul(
   }
 }
 
-// Do C += scale * A.T * A. A, C must be preallocated
-void syrk(
-  size_t A_rows, size_t A_cols,
-  GEMMINI_TYPE scale,
-  const GEMMINI_TYPE* A, GEMMINI_TYPE* C) {
-  for(size_t j = 0; j < A_cols; j++) {
-    GEMMINI_TYPE* C_start = C + j * A_cols;
-    const GEMMINI_TYPE* A_start = A + j * A_rows;
-    for(size_t i = j; i < A_cols; i++) {
-      const GEMMINI_TYPE* AT_start = A + i * A_rows;
-      for(size_t k = 0; k < A_rows; k++) {
-        *(C_start + i) += scale * (*(AT_start + k)) * (*(A_start + k));
-      }
-    }
-  }
-}
+// // Do C += scale * A.T * A. A, C must be preallocated
+// void syrk(
+//   size_t A_rows, size_t A_cols,
+//   GEMMINI_TYPE scale,
+//   const GEMMINI_TYPE* A, GEMMINI_TYPE* C) {
+//   for(size_t j = 0; j < A_cols; j++) {
+//     GEMMINI_TYPE* C_start = C + j * A_cols;
+//     const GEMMINI_TYPE* A_start = A + j * A_rows;
+//     for(size_t i = j; i < A_cols; i++) {
+//       const GEMMINI_TYPE* AT_start = A + i * A_rows;
+//       for(size_t k = 0; k < A_rows; k++) {
+//         *(C_start + i) += scale * (*(AT_start + k)) * (*(A_start + k));
+//       }
+//     }
+//   }
+// }
 
-// Do y += scale * Ax
-void gemv(
-  size_t A_rows, size_t A_cols,
-  GEMMINI_TYPE scale,
-  const GEMMINI_TYPE* A, 
-  const GEMMINI_TYPE* x,
-  GEMMINI_TYPE* y) {
-
-  for(size_t j = 0; j < A_cols; j++) {
-    const GEMMINI_TYPE* A_start = A + j * A_rows;
-    for(size_t i = 0; i < A_rows; i++) {
-      y[i] += scale * A_start[i] * x[j];
-    }
-  }
-
-}
+// // Do y += scale * Ax
+// void gemv(
+//   size_t A_rows, size_t A_cols,
+//   GEMMINI_TYPE scale,
+//   const GEMMINI_TYPE* A, 
+//   const GEMMINI_TYPE* x,
+//   GEMMINI_TYPE* y) {
+// 
+//   for(size_t j = 0; j < A_cols; j++) {
+//     const GEMMINI_TYPE* A_start = A + j * A_rows;
+//     for(size_t i = 0; i < A_rows; i++) {
+//       y[i] += scale * A_start[i] * x[j];
+//     }
+//   }
+// 
+// }
 
 // Do y += scale * A.Tx
 void transpose_gemv(
@@ -234,4 +233,48 @@ void transpose_gemv(
   }
 }
 
-} // namespace gtsam
+// Add the block of A(Ar, Ac, h, w) into the block of M(Mr, Mc, h, w)
+void add_block(
+  const GEMMINI_TYPE* A, GEMMINI_TYPE* M,
+  size_t stride_A, size_t stride_M,
+  size_t Ar, size_t Ac,
+  size_t Mr, size_t Mc,
+  size_t h, size_t w
+  ) {
+  const GEMMINI_TYPE* A_col_start = A + Ac * stride_A + Ar;
+  GEMMINI_TYPE* M_col_start = M + Mc * stride_M + Mr;
+  for(size_t j = 0; j < w; j++) {
+    const GEMMINI_TYPE* A_ptr = A_col_start;
+    GEMMINI_TYPE* M_ptr = M_col_start;
+    for(size_t i = 0; i < h; i++) {
+      *M_ptr += *A_ptr;
+      A_ptr++;
+      M_ptr++;
+    }
+    A_col_start += stride_A;
+    M_col_start += stride_M;
+  }
+}
+
+// Add the block of A(Ar, Ac, h, w).T into the block of M(Mr, Mc, w, h)
+void add_block_transpose(
+  const GEMMINI_TYPE* A, GEMMINI_TYPE* M,
+  size_t stride_A, size_t stride_M,
+  size_t Ar, size_t Ac,
+  size_t Mr, size_t Mc,
+  size_t h, size_t w
+  ) {
+  const GEMMINI_TYPE* A_col_start = A + Ac * stride_A + Ar;
+  GEMMINI_TYPE* M_col_start = M + Mc * stride_M + Mr;
+  for(size_t j = 0; j < h; j++) {
+    const GEMMINI_TYPE* A_ptr = A_col_start;
+    GEMMINI_TYPE* M_ptr = M_col_start;
+    for(size_t i = 0; i < w; i++) {
+      *M_ptr += *A_ptr;
+      A_ptr += stride_A;
+      M_ptr++;
+    }
+    A_col_start++;
+    M_col_start += stride_M;
+  }
+}

@@ -1,7 +1,7 @@
 #pragma once
 
-size_t m_full_rows = 22;
-size_t m_full_cols = 22;
+int m_full_rows = 22;
+int m_full_cols = 22;
 elem_t m_full[484] = {
 	2, 0, -0.527139, 0.0123216, 0.499848, 0, 0.0231453, 0.499463, -0.501876, 0.0164118, 0.49973, 0, 0, 0, 0, 0, 0, 0, -0.499964, 0.0059363, 0, -0.146497, 
 	6.92664e-310, 2, -0.55493, -0.499848, 0.0123216, 0, -0.499463, 0.0231453, -0.0883717, -0.49973, 0.0164118, 0, 0, 0, 0, 0, 0, 0, -0.0059363, -0.499964, 0, 0.036343, 
@@ -27,25 +27,25 @@ elem_t m_full[484] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-size_t dim_I = 10;
-size_t dim_J = 10;
-size_t dim_K = 12;
-size_t A_r1 = 12;
-size_t A_c1 = 0;
-size_t B_r1 = 12;
-size_t B_c1 = 0;
-size_t C_r1 = 12;
-size_t C_c1 = 12;
-size_t stride_A = 22;
-size_t stride_B = 22;
-size_t stride_C = 22;
+int dim_I = 10;
+int dim_J = 10;
+int dim_K = 12;
+int A_r1 = 12;
+int A_c1 = 0;
+int B_r1 = 12;
+int B_c1 = 0;
+int C_r1 = 12;
+int C_c1 = 12;
+int stride_A = 22;
+int stride_B = 22;
+int stride_C = 22;
 scale_t scale_factor_A = -1;
 scale_t scale_factor_B = 1;
 bool transpose_A = true;
 bool transpose_B = false;
 
-size_t m_correct_rows = 22;
-size_t m_correct_cols = 22;
+int m_correct_rows = 22;
+int m_correct_cols = 22;
 elem_t m_correct[484] = {
 	2, 0, -0.527139, 0.0123216, 0.499848, 0, 0.0231453, 0.499463, -0.501876, 0.0164118, 0.49973, 0, 0, 0, 0, 0, 0, 0, -0.499964, 0.0059363, 0, -0.146497, 
 	6.92664e-310, 2, -0.55493, -0.499848, 0.0123216, 0, -0.499463, 0.0231453, -0.0883717, -0.49973, 0.0164118, 0, 0, 0, 0, 0, 0, 0, -0.0059363, -0.499964, 0, 0.036343, 

@@ -17,7 +17,7 @@ def write_matrix(fin, fout):
     name = arr[0]
     rows = int(arr[1])
     cols = int(arr[2])
-    fout.write(f"size_t {name}_rows = {rows};\nsize_t {name}_cols = {cols};\nelem_t {name}[{rows * cols}] = {{\n")
+    fout.write(f"int {name}_rows = {rows};\nint {name}_cols = {cols};\nelem_t {name}[{rows * cols}] = {{\n")
     for r in range(rows):
         line = fin.readline()
         arr = line.split()
@@ -51,7 +51,7 @@ def read_syrk_inputs(fin, fout):
     transpose_B = arr[15]
 
     for name, val in d.items():
-        fout.write(f"size_t {name} = {val};\n")
+        fout.write(f"int {name} = {val};\n")
 
     fout.write(f"scale_t scale_factor_A = {scale_factor_A};\n")
     fout.write(f"scale_t scale_factor_B = {scale_factor_B};\n")
