@@ -79,10 +79,6 @@ void CholeskyEliminationTree::FactorWrapper::setCachedLinearMatrix(sharedLinearF
     cachedLinearMatrix_ = jf->matrixObject().matrix().template cast<GEMMINI_TYPE>();
   }
   else if(const HessianFactor* hf = dynamic_cast<const HessianFactor*>(linearFactor.get())) {
-<<<<<<< HEAD
-    linearFactorType_ = JACOBIAN;
-    cachedLinearMatrix_ = hf->info().matrix().template cast<GEMMINI_TYPE>();
-=======
     linearFactorType_ = HESSIAN;
     const GemminiMatrix& hessianUpper = hf->info().matrix().template cast<GEMMINI_TYPE>();
     cachedLinearMatrix_ = GemminiMatrix(hessianUpper.selfadjointView<Eigen::Upper>());
@@ -91,7 +87,6 @@ void CholeskyEliminationTree::FactorWrapper::setCachedLinearMatrix(sharedLinearF
   else {
     std::cout << "Factor type not supported!" << std::endl;
     exit(1);
->>>>>>> fp32-v2
   }
 }
 
