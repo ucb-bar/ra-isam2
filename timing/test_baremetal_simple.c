@@ -73,12 +73,13 @@ int main() {
 
 
   // Do C - BBT
+  // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
   int dim_I = height - diag_width, dim_J = dim_I, dim_K = diag_width;
   float* B = m_result + diag_width;
   float* C = m_result + diag_width * height + diag_width;
   int stride_B = height, stride_C = height;
   float scale_factor_A = -1, scale_factor_B = 1;
-  bool transpose_A = false, transpose_B = true;
+  bool transpose_A = true, transpose_B = false;
 
   matmul(dim_I, dim_J, dim_K,
        B, B, C, 
