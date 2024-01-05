@@ -12,11 +12,17 @@
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_3_7.h"
+#include "baremetal_tests/supernode_2_6.h"
 
 void ax(float a, float* x, int h) {
   for(int i = 0; i < h; i++) {
     x[i] *= a;
+  }
+}
+
+void div_ax(float a, float* x, int h) {
+  for(int i = 0; i < h; i++) {
+    x[i] /= a;
   }
 }
 
@@ -34,7 +40,8 @@ void partial_factorization1(float* AB, int w, int h) {
     float sqrtdiag = sqrt(AB[0]);
     AB[0] = sqrtdiag;
     float scale = 1 / sqrtdiag;
-    ax(scale, AB + 1, hh);
+    div_ax(sqrtdiag, AB + 1, hh);
+    // ax(scale, AB + 1, hh);
     float* AB_kk = AB;
     int hhh = hh;
     for(int k = 1; k < w - j; k++) {
@@ -112,6 +119,19 @@ int main() {
   for(int j = 0; j < height; j++) {
     for(int i = 0; i < height; i++) {
       printf("%f, ", m_correct[j * height + i]);
+    }
+    printf("\n");
+  }
+
+  printf("\n\n");
+
+  for(int j = 0; j < height; j++) {
+    for(int i = 0; i < height; i++) {
+      float abs_err = abs(m_correct[j * height + i] - m_result[j * height + i]);
+      float abs_A = abs(m_correct[j * height + i]);
+      float rel_err = abs_A == 0? abs_err : abs_err / abs_A;
+
+      printf("%f, ", rel_err);
     }
     printf("\n");
   }

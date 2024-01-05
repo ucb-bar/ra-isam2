@@ -21,8 +21,6 @@ def write_matrix(fout, matrix, matrix_name):
         for r in range(rows):
             f = matrix_f[r, c]
             # print(matrix_f[r, c])
-            print(type(f))
-            print(f)
             fout.write(str(f))
             if c + 1 != cols or r + 1 != rows:
                 fout.write(", ")
@@ -43,16 +41,24 @@ def gen_supernode_column(w, h, filename=None):
 
     D = np.diag(D)
 
+    D = D.astype(np.float32)
+
     print(D)
 
     A = Q @ D @ Q.T
-
+    print(A)
+    A = A.astype(np.float32)
     print(A)
 
+    print(A.astype(float))
+    exit(0)
+
     B = np.random.randn((h - w), w) * eval_range
+    B = B.astype(np.float32)
 
     C = np.random.randn((h - w), (h - w)) * np.sqrt(eval_range)
     C = C @ C.T
+    C = C.astype(np.float32)
 
     print(B)
     print(C)
@@ -68,7 +74,9 @@ def gen_supernode_column(w, h, filename=None):
     print(M)
 
     LA = np.linalg.cholesky(A)
-    print(LA)
+    print(LA.dtype)
+    print(B)
+    print(B.astype(float))
 
     LB = scipy.linalg.solve_triangular(LA, B.T, lower=True).T
 
@@ -110,5 +118,5 @@ if __name__ == "__main__":
     w = int(options.width)
     h = int(options.height)
 
-    gen_supernode_column(3, 6, options.outfile)
+    gen_supernode_column(w, h, options.outfile)
 
