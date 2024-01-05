@@ -252,18 +252,6 @@ public:
     size_t height = Ab.rows();
     size_t width = Ab.cols();
 
-<<<<<<< HEAD
-=======
-    if(hasNaN(Ab)) {
-      std::cout << "In update hessian jacobian. Ab has NAN!" << std::endl;
-      std::cout << "factor index = " << factorIndex_ << std::endl;
-      std::cout << "Ab = " << Ab << std::endl;
-      std::cout << "nonelinear factor = " << nonlinearFactor_ << std::endl;
-      // nonlinearFactor_->print();
-      exit(1);
-    }
-
->>>>>>> fp32-v2
     // Allocate a large scratch space
     std::vector<GEMMINI_TYPE> C(width * width, 0);
 
@@ -304,14 +292,6 @@ public:
       }
     }
 
-<<<<<<< HEAD
-=======
-    if(hasNaN(m)) {
-      std::cout << "In update hessian jacobian. m has NAN!" << std::endl;
-      exit(1);
-    }
-
->>>>>>> fp32-v2
   }
 
   template<typename MATRIX, typename INFO, typename PREDICATE>
