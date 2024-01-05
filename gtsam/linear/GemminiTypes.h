@@ -13,3 +13,4 @@
 using GEMMINI_TYPE = elem_t;
 
 typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, Eigen::Dynamic> GemminiMatrix;
+typedef Eigen::Matrix<GEMMINI_TYPE, Eigen::Dynamic, 1> GemminiVector;

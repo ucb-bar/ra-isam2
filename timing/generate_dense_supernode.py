@@ -27,7 +27,7 @@ def write_matrix(fout, matrix, matrix_name):
             if c + 1 != cols or r + 1 != rows:
                 fout.write(", ")
         fout.write("\n")
-    fout.write("\n};\n")
+    fout.write("};\n")
 
 
 
@@ -63,6 +63,8 @@ def gen_supernode_column(w, h, filename=None):
     M[w:h, :w] = B
     M[w:h, w:h] = C
 
+    M = M.astype(np.float32)
+
     print(M)
 
     LA = np.linalg.cholesky(A)
@@ -72,7 +74,7 @@ def gen_supernode_column(w, h, filename=None):
 
     LC = C - LB @ LB.T
 
-    M_cor = np.zeros((h, h))
+    M_cor = np.zeros((h, h)).astype(np.float32)
 
     M_cor[:w, :w] = LA
     M_cor[w:h, :w] = LB
