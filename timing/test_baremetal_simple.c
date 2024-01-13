@@ -9,10 +9,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <float.h>
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_2_6.h"
+#include "baremetal_tests/supernode_12_36.h"
 
 void ax(float a, float* x, int h) {
   for(int i = 0; i < h; i++) {
@@ -70,14 +71,15 @@ void set_strictly_upper_trianguler(float a, float* x, int w, int h) {
 
 int main() {
 
-  printf("%d %d\n", diag_width, height);
-
   float* m_result = (float*) malloc(height * height * sizeof(float));
   memcpy(m_result, m, height * height * sizeof(float));
 
+  const double ERR_THRESH = FLT_EPSILON * cond;
+
+  printf("Error threshold: %.8e\n", ERR_THRESH);
+
   // Do cholesky of A and solve B
   partial_factorization1(m_result, diag_width, height);
-
 
   // Do C - BBT
   // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
@@ -98,6 +100,7 @@ int main() {
   // This line is only needed for visual inspection
   set_strictly_upper_trianguler(0, m_result, diag_width, height);
 
+  /*
   for(int j = 0; j < diag_width; j++) {
     for(int i = 0; i < height; i++) {
       printf("%f, ", m[j * height + i]);
@@ -124,16 +127,26 @@ int main() {
   }
 
   printf("\n\n");
+  */
 
   for(int j = 0; j < height; j++) {
     for(int i = 0; i < height; i++) {
-      float abs_err = abs(m_correct[j * height + i] - m_result[j * height + i]);
-      float abs_A = abs(m_correct[j * height + i]);
-      float rel_err = abs_A == 0? abs_err : abs_err / abs_A;
+      double abs_err = fabs(m_correct[j * height + i] - m_result[j * height + i]);
+      double abs_A = fabs(m_correct[j * height + i]);
+      double rel_err = abs_A != 0? abs_err / abs_A :
+                       abs_err == 0? 0 : INFINITY;
 
-      printf("%f, ", rel_err);
+      // printf("%.10e, ", rel_err);
+
+      if(rel_err > ERR_THRESH) {
+        printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", j, i, rel_err);
+        return 1;
+      }
     }
-    printf("\n");
+    // printf("\n");
   }
 
+  printf("Passed :)\n");
+
+  return 0;
 }

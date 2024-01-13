@@ -45,15 +45,8 @@ def gen_supernode_column(w, h, filename=None):
 
     D = D.astype(np.float32)
 
-    print(D)
-
     A = Q @ D @ Q.T
-    print(A)
     A = A.astype(np.float32)
-    print(A)
-
-    print(A.astype(float))
-    exit(0)
 
     B = np.random.randn((h - w), w) * eval_range
     B = B.astype(np.float32)
@@ -61,9 +54,6 @@ def gen_supernode_column(w, h, filename=None):
     C = np.random.randn((h - w), (h - w)) * np.sqrt(eval_range)
     C = C @ C.T
     C = C.astype(np.float32)
-
-    print(B)
-    print(C)
 
     M = np.zeros((h, h))
 
@@ -73,12 +63,10 @@ def gen_supernode_column(w, h, filename=None):
 
     M = M.astype(np.float32)
 
-    print(M)
+    M_cond = np.linalg.cond(M)
+    print(M_cond)
 
     LA = np.linalg.cholesky(A)
-    print(LA.dtype)
-    print(B)
-    print(B.astype(float))
 
     LB = scipy.linalg.solve_triangular(LA, B.T, lower=True).T
 
@@ -96,6 +84,7 @@ def gen_supernode_column(w, h, filename=None):
             fout.write(f"#pragma once\n\n")
             fout.write(f"int diag_width = {w};\n")
             fout.write(f"int height = {h};\n\n")
+            fout.write(f"double cond = {M_cond};\n\n")
             write_matrix(fout, M, "m")
             fout.write("\n\n")
             write_matrix(fout, M_cor, "m_correct")
