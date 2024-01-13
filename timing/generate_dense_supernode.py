@@ -16,7 +16,7 @@ from optparse import OptionParser
 
 def write_matrix(fout, matrix, matrix_name):
     matrix_f = matrix.astype(np.float32)
-    print(matrix_f)
+    # print(matrix_f)
     fout.write(f"float {matrix_name}[] = {{\n" )
     rows, cols = matrix.shape
     for c in range(cols):
@@ -37,7 +37,7 @@ def gen_supernode_column(w, h, filename=None):
 
     Q = special_ortho_group.rvs(w)
     D = np.random.rand(w)
-    print(D)
+    # print(D)
 
     D = (D - 1) * (-eval_range)     # numpy rand() is sampled from [0, 1), so do shift and inverse to make sure it is > 0
 
