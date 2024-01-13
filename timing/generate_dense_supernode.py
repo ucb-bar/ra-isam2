@@ -5,6 +5,8 @@ A is width x width. C is (height - width) x (height - width)
 Also generate the correctly partially-factored result
 Write out both matrices in column major format in a C header
 where int diag_width = width; int height = height;
+
+Example Command: python3 generate_dense_supernode.py --width 2 --height 6 --outfile baremetal_tests/supernode_2_6.h --seed 0 
 """
 import numpy as np
 import scipy
