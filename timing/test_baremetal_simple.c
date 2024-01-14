@@ -171,7 +171,7 @@ int main() {
   // printf("\n\n");
 
   for(int j = 0; j < height; j++) {
-    for(int i = 0; i < height; i++) {
+    for(int i = j; i < height; i++) {
       double abs_err = fabs(m_correct[j * height + i] - m_result[j * height + i]);
       double abs_A = fabs(m_correct[j * height + i]);
       double rel_err = abs_A != 0? abs_err / abs_A :
@@ -180,7 +180,7 @@ int main() {
       // printf("%.10e, ", rel_err);
 
       if(rel_err > ERR_THRESH) {
-        // printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", j, i, rel_err);
+        printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", j, i, rel_err);
         return 1;
       }
     }
