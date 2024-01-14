@@ -13,7 +13,7 @@
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_2_6.h"
+#include "baremetal_tests/supernode_12_36.h"
 
 void ax(float a, float* x, int h) {
   for(int i = 0; i < h; i++) {
@@ -143,32 +143,32 @@ int main() {
   // This line is only needed for visual inspection
   set_strictly_upper_trianguler(0, m_result, diag_width, height);
 
-  for(int j = 0; j < diag_width; j++) {
-    for(int i = 0; i < height; i++) {
-      printf("%f, ", m[j * height + i]);
-    }
-    printf("\n");
-  }
+  // for(int j = 0; j < diag_width; j++) {
+  //   for(int i = 0; i < height; i++) {
+  //     printf("%f, ", m[j * height + i]);
+  //   }
+  //   printf("\n");
+  // }
 
-  printf("\n\n");
+  // printf("\n\n");
 
-  for(int j = 0; j < height; j++) {
-    for(int i = 0; i < height; i++) {
-      printf("%f, ", m_result[j * height + i]);
-    }
-    printf("\n");
-  }
+  // for(int j = 0; j < height; j++) {
+  //   for(int i = 0; i < height; i++) {
+  //     printf("%f, ", m_result[j * height + i]);
+  //   }
+  //   printf("\n");
+  // }
 
-  printf("\n\n");
+  // printf("\n\n");
 
-  for(int j = 0; j < height; j++) {
-    for(int i = 0; i < height; i++) {
-      printf("%f, ", m_correct[j * height + i]);
-    }
-    printf("\n");
-  }
+  // for(int j = 0; j < height; j++) {
+  //   for(int i = 0; i < height; i++) {
+  //     printf("%f, ", m_correct[j * height + i]);
+  //   }
+  //   printf("\n");
+  // }
 
-  printf("\n\n");
+  // printf("\n\n");
 
   for(int j = 0; j < height; j++) {
     for(int i = 0; i < height; i++) {
@@ -177,14 +177,14 @@ int main() {
       double rel_err = abs_A != 0? abs_err / abs_A :
                        abs_err == 0? 0 : INFINITY;
 
-      printf("%.10e, ", rel_err);
+      // printf("%.10e, ", rel_err);
 
       if(rel_err > ERR_THRESH) {
         // printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", j, i, rel_err);
         return 1;
       }
     }
-    printf("\n");
+    // printf("\n");
   }
 
   printf("Passed :)\n");
