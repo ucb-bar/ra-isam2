@@ -15,6 +15,12 @@
 
 #include "baremetal_tests/supernode_12_36.h"
 
+const int CHOL_BLOCK_SIZE = 3;
+const int TRSM_BLOCK_SIZE = 5;
+const int GEMM_BLOCK_SIZE = 7;
+
+static inline int min(int A, int B) { return A > B? B : A; }
+
 void print_col_major(float* M, int w, int h, int stride) {
   float* M_i0 = M;
   for(int i = 0; i < h; i++) {
@@ -44,6 +50,47 @@ void div_ax(float a, float* x, int h) {
 void saxpy(float a, float* x, float* y, int h) {
   for(int i = 0; i < h; i++) {
     y[i] += a * x[i];
+  }
+}
+
+// Do C += scale_factor_B * BB^T
+// B is dim_I x dim_K, C is dim_I x dim_I
+// Equivalent to the following call
+// matmul(dim_I, dim_I, dim_K,
+//      B, B, C, 
+//      stride_B, stride_B, stride_C,
+//      scale_factor_B, 1,
+//      true, false);
+void blocked_syrk(int dim_I, int dim_K,
+                  float* B, float* C,
+                  int stride_B, int stride_C,
+                  float scale_factor_B) {
+
+  float* B_0K = B;
+  for(int K = 0; K < dim_K; K += GEMM_BLOCK_SIZE) {
+    int ww = min(dim_K - K, GEMM_BLOCK_SIZE); // ww is the actual panel width
+    float* B_JK = B_0K;
+    float* C_0J = C;
+    for(int J = 0; J < dim_I; J += GEMM_BLOCK_SIZE) {
+      int hhJ = min(dim_I - J, GEMM_BLOCK_SIZE);
+      float* B_IK = B_JK;
+      float* C_IJ = C_0J + J;
+      for(int I = J; I < dim_I; I += GEMM_BLOCK_SIZE) {
+        int hhI = min(dim_I - I, GEMM_BLOCK_SIZE); 
+
+        matmul(hhJ, hhI, ww,
+               B_JK, B_IK, C_IJ,
+               stride_B, stride_B, stride_C,
+               scale_factor_B, 1,
+               true, false);
+
+        B_IK += GEMM_BLOCK_SIZE;
+        C_IJ += GEMM_BLOCK_SIZE;
+      }
+      B_JK += GEMM_BLOCK_SIZE;
+      C_0J += GEMM_BLOCK_SIZE * stride_C;
+    }
+    B_0K += GEMM_BLOCK_SIZE * stride_B;
   }
 }
 
@@ -132,9 +179,6 @@ void dense_block_triangle_solve(float* L, float* B,
 // Do partial cholesky factorization by first doing as dense cholesky on the diagonal block
 // Then doing triangle solve
 void partial_factorization2(float* AB, int w, int h) {
-  const int CHOL_BLOCK_SIZE = 2;
-  const int TRSM_BLOCK_SIZE = 2;
-  const int GEMM_BLOCK_SIZE = 2;
 
   int hh = h;   // hh is the height of the current block column
 
@@ -145,12 +189,12 @@ void partial_factorization2(float* AB, int w, int h) {
   int I;
   for(J = 0; J < w; J += CHOL_BLOCK_SIZE) {
     // TODO: Make ww fixed and use cleanup iterations
-    int ww = w - J > CHOL_BLOCK_SIZE? CHOL_BLOCK_SIZE : w - J; // ww is the panel width.
+    int ww = min(w - J, CHOL_BLOCK_SIZE); // ww is the panel width.
     dense_block_cholesky(AB_JJ, ww, h);
     float* AB_IJ = AB_JJ + ww;
     for(I = J + ww; I < h; I += TRSM_BLOCK_SIZE) {
-      // TODO: Make hhh fixed and use cleanup iterations
-      int hh = h - I > TRSM_BLOCK_SIZE? TRSM_BLOCK_SIZE : h - I; // hh is the block height
+      // TODO: Make hh fixed and use cleanup iterations
+      int hh = min(h - I, TRSM_BLOCK_SIZE); // hh is the block height
       dense_block_triangle_solve(AB_JJ, AB_IJ, 
                                  ww, 
                                  hh, 
@@ -161,16 +205,21 @@ void partial_factorization2(float* AB, int w, int h) {
     // TODO: Make this symmetric and blocked
     int dim_I = h - J - ww, dim_J = dim_I, dim_K = ww;
     float* B = AB_JJ + ww;
-    float* C = AB_JJ + CHOL_BLOCK_SIZE * (h + 1);
+    float* C = AB_JJ + ww * (h + 1);
     int stride_B = h, stride_C = h;
     float scale_factor_A = -1, scale_factor_B = 1;
     bool transpose_A = true, transpose_B = false;
 
-    matmul(dim_I, dim_J, dim_K,
-         B, B, C, 
-         stride_B, stride_B, stride_C,
-         scale_factor_A, scale_factor_B,
-         transpose_A, transpose_B);
+    blocked_syrk(dim_I, dim_K,
+                 B, C,
+                 stride_B, stride_C,
+                 scale_factor_A);
+
+    // matmul(dim_I, dim_J, dim_K,
+    //      B, B, C, 
+    //      stride_B, stride_B, stride_C,
+    //      scale_factor_A, scale_factor_B,
+    //      transpose_A, transpose_B);
 
     AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
     hh -= CHOL_BLOCK_SIZE;
@@ -194,6 +243,7 @@ int main() {
   const double ERR_THRESH = FLT_EPSILON * cond;
 
   printf("Error threshold: %.8e\n", ERR_THRESH);
+  fflush(stdout);
 
   // Do cholesky of A and solve B
   partial_factorization2(m_result, diag_width, height);
@@ -201,12 +251,12 @@ int main() {
   // This line is only needed for visual inspection
   set_strictly_upper_trianguler(0, m_result, height, diag_width, height);
 
-  printf("AB = \n");
-  print_col_major(m, diag_width, height, height);
-  printf("ABC_result = \n");
-  print_col_major(m_result, height, height, height);
-  printf("ABC_correct = \n");
-  print_col_major(m_correct, height, height, height);
+  // printf("ABC = \n");
+  // print_col_major(m, height, height, height);
+  // printf("ABC_result = \n");
+  // print_col_major(m_result, height, height, height);
+  // printf("ABC_correct = \n");
+  // print_col_major(m_correct, height, height, height);
 
   for(int j = 0; j < height; j++) {
     for(int i = j; i < height; i++) {
