@@ -13,7 +13,7 @@
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_12_36.h"
+#include "baremetal_tests/supernode_2_6.h"
 
 const int CHOL_BLOCK_SIZE = 3;
 const int TRSM_BLOCK_SIZE = 5;
@@ -217,6 +217,48 @@ void dense_block_triangle_solve(float* L, float* B,
   }
 }
 
+// Solve Lx = B.T in place, overwriting B with the answer
+// L is size w x w column major, B is size h x w column major
+// B will be transposed implicitly
+void dense_block_triangle_solve2(float* L, float* B, 
+                                 int w, int h,
+                                 int strideL, int strideB) {
+  for(int j = 0; j < w; j++) {
+    div_ax(L[0], B, h);
+    float* B_k = B;
+
+    int dim_I = h, dim_J = w - 1 - j, dim_K = 1;
+    float* gemmA = B;
+    float* gemmB = L + 1;
+    B += strideB;
+    float* gemmC = B;
+    int stride_A = strideB, stride_B = strideL, stride_C = strideB;
+    float scale_factor_A = -1, scale_factor_B = 1;
+    bool transpose_A = true, transpose_B = false;
+
+    if(dim_J > 0) {
+      matmul(dim_J, dim_I, dim_K,
+          gemmB, gemmA, gemmC,
+          stride_B, stride_A, stride_C,
+          scale_factor_A, scale_factor_B,
+          transpose_A, transpose_B);
+    }
+
+    // matmul(dim_I, dim_J, dim_K,
+    //      B, B, C, 
+    //      stride_B, stride_B, stride_C,
+    //      scale_factor_A, scale_factor_B,
+    //      transpose_A, transpose_B);
+
+    // for(int k = 1; k < w - j; k++) {
+    //   B_k += strideB;
+    //   saxpy(-L[k], B, B_k, h);
+    // }
+
+    L += strideL + 1;
+  }
+}
+
 // Do partial cholesky factorization by first doing as dense cholesky on the diagonal block
 // Then doing triangle solve
 void partial_factorization2(float* AB, int w, int h) {
@@ -301,17 +343,68 @@ void partial_factorization3(float* AB, int w, int h) {
     float scale_factor_A = -1, scale_factor_B = 1;
     bool transpose_A = true, transpose_B = false;
 
-    print_col_major(B, dim_K, dim_I, h);
-    printf("C before\n");
-    print_col_major(C, dim_J, dim_I, h);
-
     truncated_blocked_syrk(dim_I, dim_K, max_J,
                  B, C,
                  stride_B, stride_C,
                  scale_factor_A);
 
-    printf("C after\n");
-    print_col_major(C, dim_J, dim_I, h);
+    AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
+    hh -= CHOL_BLOCK_SIZE;
+  }
+
+  // This is LC = C - LB LB^T computation
+  int dim_I = h - w, dim_J = dim_I, dim_K = w;
+  float* B = AB + w;
+  float* C = AB + w * (h + 1);
+  int stride_B = h, stride_C = h;
+  float scale_factor_A = -1, scale_factor_B = 1;
+  bool transpose_A = true, transpose_B = false;
+
+  blocked_syrk(dim_I, dim_K,
+               B, C,
+               stride_B, stride_C,
+               scale_factor_A);
+}
+
+// Splitting out LC = C - LB LB^T computation for profiling
+void partial_factorization4(float* AB, int w, int h) {
+
+  int hh = h;   // hh is the height of the current block column
+
+  float* AB_JJ = AB;
+  // J is the row/col index of the diagonal block
+  // I is the row index of the subdiagonal block
+  int J;
+  int I;
+
+  // This is interleaved [LA; LB] computation
+  for(J = 0; J < w; J += CHOL_BLOCK_SIZE) {
+    // TODO: Make ww fixed and use cleanup iterations
+    int ww = min(w - J, CHOL_BLOCK_SIZE); // ww is the panel width.
+    dense_block_cholesky(AB_JJ, ww, h);
+    float* AB_IJ = AB_JJ + ww;
+
+    for(I = J + ww; I < h; I += TRSM_BLOCK_SIZE) {
+      // TODO: Make hh fixed and use cleanup iterations
+      int hh = min(h - I, TRSM_BLOCK_SIZE); // hh is the block height
+      dense_block_triangle_solve2(AB_JJ, AB_IJ, 
+                                  ww, 
+                                  hh, 
+                                  h, h);
+      AB_IJ += TRSM_BLOCK_SIZE;
+    }
+
+    int dim_I = h - J - ww, dim_J = dim_I, dim_K = ww, max_J = w - J - ww;
+    float* B = AB_JJ + ww;
+    float* C = AB_JJ + ww * (h + 1);
+    int stride_B = h, stride_C = h;
+    float scale_factor_A = -1, scale_factor_B = 1;
+    bool transpose_A = true, transpose_B = false;
+
+    truncated_blocked_syrk(dim_I, dim_K, max_J,
+                 B, C,
+                 stride_B, stride_C,
+                 scale_factor_A);
 
     AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
     hh -= CHOL_BLOCK_SIZE;
@@ -351,7 +444,7 @@ int main() {
   fflush(stdout);
 
   // Do cholesky of A and solve B
-  partial_factorization3(m_result, diag_width, height);
+  partial_factorization4(m_result, diag_width, height);
 
   // This line is only needed for visual inspection
   set_strictly_upper_trianguler(0, m_result, height, diag_width, height);
