@@ -94,6 +94,47 @@ void blocked_syrk(int dim_I, int dim_K,
   }
 }
 
+// Do C[:, max_J] += (scale_factor_B * BB^T)[:, max_J]
+// B is dim_I x dim_K, C is dim_I x dim_I
+// Equivalent to the following call
+// matmul(dim_I, dim_I, dim_K,
+//      B, B, C, 
+//      stride_B, stride_B, stride_C,
+//      scale_factor_B, 1,
+//      true, false);
+void truncated_blocked_syrk(int dim_I, int dim_K, int max_J,
+                  float* B, float* C,
+                  int stride_B, int stride_C,
+                  float scale_factor_B) {
+
+  float* B_0K = B;
+  for(int K = 0; K < dim_K; K += GEMM_BLOCK_SIZE) {
+    int ww = min(dim_K - K, GEMM_BLOCK_SIZE); // ww is the actual panel width
+    float* B_JK = B_0K;
+    float* C_0J = C;
+    for(int J = 0; J < max_J; J += GEMM_BLOCK_SIZE) {
+      int hhJ = min(max_J - J, GEMM_BLOCK_SIZE);
+      float* B_IK = B_JK;
+      float* C_IJ = C_0J + J;
+      for(int I = J; I < dim_I; I += GEMM_BLOCK_SIZE) {
+        int hhI = min(dim_I - I, GEMM_BLOCK_SIZE); 
+
+        matmul(hhJ, hhI, ww,
+               B_JK, B_IK, C_IJ,
+               stride_B, stride_B, stride_C,
+               scale_factor_B, 1,
+               true, false);
+
+        B_IK += GEMM_BLOCK_SIZE;
+        C_IJ += GEMM_BLOCK_SIZE;
+      }
+      B_JK += GEMM_BLOCK_SIZE;
+      C_0J += GEMM_BLOCK_SIZE * stride_C;
+    }
+    B_0K += GEMM_BLOCK_SIZE * stride_B;
+  }
+}
+
 // Do partial cholesky factorization with more vector type operations
 // AB is column major
 void partial_factorization1(float* AB, int w, int h) {
@@ -202,7 +243,6 @@ void partial_factorization2(float* AB, int w, int h) {
       AB_IJ += TRSM_BLOCK_SIZE;
     }
 
-    // TODO: Make this symmetric and blocked
     int dim_I = h - J - ww, dim_J = dim_I, dim_K = ww;
     float* B = AB_JJ + ww;
     float* C = AB_JJ + ww * (h + 1);
@@ -226,6 +266,71 @@ void partial_factorization2(float* AB, int w, int h) {
   }
 }
 
+// Splitting out LC = C - LB LB^T computation for profiling
+void partial_factorization3(float* AB, int w, int h) {
+
+  int hh = h;   // hh is the height of the current block column
+
+  float* AB_JJ = AB;
+  // J is the row/col index of the diagonal block
+  // I is the row index of the subdiagonal block
+  int J;
+  int I;
+
+  // This is interleaved [LA; LB] computation
+  for(J = 0; J < w; J += CHOL_BLOCK_SIZE) {
+    // TODO: Make ww fixed and use cleanup iterations
+    int ww = min(w - J, CHOL_BLOCK_SIZE); // ww is the panel width.
+    dense_block_cholesky(AB_JJ, ww, h);
+    float* AB_IJ = AB_JJ + ww;
+
+    for(I = J + ww; I < h; I += TRSM_BLOCK_SIZE) {
+      // TODO: Make hh fixed and use cleanup iterations
+      int hh = min(h - I, TRSM_BLOCK_SIZE); // hh is the block height
+      dense_block_triangle_solve(AB_JJ, AB_IJ, 
+                                 ww, 
+                                 hh, 
+                                 h, h);
+      AB_IJ += TRSM_BLOCK_SIZE;
+    }
+
+    int dim_I = h - J - ww, dim_J = dim_I, dim_K = ww, max_J = w - J - ww;
+    float* B = AB_JJ + ww;
+    float* C = AB_JJ + ww * (h + 1);
+    int stride_B = h, stride_C = h;
+    float scale_factor_A = -1, scale_factor_B = 1;
+    bool transpose_A = true, transpose_B = false;
+
+    print_col_major(B, dim_K, dim_I, h);
+    printf("C before\n");
+    print_col_major(C, dim_J, dim_I, h);
+
+    truncated_blocked_syrk(dim_I, dim_K, max_J,
+                 B, C,
+                 stride_B, stride_C,
+                 scale_factor_A);
+
+    printf("C after\n");
+    print_col_major(C, dim_J, dim_I, h);
+
+    AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
+    hh -= CHOL_BLOCK_SIZE;
+  }
+
+  // This is LC = C - LB LB^T computation
+  int dim_I = h - w, dim_J = dim_I, dim_K = w;
+  float* B = AB + w;
+  float* C = AB + w * (h + 1);
+  int stride_B = h, stride_C = h;
+  float scale_factor_A = -1, scale_factor_B = 1;
+  bool transpose_A = true, transpose_B = false;
+
+  blocked_syrk(dim_I, dim_K,
+               B, C,
+               stride_B, stride_C,
+               scale_factor_A);
+}
+
 void set_strictly_upper_trianguler(float a, float* x, int w, int h, int stride) {
   for(int j = 0; j < w; j++) {
     for(int i = 0; i < j && i < h; i++) {
@@ -246,17 +351,17 @@ int main() {
   fflush(stdout);
 
   // Do cholesky of A and solve B
-  partial_factorization2(m_result, diag_width, height);
+  partial_factorization3(m_result, diag_width, height);
 
   // This line is only needed for visual inspection
   set_strictly_upper_trianguler(0, m_result, height, diag_width, height);
 
-  // printf("ABC = \n");
-  // print_col_major(m, height, height, height);
-  // printf("ABC_result = \n");
-  // print_col_major(m_result, height, height, height);
-  // printf("ABC_correct = \n");
-  // print_col_major(m_correct, height, height, height);
+  printf("ABC = \n");
+  print_col_major(m, height, height, height);
+  printf("ABC_result = \n");
+  print_col_major(m_result, height, height, height);
+  printf("ABC_correct = \n");
+  print_col_major(m_correct, height, height, height);
 
   for(int j = 0; j < height; j++) {
     for(int i = j; i < height; i++) {
