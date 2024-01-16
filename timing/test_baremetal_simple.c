@@ -13,7 +13,7 @@
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_2_6.h"
+#include "baremetal_tests/supernode_12_36.h"
 
 void print_col_major(float* M, int w, int h, int stride) {
   float* M_i0 = M;
@@ -50,6 +50,8 @@ void saxpy(float a, float* x, float* y, int h) {
 // Do partial cholesky factorization with more vector type operations
 // AB is column major
 void partial_factorization1(float* AB, int w, int h) {
+  float* AB_orig = AB;
+
   int hh = h;
   for(int j = 0; j < w; j++) {
     hh--;
@@ -67,6 +69,22 @@ void partial_factorization1(float* AB, int w, int h) {
     }
     AB += h + 1;
   }
+  
+  // Do C - BBT
+  // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
+  int dim_I = h - w, dim_J = dim_I, dim_K = w;
+  float* B = AB_orig + w;
+  float* C = AB_orig + w * (h + 1);
+  int stride_B = height, stride_C = height;
+  float scale_factor_A = -1, scale_factor_B = 1;
+  bool transpose_A = true, transpose_B = false;
+
+  matmul(dim_I, dim_J, dim_K,
+       B, B, C, 
+       stride_B, stride_B, stride_C,
+       scale_factor_A, scale_factor_B,
+       transpose_A, transpose_B);
+
 }
 
 // Takes a dense square matrix A with size dim x dim, 
@@ -114,9 +132,9 @@ void dense_block_triangle_solve(float* L, float* B,
 // Do partial cholesky factorization by first doing as dense cholesky on the diagonal block
 // Then doing triangle solve
 void partial_factorization2(float* AB, int w, int h) {
-  const int CHOL_BLOCK_SIZE = 16;
-  const int TRSM_BLOCK_SIZE = 16;
-  const int GEMM_BLOCK_SIZE = 16;
+  const int CHOL_BLOCK_SIZE = 2;
+  const int TRSM_BLOCK_SIZE = 2;
+  const int GEMM_BLOCK_SIZE = 2;
 
   int hh = h;   // hh is the height of the current block column
 
@@ -141,7 +159,7 @@ void partial_factorization2(float* AB, int w, int h) {
     }
 
     // TODO: Make this symmetric and blocked
-    int dim_I = h - (J + ww), dim_J = dim_I, dim_K = ww;
+    int dim_I = h - J - ww, dim_J = dim_I, dim_K = ww;
     float* B = AB_JJ + ww;
     float* C = AB_JJ + CHOL_BLOCK_SIZE * (h + 1);
     int stride_B = h, stride_C = h;
@@ -159,12 +177,12 @@ void partial_factorization2(float* AB, int w, int h) {
   }
 }
 
-void set_strictly_upper_trianguler(float a, float* x, int w, int h) {
+void set_strictly_upper_trianguler(float a, float* x, int w, int h, int stride) {
   for(int j = 0; j < w; j++) {
-    for(int i = 0; i < j; i++) {
+    for(int i = 0; i < j && i < h; i++) {
       x[i] = a;
     }
-    x += h;
+    x += stride;
   }
 }
 
@@ -180,24 +198,8 @@ int main() {
   // Do cholesky of A and solve B
   partial_factorization2(m_result, diag_width, height);
 
-  // Do C - BBT
-  // We want to get C^T = B^T^T B^T, we have column major B, which is row major B^T
-  int dim_I = height - diag_width, dim_J = dim_I, dim_K = diag_width;
-  float* B = m_result + diag_width;
-  float* C = m_result + diag_width * height + diag_width;
-  int stride_B = height, stride_C = height;
-  float scale_factor_A = -1, scale_factor_B = 1;
-  bool transpose_A = true, transpose_B = false;
-
-  matmul(dim_I, dim_J, dim_K,
-       B, B, C, 
-       stride_B, stride_B, stride_C,
-       scale_factor_A, scale_factor_B,
-       transpose_A, transpose_B);
-
-
   // This line is only needed for visual inspection
-  set_strictly_upper_trianguler(0, m_result, diag_width, height);
+  set_strictly_upper_trianguler(0, m_result, height, diag_width, height);
 
   printf("AB = \n");
   print_col_major(m, diag_width, height, height);
