@@ -13,7 +13,21 @@
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_12_36.h"
+#include "baremetal_tests/supernode_2_6.h"
+
+void print_col_major(float* M, int w, int h, int stride) {
+  float* M_i0 = M;
+  for(int i = 0; i < h; i++) {
+    float* M_ij = M_i0;
+    for(int j = 0; j < w; j++) {
+      printf("%f, ", *M_ij);
+      M_ij += stride;
+    }
+    printf("\n");
+    M_i0++;
+  }
+  printf("\n");
+}
 
 void ax(float a, float* x, int h) {
   for(int i = 0; i < h; i++) {
@@ -91,6 +105,7 @@ void dense_block_triangle_solve(float* L, float* B,
       B_k += strideB;
       saxpy(-L[k], B, B_k, h);
     }
+
     L += strideL + 1;
     B += strideB;
   }
@@ -99,8 +114,49 @@ void dense_block_triangle_solve(float* L, float* B,
 // Do partial cholesky factorization by first doing as dense cholesky on the diagonal block
 // Then doing triangle solve
 void partial_factorization2(float* AB, int w, int h) {
-  dense_block_cholesky(AB, w, h);
-  dense_block_triangle_solve(AB, AB + w, w, h - w, h, h);
+  const int CHOL_BLOCK_SIZE = 16;
+  const int TRSM_BLOCK_SIZE = 16;
+  const int GEMM_BLOCK_SIZE = 16;
+
+  int hh = h;   // hh is the height of the current block column
+
+  float* AB_JJ = AB;
+  // J is the row/col index of the diagonal block
+  // I is the row index of the subdiagonal block
+  int J;
+  int I;
+  for(J = 0; J < w; J += CHOL_BLOCK_SIZE) {
+    // TODO: Make ww fixed and use cleanup iterations
+    int ww = w - J > CHOL_BLOCK_SIZE? CHOL_BLOCK_SIZE : w - J; // ww is the panel width.
+    dense_block_cholesky(AB_JJ, ww, h);
+    float* AB_IJ = AB_JJ + ww;
+    for(I = J + ww; I < h; I += TRSM_BLOCK_SIZE) {
+      // TODO: Make hhh fixed and use cleanup iterations
+      int hh = h - I > TRSM_BLOCK_SIZE? TRSM_BLOCK_SIZE : h - I; // hh is the block height
+      dense_block_triangle_solve(AB_JJ, AB_IJ, 
+                                 ww, 
+                                 hh, 
+                                 h, h);
+      AB_IJ += TRSM_BLOCK_SIZE;
+    }
+
+    // TODO: Make this symmetric and blocked
+    int dim_I = h - (J + ww), dim_J = dim_I, dim_K = ww;
+    float* B = AB_JJ + ww;
+    float* C = AB_JJ + CHOL_BLOCK_SIZE * (h + 1);
+    int stride_B = h, stride_C = h;
+    float scale_factor_A = -1, scale_factor_B = 1;
+    bool transpose_A = true, transpose_B = false;
+
+    matmul(dim_I, dim_J, dim_K,
+         B, B, C, 
+         stride_B, stride_B, stride_C,
+         scale_factor_A, scale_factor_B,
+         transpose_A, transpose_B);
+
+    AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
+    hh -= CHOL_BLOCK_SIZE;
+  }
 }
 
 void set_strictly_upper_trianguler(float a, float* x, int w, int h) {
@@ -143,32 +199,12 @@ int main() {
   // This line is only needed for visual inspection
   set_strictly_upper_trianguler(0, m_result, diag_width, height);
 
-  // for(int j = 0; j < diag_width; j++) {
-  //   for(int i = 0; i < height; i++) {
-  //     printf("%f, ", m[j * height + i]);
-  //   }
-  //   printf("\n");
-  // }
-
-  // printf("\n\n");
-
-  // for(int j = 0; j < height; j++) {
-  //   for(int i = 0; i < height; i++) {
-  //     printf("%f, ", m_result[j * height + i]);
-  //   }
-  //   printf("\n");
-  // }
-
-  // printf("\n\n");
-
-  // for(int j = 0; j < height; j++) {
-  //   for(int i = 0; i < height; i++) {
-  //     printf("%f, ", m_correct[j * height + i]);
-  //   }
-  //   printf("\n");
-  // }
-
-  // printf("\n\n");
+  printf("AB = \n");
+  print_col_major(m, diag_width, height, height);
+  printf("ABC_result = \n");
+  print_col_major(m_result, height, height, height);
+  printf("ABC_correct = \n");
+  print_col_major(m_correct, height, height, height);
 
   for(int j = 0; j < height; j++) {
     for(int i = j; i < height; i++) {
