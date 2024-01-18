@@ -14,7 +14,7 @@
 #include <math.h>
 #include <float.h>
 
-#include "baremetal_tests/cholesky.h""
+#include "cholesky.h""
 #include "baremetal_tests/cascading_supernode_dim-200_level-8.h"
 
 int main() {
