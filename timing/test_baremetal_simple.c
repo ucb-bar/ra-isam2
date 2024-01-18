@@ -13,11 +13,11 @@
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_2_6.h"
+#include "baremetal_tests/supernode_8_8.h"
 
-const int CHOL_BLOCK_SIZE = 3;
-const int TRSM_BLOCK_SIZE = 5;
-const int GEMM_BLOCK_SIZE = 7;
+const int CHOL_BLOCK_SIZE = 4;
+const int TRSM_BLOCK_SIZE = 4;
+const int GEMM_BLOCK_SIZE = 4;
 
 static inline int min(int A, int B) { return A > B? B : A; }
 
@@ -163,7 +163,7 @@ void partial_factorization1(float* AB, int w, int h) {
   int dim_I = h - w, dim_J = dim_I, dim_K = w;
   float* B = AB_orig + w;
   float* C = AB_orig + w * (h + 1);
-  int stride_B = height, stride_C = height;
+  int stride_B = h, stride_C = h;
   float scale_factor_A = -1, scale_factor_B = 1;
   bool transpose_A = true, transpose_B = false;
 
@@ -424,6 +424,84 @@ void partial_factorization4(float* AB, int w, int h) {
                scale_factor_A);
 }
 
+// Seah's impl of partial_factorization4
+void partial_factorization5(float* AB, int w, int h) {
+
+  int hh = h;   // hh is the height of the current block column
+
+  float* AB_JJ = AB;
+  // J is the row/col index of the diagonal block
+  // I is the row index of the subdiagonal block
+  int J;
+  int I;
+
+  uint64_t A_B_start = 0, A_B_end = 0, A_B_mid = 0;
+  uint64_t total_panel_chol = 0, total_triangular = 0;
+
+  // This is interleaved [LA; LB] computation
+  for(J = 0; J < w; J += CHOL_BLOCK_SIZE) {
+    // TODO: Make ww fixed and use cleanup iterations
+    int ww = min(w - J, CHOL_BLOCK_SIZE); // ww is the panel width.
+
+    dense_block_cholesky(AB_JJ, ww, h);
+    float* AB_IJ = AB_JJ + ww;
+    for(I = J + ww; I < h; I += TRSM_BLOCK_SIZE) {
+      // TODO: Make hh fixed and use cleanup iterations
+      int hh = min(h - I, TRSM_BLOCK_SIZE); // hh is the block height
+      dense_block_triangle_solve2(AB_JJ, AB_IJ, 
+                                  ww, 
+                                  hh, 
+                                  h, h);
+      AB_IJ += TRSM_BLOCK_SIZE;
+    }
+    int dim_I = h - J - ww, dim_J = dim_I, dim_K = ww, max_J = w - J - ww;
+    float* B = AB_JJ + ww;
+    float* C = AB_JJ + ww * (h + 1);
+    int stride_B = h, stride_C = h;
+    float scale_factor_A = -1, scale_factor_B = 1;
+    bool transpose_A = true, transpose_B = false;
+
+    truncated_blocked_syrk(dim_I, dim_K, max_J,
+                 B, C,
+                 stride_B, stride_C,
+                 scale_factor_A);
+
+    total_panel_chol += (A_B_mid - A_B_start);
+    total_triangular += (A_B_end - A_B_mid);
+    AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
+    hh -= CHOL_BLOCK_SIZE;
+  }
+  printf("A_B cholesky cycles: %llu\n", total_panel_chol);
+  printf("A_B triangle solve cycles: %llu\n", total_triangular);
+
+  // This is LC = C - LB LB^T computation
+  int dim_I = h - w, dim_J = dim_I, dim_K = w;
+  float* B = AB + w;
+  float* C = AB + w * (h + 1);
+  int stride_B = h, stride_C = h;
+  float scale_factor_A = -1, scale_factor_B = 1;
+  bool transpose_A = true, transpose_B = false;
+
+  uint64_t C_start = 0, C_end = 0;
+#if GEMM_BLOCKED == true
+  blocked_syrk(dim_I, dim_K,
+               B, C,
+               stride_B, stride_C,
+               scale_factor_A);
+#else
+  tiled_matmul_auto(dim_I, dim_J, dim_K,
+          (elem_t*)B, (elem_t*)B, (elem_t*)C, (elem_t*)C,
+          stride_B, stride_B, stride_C, stride_C,
+          scale_factor_B, scale_factor_A, MVIN_SCALE_IDENTITY,
+          NO_ACTIVATION, ACC_SCALE_IDENTITY, 0, false,
+          transpose_A, transpose_B,
+          false, false,
+          0,
+          CPU);
+#endif
+  printf("C cycles: %llu\n", C_end - C_start);
+}
+
 void set_strictly_upper_trianguler(float a, float* x, int w, int h, int stride) {
   for(int j = 0; j < w; j++) {
     for(int i = 0; i < j && i < h; i++) {
@@ -455,6 +533,23 @@ int main() {
   print_col_major(m_result, height, height, height);
   printf("ABC_correct = \n");
   print_col_major(m_correct, height, height, height);
+
+  for(int j = 0; j < height; j++) {
+    for(int i = j; i < height; i++) {
+      double abs_err = fabs(m_correct[j * height + i] - m_result[j * height + i]);
+      double abs_A = fabs(m_correct[j * height + i]);
+      double rel_err = abs_A != 0? abs_err / abs_A :
+                       abs_err == 0? 0 : INFINITY;
+
+      // printf("%.10e, ", rel_err);
+
+      if(rel_err > ERR_THRESH) {
+        printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", j, i, rel_err);
+        return 1;
+      }
+    }
+    // printf("\n");
+  }
 
   for(int j = 0; j < height; j++) {
     for(int i = j; i < height; i++) {
