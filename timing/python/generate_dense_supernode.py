@@ -29,11 +29,9 @@ def write_matrix(fout, matrix, matrix_name):
         fout.write("\n")
     fout.write("};\n")
 
-
-
 def gen_supernode_column(w, h, filename=None):
     eval_range = 1000
-    assert(h > w)
+    assert(h >= w)
 
     Q = special_ortho_group.rvs(w)
     D = np.random.rand(w)
