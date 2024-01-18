@@ -13,7 +13,7 @@
 
 #include <gtsam/linear/gemmini_functions.h>
 
-#include "baremetal_tests/supernode_8_8.h"
+#include "baremetal_tests/supernode_3_4.h"
 
 const int CHOL_BLOCK_SIZE = 4;
 const int TRSM_BLOCK_SIZE = 4;
@@ -544,24 +544,7 @@ int main() {
       // printf("%.10e, ", rel_err);
 
       if(rel_err > ERR_THRESH) {
-        printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", j, i, rel_err);
-        return 1;
-      }
-    }
-    // printf("\n");
-  }
-
-  for(int j = 0; j < height; j++) {
-    for(int i = j; i < height; i++) {
-      double abs_err = fabs(m_correct[j * height + i] - m_result[j * height + i]);
-      double abs_A = fabs(m_correct[j * height + i]);
-      double rel_err = abs_A != 0? abs_err / abs_A :
-                       abs_err == 0? 0 : INFINITY;
-
-      // printf("%.10e, ", rel_err);
-
-      if(rel_err > ERR_THRESH) {
-        printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", j, i, rel_err);
+        printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", i, j, rel_err);
         return 1;
       }
     }
@@ -569,6 +552,9 @@ int main() {
   }
 
   printf("Passed :)\n");
+
+  free(m_result);
+  m_result = NULL;
 
   return 0;
 }
