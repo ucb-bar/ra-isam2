@@ -7,6 +7,8 @@ but multiple block columns can merge if they have the same nonzero structure
 
 Arguments: --dim=DIM
                 total size of the generated sparse matrix, plus/minus a tolerance dim_tol
+           --num_blocks=NUM_BLOCKS
+                number of blocks generated, each block size is sampled from either [min_block_size, max_block_size] or block_sizes. Overrides dim
            --num_levels=LEVEL 
                 number of cascading supernodes
            --max_block_size=MAX_SIZE
