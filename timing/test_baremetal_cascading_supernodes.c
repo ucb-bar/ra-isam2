@@ -14,7 +14,8 @@
 #include <math.h>
 #include <float.h>
 
-#include "cholesky.h""
+#include "cholesky.h"
+#include "memory.h"
 #include "baremetal_tests/cascading_supernode_dim-200_level-8.h"
 
 int main() {
@@ -28,8 +29,8 @@ int main() {
   float* m_result[m_nnode];
   for(int i = 0; i < m_nnode; i++) {
     int height = m_height[i];
-    m_result[i] = malloc(height * height * sizeof(float));
-    memcpy(m_result[i], m[i], height * height * sizeof(float));
+    m_result[i] = (float*) my_malloc(height * height * sizeof(float));
+    my_memcpy(m_result[i], m[i], height * height * sizeof(float));
   }
 
   // Do cascading partial factorization
@@ -45,7 +46,7 @@ int main() {
     if(i + 1 < m_nnode) {
       int next_height = m_height[i + 1];
       // print_col_major(m_result[i + 1], next_height, next_height, next_height);
-      sparse_matrix_add(m_result[i] + width * (height + 1), height - width, height, m_row_indices[i] + width,
+      sparse_matrix_add2(m_result[i] + width * (height + 1), height - width, height, m_row_indices[i] + width,
                         m_result[i + 1], next_height, next_height, m_row_indices[i + 1], 
                         1);
       // print_col_major(m_result[i + 1], next_height, next_height, next_height);

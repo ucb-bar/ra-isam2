@@ -3,10 +3,12 @@
 #include <stdio.h>
 #include <math.h>
 #include <gtsam/linear/gemmini_functions.h>
+#include "memory.h"
 
 const int CHOL_BLOCK_SIZE = 4;
 const int TRSM_BLOCK_SIZE = 4;
 const int GEMM_BLOCK_SIZE = 4;
+const int MAX_DENSE_BLK_SIZE = 8;
 
 static inline int min(int A, int B) { return A > B? B : A; }
 
@@ -500,7 +502,7 @@ void set_strictly_upper_trianguler(float a, float* x, int w, int h, int stride) 
   }
 }
 
-// Do B += A. Both A and B are square and col major. 
+// Do B += Ascale * A. Both A and B are square and col major. 
 // A is Adim x Adim. B is Bdim x Bdim. Bdim >= Adim
 // Bidx must be a superset of Aidx and in the same order
 void sparse_matrix_add(float* A, int Adim, int Astride, int* Aidx,
@@ -524,6 +526,98 @@ void sparse_matrix_add(float* A, int Adim, int Astride, int* Aidx,
       Aj++;
       A_0j += Astride;
     }
+  }
+}
+
+// Group indices in A that are consecutive in B into blocks
+// A_blk_start, B_blk_start, blk_width should already be allocated
+// and should be at least Alen long
+void group_block_indices(int* Aidx, int Alen,
+                         int* Bidx, int Blen,
+                         int* A_blk_start, int* B_blk_start, 
+                         int* blk_width, int* num_blks) {
+    
+  int* A_blk_start_orig = A_blk_start;
+  bool in_blk = false;
+  int* Aidx_orig = Aidx;
+  int* Bidx_orig = Bidx;
+  *num_blks = 0;
+  for(int Bi = 0; Bi < Blen; Bi++, Bidx++) {
+    if(*Aidx == *Bidx) {
+      if(!in_blk) {
+        in_blk = true;
+        *A_blk_start = Aidx - Aidx_orig;
+        *B_blk_start = Bidx - Bidx_orig;
+        *blk_width = 1;
+        (*num_blks)++;
+      }
+      else {
+        (*blk_width)++;
+        // Start new block if block size too large
+        if(*blk_width >= MAX_DENSE_BLK_SIZE) {
+          in_blk = false;
+          A_blk_start++;
+          B_blk_start++;
+          blk_width++;
+        }
+      }
+      Aidx++;
+    }
+    else {
+      if(in_blk) {
+        in_blk = false;
+        A_blk_start++;
+        B_blk_start++;
+        blk_width++;
+      }
+    }
+  }
+}
+
+// Add two dense blocks together
+// Bblk = scaleA * Ablk + scaleB * Bblk
+void dense_block_add(float* Ablk, float* Bblk, 
+                     int height, int width,
+                     int Astride, int Bstride,
+                     float Ascale, float Bscale) {
+  float* Ablk_0j = Ablk;
+  float* Bblk_0j = Bblk;
+  for(int j = 0; j < width; j++) {
+    float* Ablk_ij = Ablk_0j;
+    float* Bblk_ij = Bblk_0j;
+    for(int i = 0; i < height; i++) {
+      *Bblk_ij = Ascale * *Ablk_ij + Bscale * *Bblk_ij;
+      Ablk_ij++;
+      Bblk_ij++;
+    }
+    Ablk_0j += Astride;
+    Bblk_0j += Bstride;
+  }
+
+}
+
+// Do B += A. Both A and B are square and col major. 
+// A is Adim x Adim. B is Bdim x Bdim. Bdim >= Adim
+// Bidx must be a superset of Aidx and in the same order
+void sparse_matrix_add2(float* A, int Adim, int Astride, int* Aidx,
+                        float* B, int Bdim, int Bstride, int* Bidx,
+                        float Ascale) {
+  int* A_blk_start = (int*) my_malloc(Adim * sizeof(int));
+  int* B_blk_start = (int*) my_malloc(Adim * sizeof(int));
+  int* blk_width = (int*) my_malloc(Adim * sizeof(int));
+  int num_blks;
+
+  group_block_indices(Aidx, Adim, Bidx, Bdim, A_blk_start, B_blk_start, blk_width, &num_blks);
+
+  float* A_col = A;
+  for(int J = 0; J < num_blks; J++) {
+    float* B_col = B + B_blk_start[J] * Bstride;
+    for(int I = J; I < num_blks; I++) {
+      float* A_blk = A_col + A_blk_start[I];
+      float* B_blk = B_col + B_blk_start[I];
+      dense_block_add(A_blk, B_blk, blk_width[I], blk_width[J], Astride, Bstride, 1, 1);
+    }
+    A_col += blk_width[J] * Astride;
   }
 }
 
