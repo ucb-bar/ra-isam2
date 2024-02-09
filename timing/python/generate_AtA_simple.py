@@ -180,7 +180,7 @@ if __name__ == "__main__":
 
     for i in range(num_factor):
         num_factor_var = np.random.choice(num_factor_vars)
-        factor_vars = sorted(list(np.random.choice(np.arange(0, len(seq) - 2), num_factor_var, replace=False)))
+        factor_vars = sorted(list(np.random.choice(np.arange(0, len(seq) - 1), num_factor_var, replace=False)))
         factor_vars.append(len(seq) - 1)
         factor_dim = np.random.choice(factor_dims)
 
