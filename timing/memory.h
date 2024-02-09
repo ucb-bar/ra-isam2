@@ -36,7 +36,19 @@ void my_free_all(void* ptr) {
 }
 
 void my_memcpy(void* dest, void* src, unsigned int len) {
+  char* d = (char*) dest;
+  char* s = (char*) src;
   for(int i = 0; i < len; i++) {
-    ((char*) dest)[i] = ((char*) src)[i];
+    *d = *s;
+    d++;
+    s++;
+  }
+}
+
+void my_memset(void* dest, char a, unsigned int len) {
+  char* d = (char*) dest;
+  for(int i = 0; i < len; i++) {
+    *d = a;
+    d++;
   }
 }
