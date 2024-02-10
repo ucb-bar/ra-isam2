@@ -59,7 +59,7 @@ int main() {
     int height = m_height[i];
     int res = check_tril_result(m_result[i], m_correct[i], width, height, height, ERR_THRESH);
     if(res != 0) {
-      printf("Column m%d does not pass check.\n");
+      printf("Column m%d does not pass check.\n", i);
       return 1;
     }
   }
