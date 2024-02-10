@@ -111,6 +111,24 @@ def write_matrix(fout, matrix, matrix_name):
         fout.write("\n")
     fout.write("};\n")
 
+def write_python_command(fout):
+    fout.write(" * Command: ")
+    for s in sys.argv:
+        fout.write(f"{s} ")
+    fout.write("\n")
+
+def write_comment_header(fout):
+    fout.write("/*")
+    for _ in range(80):
+        fout.write("*")
+    fout.write("\n")
+
+def write_comment_footer(fout):
+    for _ in range(80):
+        fout.write("*")
+    fout.write("*/\n\n")
+
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("--dim", dest="dim", type="int", 
@@ -256,6 +274,9 @@ if __name__ == "__main__":
     M_cor[w:h, w:h] = LC
 
     with open(outfile, "w") as fout:
+        write_comment_header(fout)
+        write_python_command(fout)
+        write_comment_footer(fout)
         fout.write("#pragma once\n\n")
         nfactors = len(factors["vars"])
         fout.write(f"int nfactors = {nfactors};\n\n")

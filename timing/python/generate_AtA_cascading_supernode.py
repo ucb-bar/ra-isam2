@@ -249,6 +249,12 @@ def write_block_sparse_matrix(fout, matrix, matrix_name, seq, seq_pos, sel_ances
 
     assert(np.allclose(np.tril(M), np.zeros(M.shape)))
 
+def write_python_command(fout):
+    fout.write(" * Command: ")
+    for s in sys.argv:
+        fout.write(f"{s} ")
+    fout.write("\n")
+
 def write_comment_header(fout):
     fout.write("/*")
     for _ in range(80):
@@ -258,7 +264,7 @@ def write_comment_header(fout):
 def write_comment_footer(fout):
     for _ in range(80):
         fout.write("*")
-    fout.write("*/\n")
+    fout.write("*/\n\n")
 
 if __name__ == "__main__":
     parser = OptionParser()
@@ -409,12 +415,9 @@ if __name__ == "__main__":
         print(f"Write to {outfile}")
         with open(outfile, "w") as fout:
             write_comment_header(fout)
-            fout.write(" * Command: ")
-            for s in sys.argv:
-                fout.write(f"{s} ")
-            fout.write("\n")
+            write_python_command(fout)
             write_comment_footer(fout)
-            fout.write(f"\n#pragma once\n\n")
+            fout.write(f"#pragma once\n\n")
             fout.write(f"const int m_dim = {total_dim};\n\n")
             fout.write(f"double cond = {M_cond};\n\n")
             write_factors(fout, factors, seq, seq_pos)
