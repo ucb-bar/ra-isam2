@@ -1,5 +1,5 @@
 /************************************************************
- * test_baremetal_AtA_simple.c
+ * test_baremetal_AtA_supernode.c
  * Combine the AtA and single supernode factorization
  ************************************************************/
 
