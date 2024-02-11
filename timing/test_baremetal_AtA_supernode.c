@@ -16,7 +16,14 @@ int main() {
     const double ERR_THRESH = FLT_EPSILON * H_height * nfactors * factor_widths[0];
     printf("ERROR THRESHOLD=%f\n", ERR_THRESH);
 
+    int max_H_ridx = H_ridx[H_height - 1];
+    int* H_lookup = my_malloc((max_H_ridx + 1) * sizeof(int));
+    my_memset(H_lookup, 0, (max_H_ridx + 1) * sizeof(int));
+
+    build_reverse_lookup(H_ridx, H_height, H_lookup);
+
     for(int i = 0; i < nfactors; i++) {
+
         int h = factor_heights[i];
         int w = factor_widths[i];
         int* ridx = factor_ridx[i];
@@ -30,10 +37,13 @@ int main() {
                1, 1, 
                true, false);
 
-        sparse_matrix_add2(workspace, h, h, ridx,
+        // sparse_matrix_add2(workspace, h, h, ridx,
+        //                    H, H_height, H_height, H_ridx,
+        //                    1);
+        sparse_matrix_add3(workspace, h, h, ridx,
                            H, H_height, H_height, H_ridx,
-                           1);
-        my_free_all(workspace);
+                           1, H_lookup);
+        my_free_after(workspace);
     }
 
     // Do cholesky of A and solve B

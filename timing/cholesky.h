@@ -621,6 +621,75 @@ void sparse_matrix_add2(float* A, int Adim, int Astride, int* Aidx,
   }
 }
 
+// From a list of values, build a reverse
+// lookup table from values to index
+// indices must be already allocated to the maximum entry in values
+void build_reverse_lookup(int* values, 
+                          int len,
+                          int* indices) {
+  for(int i = 0; i < len; i++) {
+    indices[values[i]] = i;
+  }
+}
+
+// Group indices in A that are consecutive in B into blocks
+// A_blk_start, B_blk_start, blk_width should already be allocated
+// and should be at least Alen long
+// B_lookup should be a reverse lookup from entry in Aidx to index in Bidx
+void group_block_indices2(int* Aidx, int Alen,
+                          int* A_blk_start, int* B_blk_start, 
+                          int* blk_width, int* num_blks,
+                          int* B_lookup) {
+
+  // Prepare for initial ++ operation
+  A_blk_start--;
+  B_blk_start--;
+  blk_width--;
+
+  int last_matched_idx = INT_MAX;
+  *num_blks = 0;
+  for(int i = 0; i < Alen; i++) {
+    int Aval = Aidx[i];
+    int Bidx = B_lookup[Aval];
+    if(Bidx != last_matched_idx + 1) {
+      *(++A_blk_start) = i;
+      *(++B_blk_start) = Bidx;
+      *(++blk_width) = 1;
+      (*num_blks)++;
+    }
+    else {
+      (*blk_width)++;
+    }
+    last_matched_idx = Bidx;
+  } 
+}
+
+// Do B += A. Both A and B are square and col major. 
+// A is Adim x Adim. B is Bdim x Bdim. Bdim >= Adim
+// Bidx must be a superset of Aidx and in the same order
+void sparse_matrix_add3(float* A, int Adim, int Astride, int* Aidx,
+                        float* B, int Bdim, int Bstride, int* Bidx,
+                        float Ascale, 
+                        int* B_lookup) {
+  int* A_blk_start = (int*) my_malloc(Adim * sizeof(int));
+  int* B_blk_start = (int*) my_malloc(Adim * sizeof(int));
+  int* blk_width = (int*) my_malloc(Adim * sizeof(int));
+  int num_blks;
+
+  group_block_indices2(Aidx, Adim, A_blk_start, B_blk_start, blk_width, &num_blks, B_lookup);
+
+  float* A_col = A;
+  for(int J = 0; J < num_blks; J++) {
+    float* B_col = B + B_blk_start[J] * Bstride;
+    for(int I = J; I < num_blks; I++) {
+      float* A_blk = A_col + A_blk_start[I];
+      float* B_blk = B_col + B_blk_start[I];
+      dense_block_add(A_blk, B_blk, blk_width[I], blk_width[J], Astride, Bstride, 1, 1);
+    }
+    A_col += blk_width[J] * Astride;
+  }
+}
+
 // Check the lower triangular part of M equals M_correct
 // Returns 0 if the matrices are the same
 // Returns nonzero if there is a mismatched entry

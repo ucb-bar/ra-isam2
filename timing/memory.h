@@ -30,9 +30,14 @@ void* my_malloc(unsigned int size) {
 // Function to reallocate memory
 void* my_realloc(void* ptr, int size);
 
-// Function to free all allocated memory
+// Function to free all allocated memory after ptr
 void my_free_all(void* ptr) {
   stack_ptr = 0;
+}
+
+// Function to free all allocated memory after ptr
+void my_free_after(void* ptr) {
+  stack_ptr = (double*) ptr - _memory;
 }
 
 void my_memcpy(void* dest, void* src, unsigned int len) {
