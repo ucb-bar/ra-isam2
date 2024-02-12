@@ -55,7 +55,7 @@ int main() {
     }
 
     // Do cholesky of A and solve B
-    partial_factorization4(H, supernode_width, H_height);
+    partial_factorization6(H, supernode_width, H_height);
 
     int res = check_tril_result(H, M_cor,
                                 supernode_width, H_height, H_height,

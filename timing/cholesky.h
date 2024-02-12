@@ -493,6 +493,51 @@ void partial_factorization5(float* AB, int w, int h) {
   printf("C cycles: %llu\n", C_end - C_start);
 }
 
+// Partial factorization but don't do LC = C - LB LB^T
+void partial_factorization6(float* AB, int w, int h) {
+
+  int hh = h;   // hh is the height of the current block column
+
+  float* AB_JJ = AB;
+  // J is the row/col index of the diagonal block
+  // I is the row index of the subdiagonal block
+  int J;
+  int I;
+
+  // This is interleaved [LA; LB] computation
+  for(J = 0; J < w; J += CHOL_BLOCK_SIZE) {
+    // TODO: Make ww fixed and use cleanup iterations
+    int ww = min(w - J, CHOL_BLOCK_SIZE); // ww is the panel width.
+    dense_block_cholesky(AB_JJ, ww, h);
+    float* AB_IJ = AB_JJ + ww;
+
+    for(I = J + ww; I < h; I += TRSM_BLOCK_SIZE) {
+      // TODO: Make hh fixed and use cleanup iterations
+      int hh = min(h - I, TRSM_BLOCK_SIZE); // hh is the block height
+      dense_block_triangle_solve2(AB_JJ, AB_IJ, 
+                                  ww, 
+                                  hh, 
+                                  h, h);
+      AB_IJ += TRSM_BLOCK_SIZE;
+    }
+
+    int dim_I = h - J - ww, dim_J = dim_I, dim_K = ww, max_J = w - J - ww;
+    float* B = AB_JJ + ww;
+    float* C = AB_JJ + ww * (h + 1);
+    int stride_B = h, stride_C = h;
+    float scale_factor_A = -1, scale_factor_B = 1;
+    bool transpose_A = true, transpose_B = false;
+
+    truncated_blocked_syrk(dim_I, dim_K, max_J,
+                 B, C,
+                 stride_B, stride_C,
+                 scale_factor_A);
+
+    AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
+    hh -= CHOL_BLOCK_SIZE;
+  }
+}
+
 void set_strictly_upper_trianguler(float a, float* x, int w, int h, int stride) {
   for(int j = 0; j < w; j++) {
     for(int i = 0; i < j && i < h; i++) {
