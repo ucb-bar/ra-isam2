@@ -48,9 +48,9 @@ int main() {
                1, 1, 
                true, false);
 
-        sparse_matrix_add4(workspace, h, w1, h, ridx,
-                           H, H_height, H_width, H_height, H_ridx,
-                           1, H_lookup);
+        sparse_matrix_add4_2(workspace, h, w1, h, ridx,
+                             H, H_height, H_width, H_height, H_ridx,
+                             1, H_lookup);
         my_free_after(workspace);
     }
 

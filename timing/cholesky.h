@@ -735,6 +735,49 @@ void sparse_matrix_add3(float* A, int Adim, int Astride, int* Aidx,
   }
 }
 
+// Do B += A. Both A and B are square and col major. 
+// A is Adim x Adim. B is Bdim x Bdim. Bdim >= Adim
+// Bidx must be a superset of Aidx and in the same order
+// Always do last column separately
+void sparse_matrix_add3_2(float* A, int Adim, int Astride, int* Aidx,
+                          float* B, int Bdim, int Bstride, int* Bidx,
+                          float Ascale, 
+                          int* B_lookup) {
+  int* A_blk_start = (int*) my_malloc(Adim * sizeof(int));
+  int* B_blk_start = (int*) my_malloc(Adim * sizeof(int));
+  int* blk_width = (int*) my_malloc(Adim * sizeof(int));
+  int num_blks;
+
+  group_block_indices2(Aidx, Adim - 1, A_blk_start, B_blk_start, blk_width, &num_blks, B_lookup);
+  
+  for(int J = 0; J < num_blks; J++) {
+    float* A_col = A + A_blk_start[J] * Astride;
+    float* B_col = B + B_blk_start[J] * Bstride;
+    for(int I = J; I < num_blks; I++) {
+      float* A_blk = A_col + A_blk_start[I];
+      float* B_blk = B_col + B_blk_start[I];
+      dense_block_add(A_blk, B_blk, blk_width[I], blk_width[J], Astride, Bstride, 1, 1);
+    }
+  }
+
+  // Manually add last row
+  A_blk_start[num_blks] = Adim - 1;
+  B_blk_start[num_blks] = Bdim - 1;
+  blk_width[num_blks] = 1;
+  num_blks++;
+
+  float* A_col = A + Adim - 1;
+  for(int J = 0; J < num_blks; J++) {
+    float* B_col = B + B_blk_start[J] * Bstride + Bdim - 1;
+    for(int j = 0; j < blk_width[J]; j++) {
+      *B_col += *A_col;
+      A_col += Astride;
+      B_col += Bstride;
+    }
+  }
+
+}
+
 // Do B += A. Extend the case of sparse_block_add3 to nonsquare case
 // A is Ah x Aw. Ah >= Aw. B is larger than A
 // Bidx must be a superset of Aidx and in the same order
@@ -762,6 +805,53 @@ void sparse_matrix_add4(float* A, int Ah, int Aw, int Astride, int* Aidx,
       dense_block_add(A_blk, B_blk, blk_widths[I], Jwidth, Astride, Bstride, 1, 1);
     }
   }
+}
+
+// Do B += A. Extend the case of sparse_block_add3 to nonsquare case
+// A is Ah x Aw. Ah >= Aw. B is larger than A
+// Bidx must be a superset of Aidx and in the same order
+// Always separate out the last row
+void sparse_matrix_add4_2(float* A, int Ah, int Aw, int Astride, int* Aidx,
+                        float* B, int Bh, int Bw, int Bstride, int* Bidx,
+                        float Ascale, 
+                        int* B_lookup) {
+  int* A_blk_start = (int*) my_malloc(Ah * sizeof(int));
+  int* B_blk_start = (int*) my_malloc(Ah * sizeof(int));
+  int* blk_widths = (int*) my_malloc(Ah * sizeof(int));
+  int num_blks;
+
+  group_block_indices2(Aidx, Ah - 1, A_blk_start, B_blk_start, blk_widths, &num_blks, B_lookup);
+
+  for(int J = 0; A_blk_start[J] < Aw; J++) {
+    int blk_start = A_blk_start[J];
+    int blk_width = blk_widths[J];
+    int Jwidth = blk_start + blk_width < Aw? blk_width : Aw - blk_start;
+    float* A_col = A + blk_start * Astride;
+    float* B_col = B + B_blk_start[J] * Bstride;
+
+    for(int I = J; I < num_blks; I++) {
+      float* A_blk = A_col + A_blk_start[I];
+      float* B_blk = B_col + B_blk_start[I];
+      dense_block_add(A_blk, B_blk, blk_widths[I], Jwidth, Astride, Bstride, 1, 1);
+    }
+  }
+  
+  // Manually add last row
+  A_blk_start[num_blks] = Ah - 1;
+  B_blk_start[num_blks] = Bh - 1;
+  blk_widths[num_blks] = 1;
+  num_blks++;
+
+  float* A_col = A + Ah - 1;
+  for(int J = 0; J < num_blks; J++) {
+    float* B_col = B + B_blk_start[J] * Bstride + Bh - 1;
+    for(int j = 0; j < blk_widths[J]; j++) {
+      *B_col += *A_col;
+      A_col += Astride;
+      B_col += Bstride;
+    }
+  }
+
 }
 
 // Check the lower triangular part of M equals M_correct
