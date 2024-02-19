@@ -16,12 +16,30 @@ int main() {
     const double ERR_THRESH = FLT_EPSILON * cond * 10;
     printf("ERROR THRESHOLD=%f\n", ERR_THRESH);
 
+    int* H_lookups[H_nnode];
+
+    for(int node = 0; node < H_nnode; node++) {
+        int H_h = H_height[node];
+        int H_w = H_width[node];
+        int* H_ridx = H_row_indices[node];
+        float* H_data = H[node];
+
+        int max_H_ridx = H_ridx[H_h - 1];
+        H_lookups[node] = my_malloc((max_H_ridx + 1) * sizeof(int));
+        my_memset(H_lookups[node], 0, (max_H_ridx + 1) * sizeof(int));
+
+        build_reverse_lookup(H_ridx, H_h, H_lookups[node]);
+
+    }
+
     for(int node = 0; node < H_nnode; node++) {
 
         int H_h = H_height[node];
         int H_w = H_width[node];
         int* H_ridx = H_row_indices[node];
         float* H_data = H[node];
+
+        int* H_lookup = H_lookups[node];
 
         for(int i = 0; i < node_nfactors[node]; i++) {
             int h = node_factor_heights[node][i];
@@ -40,19 +58,22 @@ int main() {
             sparse_matrix_add2(workspace, h, h, ridx,
                                H_data, H_h, H_h, H_ridx,
                                1);
-            my_free_all(workspace);
+            // sparse_matrix_add3_2(workspace, h, h, ridx,
+            //                      H_data, H_h, H_h, H_ridx,
+            //                      1, H_lookup);
+            my_free_after(workspace);
         }
 
 
-        // int res = check_tril_result(H[node], M[node], H_w, H_h, H_h, 
-        //                             ERR_THRESH);
-        // if(res != 0) {
-        //     printf("Column H%d does not pass check.\n", node);
-        //     return 1;
-        // }
-        // else {
-        //     printf("Column H%d passed check.\n", node);
-        // }
+        int res = check_tril_result(H[node], M[node], H_w, H_h, H_h, 
+                                    ERR_THRESH);
+        if(res != 0) {
+            printf("Column H%d does not pass initial check.\n", node);
+            return 1;
+        }
+        else {
+            printf("Column H%d passed initial check.\n", node);
+        }
 
         // Do cholesky of A and solve B and compute C -= BB^T
         partial_factorization4(H_data, H_w, H_h);
@@ -64,10 +85,20 @@ int main() {
             int next_H_h = H_height[node + 1];
             int* next_H_ridx = H_row_indices[node + 1];
             float* next_H_data = H[node + 1];
+            int* next_H_lookup = H_lookups[node + 1];
+
+            for(int i = 0; i < next_H_h; i++) {
+              printf("%d ", next_H_lookup[i]);
+            }
+            printf("\n");
+            
+            // sparse_matrix_add3_2(C, subdiag_h, H_h, H_ridx + H_w,
+            //                      next_H_data, next_H_h, next_H_h, next_H_ridx,
+            //                      1, next_H_lookup);
+            
             sparse_matrix_add2(C, subdiag_h, H_h, H_ridx + H_w,
                                next_H_data, next_H_h, next_H_h, next_H_ridx,
                                1);
-            // print_col_major(m_result[i + 1], next_height, next_height, next_height);
         }
     }
 
