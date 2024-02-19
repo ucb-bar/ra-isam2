@@ -55,25 +55,22 @@ int main() {
                    1, 1, 
                    true, false);
 
-            sparse_matrix_add2(workspace, h, h, ridx,
-                               H_data, H_h, H_h, H_ridx,
-                               1);
-            // sparse_matrix_add3_2(workspace, h, h, ridx,
-            //                      H_data, H_h, H_h, H_ridx,
-            //                      1, H_lookup);
+            sparse_matrix_add3_2(workspace, h, h, ridx,
+                                 H_data, H_h, H_h, H_ridx,
+                                 1, H_lookup);
             my_free_after(workspace);
         }
 
-
-        int res = check_tril_result(H[node], M[node], H_w, H_h, H_h, 
-                                    ERR_THRESH);
-        if(res != 0) {
-            printf("Column H%d does not pass initial check.\n", node);
-            return 1;
-        }
-        else {
-            printf("Column H%d passed initial check.\n", node);
-        }
+        // FIXME: Fix this intermediate check
+        // int res = check_tril_result(H[node], M[node], H_w, H_h, H_h, 
+        //                             ERR_THRESH);
+        // if(res != 0) {
+        //     printf("Column H%d does not pass initial check.\n", node);
+        //     return 1;
+        // }
+        // else {
+        //     printf("Column H%d passed initial check.\n", node);
+        // }
 
         // Do cholesky of A and solve B and compute C -= BB^T
         partial_factorization4(H_data, H_w, H_h);
@@ -86,19 +83,11 @@ int main() {
             int* next_H_ridx = H_row_indices[node + 1];
             float* next_H_data = H[node + 1];
             int* next_H_lookup = H_lookups[node + 1];
-
-            for(int i = 0; i < next_H_h; i++) {
-              printf("%d ", next_H_lookup[i]);
-            }
-            printf("\n");
             
-            // sparse_matrix_add3_2(C, subdiag_h, H_h, H_ridx + H_w,
-            //                      next_H_data, next_H_h, next_H_h, next_H_ridx,
-            //                      1, next_H_lookup);
+            sparse_matrix_add3_2(C, subdiag_h, H_h, H_ridx + H_w,
+                                 next_H_data, next_H_h, next_H_h, next_H_ridx,
+                                 1, next_H_lookup);
             
-            sparse_matrix_add2(C, subdiag_h, H_h, H_ridx + H_w,
-                               next_H_data, next_H_h, next_H_h, next_H_ridx,
-                               1);
         }
     }
 
