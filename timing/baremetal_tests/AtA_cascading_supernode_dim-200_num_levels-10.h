@@ -4,6 +4,12 @@
 
 #pragma once
 
+#define MAX_NFACTOR_PER_NODE 24
+
+#define MAX_FACTOR_HEIGHT 25
+
+#define MAX_H_NNODE 10
+
 const int m_dim = 202;
 
 double cond = 99.74212646484375;

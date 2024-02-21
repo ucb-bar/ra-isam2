@@ -372,6 +372,8 @@ if __name__ == "__main__":
     print("sel_ancestors = ", sel_ancestors)
 
     # Generate at least num_factor_per_var per var
+    max_factors_per_node = 0
+    max_factor_height = 0
     factors = {}
     sorted_split_indices = sorted(sel_ancestors.keys())
     last_idx = len(seq) - 1
@@ -379,7 +381,10 @@ if __name__ == "__main__":
         factors[split_index] = {"vars": [], "matrix": []}
         ancestors = sel_ancestors[split_index]
         supernode_vars = list(range(split_index, last_idx)) if i == len(sorted_split_indices) - 1 else list(range(split_index, sorted_split_indices[i + 1]))
-        for f in range(num_factor_per_var * len(supernode_vars)):
+        num_factors_in_supernode = num_factor_per_var * len(supernode_vars)
+        if max_factors_per_node < num_factors_in_supernode:
+            max_factors_per_node = num_factors_in_supernode
+        for f in range(num_factors_in_supernode):
             first_var = np.random.choice(supernode_vars)
             valid_choices = deepcopy(ancestors)
             valid_choices.remove(first_var)
@@ -402,6 +407,9 @@ if __name__ == "__main__":
             A[row_indices, :] = factor_matrix
             M += A @ A.T
 
+            if max_factor_height < factor_height:
+                max_factor_height = factor_height
+
     # Compute correct answer
     M_cond = np.linalg.cond(M)
     M_cor = np.linalg.cholesky(M)
@@ -410,7 +418,6 @@ if __name__ == "__main__":
     # M_cor_double = M_cor.astype(np.float64)
     # assert(np.allclose(M_double, M_cor_double @ M_cor_double.T, rtol=np.finfo(np.float32).eps))
 
-
     if outfile is not None:
         print(f"Write to {outfile}")
         with open(outfile, "w") as fout:
@@ -418,6 +425,9 @@ if __name__ == "__main__":
             write_python_command(fout)
             write_comment_footer(fout)
             fout.write(f"#pragma once\n\n")
+            fout.write(f"#define MAX_NFACTOR_PER_NODE {max_factors_per_node}\n\n")
+            fout.write(f"#define MAX_FACTOR_HEIGHT {max_factor_height}\n\n")
+            fout.write(f"#define MAX_H_NNODE {len(sel_ancestors)}\n\n")
             fout.write(f"const int m_dim = {total_dim};\n\n")
             fout.write(f"double cond = {M_cond};\n\n")
             write_factors(fout, factors, seq, seq_pos)
