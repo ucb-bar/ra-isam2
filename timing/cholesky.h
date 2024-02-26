@@ -696,7 +696,7 @@ void group_block_indices2(int* Aidx, int Alen,
   for(int i = 0; i < Alen; i++) {
     int Aval = Aidx[i];
     int Bidx = B_lookup[Aval];
-    if(Bidx != last_matched_idx + 1) {
+    if(Bidx != last_matched_idx + 1 || *blk_width >= MAX_DENSE_BLK_SIZE) {
       *(++A_blk_start) = i;
       *(++B_blk_start) = Bidx;
       *(++blk_width) = 1;
