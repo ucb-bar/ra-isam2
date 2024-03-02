@@ -122,6 +122,8 @@ def write_supernode_factors(fout, name, factors, seq, seq_pos):
     nfactors = len(factors["vars"])
     fout.write(f"const int {name}_nfactors = {nfactors};\n\n")
 
+    max_factor_height = 0
+    max_factor_width = 0
     for i in range(nfactors):
         v = factors["vars"][i]
         m = factors["matrix"][i].astype(np.float32)
@@ -140,6 +142,11 @@ def write_supernode_factors(fout, name, factors, seq, seq_pos):
             fout.write(f"\n")
         fout.write("};\n\n")
 
+        if max_factor_height < m.shape[0]:
+            max_factor_height = m.shape[0]
+        if max_factor_width < m.shape[1]:
+            max_factor_width = m.shape[1]
+
     l = len(factors["vars"])
     fout.write(f"const int {name}_heights[{l}] = {{\n")
     for i in range(len(factors["vars"])):
@@ -157,6 +164,8 @@ def write_supernode_factors(fout, name, factors, seq, seq_pos):
     for i in range(len(factors["vars"])):
         fout.write(f"{name}{i}_data, ")
     fout.write("};\n\n")
+    fout.write(f"const int {name}_max_height = {max_factor_height}; \n")
+    fout.write(f"const int {name}_max_width = {max_factor_width}; \n\n")
 
 
 def write_factors(fout, factors, seq, seq_pos):
@@ -184,6 +193,14 @@ def write_factors(fout, factors, seq, seq_pos):
     fout.write(f"const float** node_factor_data[{l}] = {{\n")
     for i in range(l):
         fout.write(f"node{i}_factor_data, ")
+    fout.write("};\n")
+    fout.write(f"const int node_factor_max_heights[{l}] = {{\n")
+    for i in range(l):
+        fout.write(f"node{i}_factor_max_height, ")
+    fout.write("};\n")
+    fout.write(f"const int node_factor_max_width[{l}] = {{\n")
+    for i in range(l):
+        fout.write(f"node{i}_factor_max_width, ")
     fout.write("};\n")
     fout.write("\n\n")
 
@@ -374,6 +391,8 @@ if __name__ == "__main__":
     # Generate at least num_factor_per_var per var
     max_factors_per_node = 0
     max_factor_height = 0
+    max_factor_heights_per_node = []
+    max_factor_widths_per_node = []
     factors = {}
     sorted_split_indices = sorted(sel_ancestors.keys())
     last_idx = len(seq) - 1

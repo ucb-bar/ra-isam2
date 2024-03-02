@@ -80,6 +80,9 @@ node0_factor0_ridx, node0_factor1_ridx, node0_factor2_ridx, node0_factor3_ridx, 
 const float* node0_factor_data[4] = {
 node0_factor0_data, node0_factor1_data, node0_factor2_data, node0_factor3_data, };
 
+const int node0_factor_max_height = 22; 
+const int node0_factor_max_width = 9; 
+
 const int node1_factor_nfactors = 4;
 
 const int node1_factor0_height = 25;
@@ -151,6 +154,9 @@ const int* node1_factor_ridx[4] = {
 node1_factor0_ridx, node1_factor1_ridx, node1_factor2_ridx, node1_factor3_ridx, };
 const float* node1_factor_data[4] = {
 node1_factor0_data, node1_factor1_data, node1_factor2_data, node1_factor3_data, };
+
+const int node1_factor_max_height = 25; 
+const int node1_factor_max_width = 9; 
 
 const int node2_factor_nfactors = 8;
 
@@ -266,6 +272,9 @@ const int* node2_factor_ridx[8] = {
 node2_factor0_ridx, node2_factor1_ridx, node2_factor2_ridx, node2_factor3_ridx, node2_factor4_ridx, node2_factor5_ridx, node2_factor6_ridx, node2_factor7_ridx, };
 const float* node2_factor_data[8] = {
 node2_factor0_data, node2_factor1_data, node2_factor2_data, node2_factor3_data, node2_factor4_data, node2_factor5_data, node2_factor6_data, node2_factor7_data, };
+
+const int node2_factor_max_height = 25; 
+const int node2_factor_max_width = 9; 
 
 const int node3_factor_nfactors = 12;
 
@@ -430,6 +439,9 @@ const int* node3_factor_ridx[12] = {
 node3_factor0_ridx, node3_factor1_ridx, node3_factor2_ridx, node3_factor3_ridx, node3_factor4_ridx, node3_factor5_ridx, node3_factor6_ridx, node3_factor7_ridx, node3_factor8_ridx, node3_factor9_ridx, node3_factor10_ridx, node3_factor11_ridx, };
 const float* node3_factor_data[12] = {
 node3_factor0_data, node3_factor1_data, node3_factor2_data, node3_factor3_data, node3_factor4_data, node3_factor5_data, node3_factor6_data, node3_factor7_data, node3_factor8_data, node3_factor9_data, node3_factor10_data, node3_factor11_data, };
+
+const int node3_factor_max_height = 19; 
+const int node3_factor_max_width = 9; 
 
 const int node4_factor_nfactors = 12;
 
@@ -606,6 +618,9 @@ const int* node4_factor_ridx[12] = {
 node4_factor0_ridx, node4_factor1_ridx, node4_factor2_ridx, node4_factor3_ridx, node4_factor4_ridx, node4_factor5_ridx, node4_factor6_ridx, node4_factor7_ridx, node4_factor8_ridx, node4_factor9_ridx, node4_factor10_ridx, node4_factor11_ridx, };
 const float* node4_factor_data[12] = {
 node4_factor0_data, node4_factor1_data, node4_factor2_data, node4_factor3_data, node4_factor4_data, node4_factor5_data, node4_factor6_data, node4_factor7_data, node4_factor8_data, node4_factor9_data, node4_factor10_data, node4_factor11_data, };
+
+const int node4_factor_max_height = 19; 
+const int node4_factor_max_width = 9; 
 
 const int node5_factor_nfactors = 20;
 
@@ -887,6 +902,9 @@ node5_factor0_ridx, node5_factor1_ridx, node5_factor2_ridx, node5_factor3_ridx, 
 const float* node5_factor_data[20] = {
 node5_factor0_data, node5_factor1_data, node5_factor2_data, node5_factor3_data, node5_factor4_data, node5_factor5_data, node5_factor6_data, node5_factor7_data, node5_factor8_data, node5_factor9_data, node5_factor10_data, node5_factor11_data, node5_factor12_data, node5_factor13_data, node5_factor14_data, node5_factor15_data, node5_factor16_data, node5_factor17_data, node5_factor18_data, node5_factor19_data, };
 
+const int node5_factor_max_height = 22; 
+const int node5_factor_max_width = 9; 
+
 const int node6_factor_nfactors = 20;
 
 const int node6_factor0_height = 13;
@@ -1142,6 +1160,9 @@ const int* node6_factor_ridx[20] = {
 node6_factor0_ridx, node6_factor1_ridx, node6_factor2_ridx, node6_factor3_ridx, node6_factor4_ridx, node6_factor5_ridx, node6_factor6_ridx, node6_factor7_ridx, node6_factor8_ridx, node6_factor9_ridx, node6_factor10_ridx, node6_factor11_ridx, node6_factor12_ridx, node6_factor13_ridx, node6_factor14_ridx, node6_factor15_ridx, node6_factor16_ridx, node6_factor17_ridx, node6_factor18_ridx, node6_factor19_ridx, };
 const float* node6_factor_data[20] = {
 node6_factor0_data, node6_factor1_data, node6_factor2_data, node6_factor3_data, node6_factor4_data, node6_factor5_data, node6_factor6_data, node6_factor7_data, node6_factor8_data, node6_factor9_data, node6_factor10_data, node6_factor11_data, node6_factor12_data, node6_factor13_data, node6_factor14_data, node6_factor15_data, node6_factor16_data, node6_factor17_data, node6_factor18_data, node6_factor19_data, };
+
+const int node6_factor_max_height = 22; 
+const int node6_factor_max_width = 9; 
 
 const int node7_factor_nfactors = 20;
 
@@ -1417,6 +1438,9 @@ node7_factor0_ridx, node7_factor1_ridx, node7_factor2_ridx, node7_factor3_ridx, 
 const float* node7_factor_data[20] = {
 node7_factor0_data, node7_factor1_data, node7_factor2_data, node7_factor3_data, node7_factor4_data, node7_factor5_data, node7_factor6_data, node7_factor7_data, node7_factor8_data, node7_factor9_data, node7_factor10_data, node7_factor11_data, node7_factor12_data, node7_factor13_data, node7_factor14_data, node7_factor15_data, node7_factor16_data, node7_factor17_data, node7_factor18_data, node7_factor19_data, };
 
+const int node7_factor_max_height = 22; 
+const int node7_factor_max_width = 9; 
+
 const int node8_factor_nfactors = 20;
 
 const int node8_factor0_height = 16;
@@ -1684,6 +1708,9 @@ const int* node8_factor_ridx[20] = {
 node8_factor0_ridx, node8_factor1_ridx, node8_factor2_ridx, node8_factor3_ridx, node8_factor4_ridx, node8_factor5_ridx, node8_factor6_ridx, node8_factor7_ridx, node8_factor8_ridx, node8_factor9_ridx, node8_factor10_ridx, node8_factor11_ridx, node8_factor12_ridx, node8_factor13_ridx, node8_factor14_ridx, node8_factor15_ridx, node8_factor16_ridx, node8_factor17_ridx, node8_factor18_ridx, node8_factor19_ridx, };
 const float* node8_factor_data[20] = {
 node8_factor0_data, node8_factor1_data, node8_factor2_data, node8_factor3_data, node8_factor4_data, node8_factor5_data, node8_factor6_data, node8_factor7_data, node8_factor8_data, node8_factor9_data, node8_factor10_data, node8_factor11_data, node8_factor12_data, node8_factor13_data, node8_factor14_data, node8_factor15_data, node8_factor16_data, node8_factor17_data, node8_factor18_data, node8_factor19_data, };
+
+const int node8_factor_max_height = 22; 
+const int node8_factor_max_width = 9; 
 
 const int node9_factor_nfactors = 24;
 
@@ -1996,6 +2023,9 @@ node9_factor0_ridx, node9_factor1_ridx, node9_factor2_ridx, node9_factor3_ridx, 
 const float* node9_factor_data[24] = {
 node9_factor0_data, node9_factor1_data, node9_factor2_data, node9_factor3_data, node9_factor4_data, node9_factor5_data, node9_factor6_data, node9_factor7_data, node9_factor8_data, node9_factor9_data, node9_factor10_data, node9_factor11_data, node9_factor12_data, node9_factor13_data, node9_factor14_data, node9_factor15_data, node9_factor16_data, node9_factor17_data, node9_factor18_data, node9_factor19_data, node9_factor20_data, node9_factor21_data, node9_factor22_data, node9_factor23_data, };
 
+const int node9_factor_max_height = 19; 
+const int node9_factor_max_width = 9; 
+
 const int node_nfactors[10] = {
 node0_factor_nfactors, node1_factor_nfactors, node2_factor_nfactors, node3_factor_nfactors, node4_factor_nfactors, node5_factor_nfactors, node6_factor_nfactors, node7_factor_nfactors, node8_factor_nfactors, node9_factor_nfactors, };
 const int* node_factor_heights[10] = {
@@ -2006,6 +2036,10 @@ const int** node_factor_ridx[10] = {
 node0_factor_ridx, node1_factor_ridx, node2_factor_ridx, node3_factor_ridx, node4_factor_ridx, node5_factor_ridx, node6_factor_ridx, node7_factor_ridx, node8_factor_ridx, node9_factor_ridx, };
 const float** node_factor_data[10] = {
 node0_factor_data, node1_factor_data, node2_factor_data, node3_factor_data, node4_factor_data, node5_factor_data, node6_factor_data, node7_factor_data, node8_factor_data, node9_factor_data, };
+const int node_factor_max_heights[10] = {
+node0_factor_max_height, node1_factor_max_height, node2_factor_max_height, node3_factor_max_height, node4_factor_max_height, node5_factor_max_height, node6_factor_max_height, node7_factor_max_height, node8_factor_max_height, node9_factor_max_height, };
+const int node_factor_max_width[10] = {
+node0_factor_max_width, node1_factor_max_width, node2_factor_max_width, node3_factor_max_width, node4_factor_max_width, node5_factor_max_width, node6_factor_max_width, node7_factor_max_width, node8_factor_max_width, node9_factor_max_width, };
 
 
 const int H_w0 = 6;
