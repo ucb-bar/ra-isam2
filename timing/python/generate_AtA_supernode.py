@@ -16,7 +16,7 @@ Arguments: --dim=DIM
                 set of factor dimensions to sample from. 
            --num_factor_vars=NUM1 NUM2 ...
                 potential number of blocks involved in a sparse factor, not including the last row
-           --supernode_width=WIDTH
+           --max_supernode_width=WIDTH
                 Maximum supernode width. 
            --multiplier=MULTIPLIER
                 multiply output matrix by MULTIPLIER
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     supernode_width = 0
     block_i = 0
     while True:
-        if supernode_width + seq[block_i] < max_supernode_width:
+        if supernode_width + seq[block_i] <= max_supernode_width:
             supernode_width += seq[block_i]
         else:
             break
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         first_var = np.random.choice(np.arange(0, supernode_blocks))
         var_set = list(np.arange(0, len(seq) - 1))
         var_set.remove(first_var)
-        factor_vars = sorted(list(np.random.choice(var_set, num_factor_var, replace=False)))
+        factor_vars = sorted(list(np.random.choice(var_set, num_factor_var - 1, replace=False)))
         factor_vars.append(first_var)
         factor_vars.append(len(seq) - 1)
         factor_vars = sorted(factor_vars)
