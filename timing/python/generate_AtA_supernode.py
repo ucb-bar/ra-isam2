@@ -204,6 +204,8 @@ if __name__ == "__main__":
             supernode_width += seq[block_i]
         else:
             break
+        if block_i + 1 >= len(seq): 
+            break
         block_i += 1
     supernode_blocks = block_i
 
