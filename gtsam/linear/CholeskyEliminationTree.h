@@ -139,6 +139,14 @@ public:
 
   sharedFactor nonlinearFactorAt(FactorIndex factorIndex);
 
+  // Print subtree of size for hw profiling
+  // It does so by doing a breadth-first search on the elimination tree, adding in supernodes
+  // until size is reached or there are no more nodes
+  // It should also print all factors whose lowest key is in the collected supernodes
+  // Actually, we only care about the sparsity structure, so we should collect
+  // the sparsity structure and just generate entries for them later
+  void extractSubtree(std::ostream& os, int size) const; 
+
 private:
   // Add new unmapped Key to transform map and return the mapped key, 
   // If key already exists, just return the mapped key

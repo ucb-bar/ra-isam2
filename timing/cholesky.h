@@ -766,15 +766,20 @@ void sparse_matrix_add3_2(float* A, int Adim, int Astride, int* Aidx,
   blk_width[num_blks] = 1;
   num_blks++;
 
+
   float* A_col = A + Adim - 1;
   for(int J = 0; J < num_blks; J++) {
     float* B_col = B + B_blk_start[J] * Bstride + Bdim - 1;
     for(int j = 0; j < blk_width[J]; j++) {
+
+
       *B_col += *A_col;
       A_col += Astride;
       B_col += Bstride;
     }
+
   }
+
 
 }
 
@@ -871,7 +876,7 @@ int check_tril_result(float* m, float* m_correct,
 
       if(rel_err > tol) {
         printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", i, j, rel_err);
-        printf("Value: %f, Correct: %f\n", m_correct[j * stride + i], m[j * stride + i]);
+        printf("Value: %f, Correct: %f\n", m[j * stride + i], m_correct[j * stride + i]);
         return 1;
       }
     }

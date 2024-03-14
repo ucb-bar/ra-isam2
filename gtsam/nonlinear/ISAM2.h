@@ -287,6 +287,10 @@ class GTSAM_EXPORT ISAM2 : public BayesTree<ISAM2Clique> {
    */
   VectorValues gradientAtZero() const;
 
+  void extractSubTree(std::ostream& os, int size) const {
+    eTree_.extractSubtree(os, size);
+  }
+
   /// @}
 
  protected:

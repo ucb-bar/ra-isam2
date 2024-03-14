@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define MEMORY_SIZE 40960 // bytes
+#define MEMORY_SIZE 1638400 // bytes
 
 
 // Define a char array to represent the memory space

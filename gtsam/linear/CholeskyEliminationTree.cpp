@@ -21,6 +21,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <cstdlib>
+#include <queue>
 
 using namespace std;
 
@@ -52,11 +53,11 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
     addNewNode(key, dim);
     
     // Add regularization factor because problem is too ill conditioned
-    double lambda = 1e6; // This needs to be a large number since the Hessian factor takes in the covariance matrix
+    double lambda = 1e-3; // This needs to be a large number since the Hessian factor takes in the covariance matrix
     Vector mu = Matrix::Zero(dim, 1);
     Matrix sigma = lambda * Matrix::Identity(dim, dim);
-    HessianFactor::shared_ptr regularization_factor 
-        = boost::make_shared<HessianFactor>(unmappedKey, mu, sigma);
+    JacobianFactor::shared_ptr regularization_factor 
+        = boost::make_shared<JacobianFactor>(unmappedKey, sigma, mu);
 
     size_t factorIndex = factors_.size();
     sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
@@ -1581,6 +1582,8 @@ void CholeskyEliminationTree::marginalizeClique(
       FactorIndices* marginalFactors) {
   // cout << "[CholeskyEliminationTree] marginalizedClique() clique: " << *clique << endl;
 
+  cout << "marginalize. should not be here" << endl;
+
   // Set all factors in each node to be LINEAR
   // and remove all keys that are marginalized out
   // If all the keys in a factor is marginalized out, remove that factor
@@ -1697,6 +1700,105 @@ void CholeskyEliminationTree::printOrderingRemapped(std::ostream& os) const {
 NonlinearFactor::shared_ptr CholeskyEliminationTree::nonlinearFactorAt(FactorIndex factorIndex) { 
   size_t realFactorIndex = factorIndexTransformMap_[factorIndex];
   return factors_[realFactorIndex]->nonlinearFactor(); 
+}
+
+void CholeskyEliminationTree::extractSubtree(std::ostream& os, int size) const {
+  queue<sharedClique> q;
+  vector<sharedClique> collectedCliques;
+  set<sharedFactorWrapper> collectedFactors;
+  q.push(root_);
+
+  int collectedSize = 0;
+  int numNodes = 0;
+
+  while(!q.empty()) {
+    sharedClique clique = q.front();
+    q.pop();
+
+    collectedCliques.push_back(clique);
+
+    for(sharedNode node : clique->nodes) {
+      collectedSize += node->width;
+      numNodes++;
+
+      for(sharedFactorWrapper factorWrapper : node->factors) {
+        if(factorWrapper->lowestKey() == node->key) {
+          collectedFactors.insert(factorWrapper);
+        }
+      }
+    }
+
+    if(collectedSize >= size) {
+      break;
+    }
+
+    for(sharedClique child : clique->children) {
+      q.push(child);
+    }
+  }
+
+  os << "factors\n" << collectedFactors.size() << endl;
+  for(sharedFactorWrapper factorWrapper : collectedFactors) {
+    cout << *factorWrapper << endl;
+    os << factorWrapper->factorIndex() << " " << factorWrapper->getCachedMatrix().rows() << " " << factorWrapper->getCachedMatrix().cols() << " " << factorWrapper->remappedKeys().size() << " ";
+    for(RemappedKey remappedKey : factorWrapper->remappedKeys()) {
+      os << remappedKey << " ";
+    }
+    os << endl;
+  }
+
+  unordered_map<sharedClique, int> cliqueMap;
+
+  int c = 0;
+  for(auto it = collectedCliques.rbegin(); it != collectedCliques.rend(); it++, c++) {
+    cout << *it << " " << c << endl;
+    cliqueMap.insert({*it, c});
+  }
+
+  os << endl << "cliques\n" << collectedCliques.size() << endl;
+
+  for(auto it = collectedCliques.rbegin(); it != collectedCliques.rend(); it++) {
+    sharedClique clique = *it;
+
+    os << "clique\n" << cliqueMap.at(clique) << " ";
+    if(clique->parent() != nullptr) {
+      os << cliqueMap.at(clique->parent());
+    }
+    else {
+      os << "-1";
+    }
+    os << " ";
+
+    os << clique->nodes.size() << " " << clique->blockIndices.size() << endl;
+
+
+    for(auto& [key, row, height] : clique->blockIndices) {
+      os << key << " " << row << " " << height << endl;
+    }
+
+    os << endl;
+
+    vector<sharedFactorWrapper> cliqueFactors;
+
+    for(sharedNode node : clique->nodes) {
+      for(sharedFactorWrapper factorWrapper : node->factors) {
+        if(factorWrapper->lowestKey() == node->key) {
+          cliqueFactors.push_back(factorWrapper);
+        }
+      }
+    }
+
+    os << "clique factors\n" << cliqueFactors.size() << endl;
+
+    for(sharedFactorWrapper factorWrapper : cliqueFactors) {
+      os << factorWrapper->factorIndex() << endl;
+    }
+
+    os << endl;
+  }
+
+  os << endl;
+  
 }
 
 RemappedKey CholeskyEliminationTree::addRemapKey(const Key unmappedKey) {
