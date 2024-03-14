@@ -51,16 +51,16 @@ int main() {
             int w = factor_width[factor_index];
             int* ridx = factor_ridx[factor_index];
             float* data = factor_data[factor_index];
-            float* workspace = my_malloc(w * w * sizeof(float));
-            my_memset(workspace, 0, w * w * sizeof(float));
+            float* workspace = my_malloc(h * h * sizeof(float));
+            my_memset(workspace, 0, h * h * sizeof(float));
 
-            matmul(w, w, h, 
+            matmul(h, h, w, 
                    data, data, workspace,
-                   h, h, w,
+                   h, h, h,
                    1, 1, 
-                   false, true);
+                   true, false);
 
-            sparse_matrix_add3_2(workspace, w, w, ridx,
+            sparse_matrix_add3_2(workspace, h, h, ridx,
                                  H_data, H_h, H_h, H_ridx,
                                  1, H_lookup);
 

@@ -24,7 +24,7 @@ def write_factors(fout, factors, nodes):
         keys = factor["keys"]
         fout.write(f"const int factor{index}_height = {height};\n")
         fout.write(f"const int factor{index}_width = {width};\n")
-        fout.write(f"const int factor{index}_ridx[{width}] = {{\n")
+        fout.write(f"const int factor{index}_ridx[{height}] = {{\n")
 
         indices = []
         for key in keys:
@@ -215,14 +215,16 @@ if __name__ == "__main__":
             line = fin.readline()
             arr = [int(a) for a in line.split()]
 
+            # Transpose the factors
+            factor_height = arr[2]
+            factor_width = arr[1]
+
             factors[-1]["index"] = arr[0]
-            factors[-1]["height"] = arr[1]
-            factors[-1]["width"] = arr[2]
+            factors[-1]["height"] = factor_height
+            factors[-1]["width"] = factor_width
             factors[-1]["num_keys"] = arr[3]
             factors[-1]["keys"] = []
 
-            factor_height = arr[1]
-            factor_width = arr[2]
 
             factors[-1]["matrix"] = multiplier * np.random.standard_normal((factor_height, factor_width))
 
@@ -322,7 +324,7 @@ if __name__ == "__main__":
             if nodes[keys[0]][1] == 0:
                 print("matrix = \n", matrix[:3,:3])
 
-            Hi = matrix.T @ matrix
+            Hi = matrix @ matrix.T
 
             ifrow = 0
             for ikey in keys:
