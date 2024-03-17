@@ -74,14 +74,34 @@ def write_clique(fout, cliques, factors, nodes):
         index = factor["index"]
         factor_map[index] = len(factor_map)
 
+    max_factor_height_clique = []
+    max_factor_width_clique = []
+
     for clique_i, clique in enumerate(cliques):
-        factors = clique["factors"]
-        fout.write(f"const int node{clique_i}_nfactors = {len(factors)};\n")
+        clique_factors = clique["factors"]
+        fout.write(f"const int node{clique_i}_nfactors = {len(clique_factors)};\n")
         fout.write(f"const int node{clique_i}_factors[] = {{")
-        for factor in factors:
-            factor_i = factor_map[factor]
+
+        for clique_factor in clique_factors:
+            factor_i = factor_map[clique_factor]
             fout.write(f"{factor_i}, ")
+
         fout.write("};\n")
+
+        max_factor_height_per_clique = 0
+        max_factor_width_per_clique = 0
+
+        for clique_factor in clique_factors:
+            factor_i = factor_map[clique_factor]
+            factor = factors[factor_i]
+            if factor["width"] > max_factor_width_per_clique:
+                max_factor_width_per_clique = factor["width"]
+            if factor["height"] > max_factor_height_per_clique:
+                max_factor_height_per_clique = factor["height"]
+
+        max_factor_height_clique.append(max_factor_height_per_clique)
+        max_factor_width_clique.append(max_factor_width_per_clique)
+
 
     fout.write("const int node_nfactors[] = {")
     for clique_i, clique in enumerate(cliques):
@@ -99,6 +119,20 @@ def write_clique(fout, cliques, factors, nodes):
     fout.write("const int node_parent[] = {")
     for clique_i, clique in enumerate(cliques):
         fout.write(f"node{clique_i}_parent, ")
+    fout.write("};\n\n\n")
+
+    for clique_i, clique in enumerate(cliques):
+        fout.write(f"const int node{clique_i}_factor_max_height = {max_factor_height_clique[clique_i]};\n")
+        fout.write(f"const int node{clique_i}_factor_max_width = {max_factor_width_clique[clique_i]};\n")
+
+    fout.write("const int node_factor_max_height[] = {")
+    for clique_i, clique in enumerate(cliques):
+        fout.write(f"node{clique_i}_factor_max_height, ")
+    fout.write("};\n")
+
+    fout.write("const int node_factor_max_width[] = {")
+    for clique_i, clique in enumerate(cliques):
+        fout.write(f"node{clique_i}_factor_max_width, ")
     fout.write("};\n\n\n")
     
 
@@ -126,7 +160,7 @@ def write_matrix(fout, name, matrix, cliques, nodes):
         fout.write(f"const int {name}_w{clique_i} = {clique_width};\n")
         fout.write(f"const int {name}_h{clique_i} = {clique_height};\n")
 
-        fout.write(f"const int {name}_ridx{clique_i}[{clique_height}] = {{\n")
+        fout.write(f"int {name}_ridx{clique_i}[{clique_height}] = {{\n")
 
         for key, _, height in block_indices:
             row = nodes[key][1]
@@ -159,7 +193,7 @@ def write_matrix(fout, name, matrix, cliques, nodes):
     for clique_i in range(num_cliques):
         fout.write(f"{name}_h{clique_i}, ")
     fout.write("};\n")
-    fout.write(f"const int* {name}_row_indices[{num_cliques}] = {{")
+    fout.write(f"int* {name}_row_indices[{num_cliques}] = {{")
     for clique_i in range(num_cliques):
         fout.write(f"{name}_ridx{clique_i}, ")
     fout.write("};\n")
