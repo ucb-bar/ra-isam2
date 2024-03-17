@@ -46,11 +46,10 @@ int main() {
         // printf("\n");
 
         for(int i = 0; i < node_nfactors[node]; i++) {
-            int factor_index = node_factors[node][i];
-            int h = factor_height[factor_index];
-            int w = factor_width[factor_index];
-            int* ridx = factor_ridx[factor_index];
-            float* data = factor_data[factor_index];
+            int h = node_factor_height[node][i];
+            int w = node_factor_width[node][i];
+            int* ridx = node_factor_ridx[node][i];
+            float* data = node_factor_data[node][i];
             float* workspace = my_malloc(h * h * sizeof(float));
             my_memset(workspace, 0, h * h * sizeof(float));
 
