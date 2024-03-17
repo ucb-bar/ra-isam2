@@ -104,7 +104,7 @@ def write_clique(fout, cliques, factors, nodes):
             fout.write(f"factor{clique_factor}_ridx, ")
         fout.write("};\n")
 
-        fout.write(f"const float* node{clique_i}_factor_data[] = {{")
+        fout.write(f"float* node{clique_i}_factor_data[] = {{")
         for clique_factor in clique_factors:
             fout.write(f"factor{clique_factor}_data, ")
         fout.write("};\n")
