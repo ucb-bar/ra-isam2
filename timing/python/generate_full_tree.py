@@ -24,7 +24,7 @@ def write_factors(fout, factors, nodes):
         keys = factor["keys"]
         fout.write(f"const int factor{index}_height = {height};\n")
         fout.write(f"const int factor{index}_width = {width};\n")
-        fout.write(f"const int factor{index}_ridx[{height}] = {{\n")
+        fout.write(f"int factor{index}_ridx[{height}] = {{\n")
 
         indices = []
         for key in keys:
@@ -36,7 +36,7 @@ def write_factors(fout, factors, nodes):
 
         fout.write("\n};\n")
 
-        fout.write(f"const float factor{index}_data[{height * width}] = {{\n")
+        fout.write(f"float factor{index}_data[{height * width}] = {{\n")
         for j in range(width):
             for i in range(height):
                 fout.write(f"{matrix[i,j]}, ")
