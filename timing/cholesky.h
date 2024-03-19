@@ -134,6 +134,10 @@ void partial_factorization1(float* AB, int w, int h) {
   int hh = h;
   for(int j = 0; j < w; j++) {
     hh--;
+    if(AB[0] <= 0) {
+        printf("Non positive definite!\n");
+        exit(1);
+    }
     float sqrtdiag = sqrt(AB[0]);
     AB[0] = sqrtdiag;
     float scale = 1 / sqrtdiag;
@@ -173,6 +177,10 @@ void dense_block_cholesky(float* A, int dim, int stride) {
   int hh = dim;                       // subdiagonal height of current column
   for(int j = 0; j < dim; j++) {
     hh--;
+    if(A[0] <= 0) {
+        printf("Non positive definite!\n");
+        exit(1);
+    }
     float sqrtdiag = sqrt(A[0]);
     A[0] = sqrtdiag;
     div_ax(sqrtdiag, A + 1, hh);

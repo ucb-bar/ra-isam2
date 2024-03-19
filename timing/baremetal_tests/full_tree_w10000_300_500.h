@@ -14,6 +14,9 @@ const int m_dim = 502;
 
 double cond = 648.7206668343754;
 
+const int factor_max_height = 7;
+const int factor_max_width = 3;
+
 const int factor910_height = 4;
 const int factor910_width = 3;
 int factor910_ridx[4] = {

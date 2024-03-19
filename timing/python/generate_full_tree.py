@@ -16,6 +16,18 @@ from copy import deepcopy
 from utils import *
 
 def write_factors(fout, factors, nodes):
+    factor_max_height = 0
+    factor_max_width = 0
+    for factor in factors:
+        height = factor["height"]
+        width = factor["width"]
+        if factor_max_height < height:
+            factor_max_height = height
+        if factor_max_width < width:
+            factor_max_width = width
+    fout.write(f"const int factor_max_height = {factor_max_height};\n")
+    fout.write(f"const int factor_max_width = {factor_max_width};\n\n")
+
     for factor in factors:
         index = factor["index"]
         height = factor["height"]

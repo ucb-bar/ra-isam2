@@ -17,6 +17,7 @@ void* my_malloc(unsigned int size) {
   // Check memory bound
   if(stack_ptr + size >= MEMORY_SIZE) {
     exit(1);
+    return 0;
   }
 
   int remainder = size & 0b111;

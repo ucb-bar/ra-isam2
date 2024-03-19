@@ -21,6 +21,16 @@ void matmul(
   scale_t A_scale_factor, scale_t B_scale_factor,
   bool transpose_A, bool transpose_B);
 
+// Perform C = A_scale_factor * A^(transpose_A * T) * B_scale_factor * B^(transpose_B * T) + D_scale_factor * D
+// Assume A, B, C, D are stored in row-major order
+void matmul2(
+  size_t dim_I, size_t dim_J, size_t dim_K, 
+  const elem_t* A, const elem_t* B, 
+  const elem_t* D, elem_t* C,
+  size_t stride_A, size_t stride_B, size_t stride_D, size_t stride_C,
+  scale_t A_scale_factor, scale_t B_scale_factor, scale_t D_scale_factor,
+  bool transpose_A, bool transpose_B);
+
 // Perform C += A_scale_factor * A^(transpose_A * T) * A^(transpose_A * T)
 // Assume A, C are stored in row-major order
 // Inputting B as a parameter because I don't want to change the function call lol
