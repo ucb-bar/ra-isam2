@@ -16,9 +16,6 @@ $BUILD_DIR/timing/testGtsamIncremental-treegen -f w10000 --num_steps $num_steps 
 
 python3 $SCRIPT_DIR/generate_full_tree_backsolve.py --infile $BUILD_DIR/tree.out --outfile $HEADER_DIR/full_tree_backsolve_w10000_${num_steps}_${tree_size}.h --seed 0
 
-exit
-
-
 $BUILD_DIR/timing/testGtsamIncremental3D-treegen -f sphere2500 --num_steps $num_steps --tree_size $tree_size --tree_outfile $BUILD_DIR/tree.out 
 
 python3 $SCRIPT_DIR/generate_full_tree_backsolve.py --infile $BUILD_DIR/tree.out --outfile $HEADER_DIR/full_tree_backsolve_sphere2500_${num_steps}_${tree_size}.h --seed 0
