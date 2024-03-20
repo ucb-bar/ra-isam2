@@ -53,22 +53,6 @@ int main() {
     float** M_workspace = my_malloc(M_nnode * sizeof(float*));
     my_memset(M_workspace, 0, M_nnode * sizeof(float*));
 
-    for(int node = M_nnode - 1; node >= 0; node--) {
-        if(marked[node] == false) { continue; }
-
-        int M_h = M_height[node];
-        int M_w = M_width[node];
-        float* M_data = M[node];
-
-        int workspace_size = M_h * M_h * sizeof(float);
-        int supernode_size = M_h * M_w * sizeof(float);
-
-        M_workspace[node] = my_malloc(M_h * M_h * sizeof(float));
-
-        my_memset(M_workspace[node], 0, M_h * M_h * sizeof(float));
-
-    }
-
     for(int node = 0; node < M_nnode; node++) {
 
         if(marked[node] == false) { continue; }
@@ -77,6 +61,11 @@ int main() {
         int M_w = M_width[node];
         int* M_ridx = M_row_indices[node];
         float* M_data = M[node];
+
+        if(M_workspace[node] == 0) {
+            M_workspace[node] = my_malloc(M_h * M_h * sizeof(float));
+            my_memset(M_workspace[node], 0, M_h * M_h * sizeof(float));
+        }
         float* M_workspace_data = M_workspace[node];
 
         int* M_lookup = M_lookups[node];
