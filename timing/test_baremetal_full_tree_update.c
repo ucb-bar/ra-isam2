@@ -1,6 +1,7 @@
 /************************************************************
- * test_baremetal_AtA_cascading_supernode.c
- * Combine the AtA and the cascading supernode factorization
+ * test_baremetal_full_tree_update.c
+ * Test cholesky updating. Given a precomputed cholesky and a few updating factors
+ * compute the new cholesky
  ************************************************************/
 
 #include <stdio.h>
@@ -169,10 +170,18 @@ int main() {
         // Add C to the next node
         int parent = node_parent[node];
         if(parent != -1) {
+
+
             int subdiag_h = M_h - M_w;
             float* C = M_workspace_data + M_w * (M_h + 1);
             int next_M_h = M_height[parent];
             int* next_M_ridx = M_row_indices[parent];
+
+            if(M_workspace[parent] == 0) {
+                M_workspace[parent] = my_malloc(next_M_h * next_M_h * sizeof(float));
+                my_memset(M_workspace[parent], 0, next_M_h * next_M_h * sizeof(float));
+            }
+
             float* next_M_data = M_workspace[parent];
             int* next_M_lookup = M_lookups[parent];
 
