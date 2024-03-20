@@ -1,6 +1,6 @@
 /************************************************************
- * test_baremetal_full_tree.c
- * Compute the cholesky of a full tree with branches
+ * test_baremetal_full_tree_backsolve.c
+ * Compute the cholesky of a full tree with branches, and performs backsolve at the end
  ************************************************************/
 
 #include <stdio.h>
@@ -10,7 +10,7 @@
 
 #include "cholesky.h"
 #include "memory.h"
-#include "baremetal_tests/full_tree_sphere2500_300_500.h"
+#include "baremetal_tests/full_tree_backsolve_w10000_300_500.h"
 
 int main() {
     const double ERR_THRESH = FLT_EPSILON * cond * 100;
@@ -105,6 +105,25 @@ int main() {
                                     ERR_THRESH);
         if(res != 0) {
             printf("Column H%d does not pass check.\n", node);
+            return 1;
+        }
+    }
+
+    // Perform backsolve
+    float* x = my_malloc(x_correct_len * sizeof(float));
+    for(int node = H_nnode - 2; node >= 0; node--) {
+        int width = H_width[node];
+        int height = H_height[node];
+        int* ridx = H_row_indices[node];
+
+        set_strictly_upper_trianguler(0, H[node], width, height, height);
+
+        partial_backsolve(H[node], width, height, height, ridx, x);
+
+        int res = check_tril_result(x + ridx[0], x_correct_data + ridx[0], 1, width, width, 
+                                    ERR_THRESH);
+        if(res != 0) {
+            printf("x at node %d does not pass check.\n", node);
             return 1;
         }
     }

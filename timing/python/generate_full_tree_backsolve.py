@@ -3,7 +3,7 @@ generate_full_tree.py
 Generate several cascading supernodes in a tree structure. 
 Takes in a tree structure file
 
-Usage: generate_full_tree.py --infile <tree_structure_file> --seed 0 --outfile <outfile_path>
+Usage: generate_full_tree_backsolve.py --infile <tree_structure_file> --seed 0 --outfile <outfile_path>
 """
 
 import numpy as np
@@ -186,6 +186,14 @@ def write_clique(fout, cliques, factors, nodes):
 
     fout.write("\n")
 
+def write_dense_vector(fout, name, vector):
+    vector = deepcopy(vector.astype(np.float32))
+    vlen = vector.shape[0]
+    fout.write(f"const int {name}_len = {vlen};\n")
+    fout.write(f"const float {name}_data[{vlen}] = {{")
+    for i in range(vlen):
+        fout.write(f"{vector[i]}, ")
+    fout.write("};\n\n")
     
 
 def write_matrix(fout, name, matrix, cliques, nodes):
@@ -436,6 +444,9 @@ if __name__ == "__main__":
         M_cor = np.linalg.cholesky(M)
 
         Atb = M_cor[-1, :-1]
+        print(Atb.shape, M_cor.shape)
+        L = M_cor[:-1, :-1]
+        x_cor = scipy.linalg.solve_triangular(L, Atb, True, "T")
 
         if outfile is not None:
             with open(outfile, "w") as fout:
@@ -457,6 +468,7 @@ if __name__ == "__main__":
                     write_matrix(fout, "H", H, cliques, nodes);
                     write_matrix(fout, "M", M, cliques, nodes);
                     write_matrix(fout, "M_correct", M_cor, cliques, nodes);
+                    write_dense_vector(fout, "x_correct", x_cor)
 
 
 

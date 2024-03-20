@@ -49,6 +49,17 @@ void gemv(
   size_t stride_A,
   scale_t A_scale_factor);
 
+// Perform y = A_scale_factor A * x_scale_factor x + z_scale_factor z
+// A is of dim_I x dim_K
+// x is a vector of dim_K x 1, y, z are vectors of dim_I x 1
+void gemv2(
+  size_t dim_I, size_t dim_K,
+  const elem_t* A, const elem_t* x, 
+  const elem_t* z, elem_t* y,
+  size_t stride_A,
+  scale_t A_scale_factor, scale_t x_scale_factor, scale_t z_scale_factor,
+  bool transpose_A, bool transpose_x);
+
 // Do C += scale * A.T * B. A, B, C must be preallocated
 void transposed_matmul(
     size_t A_rows, size_t A_cols, 

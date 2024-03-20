@@ -1,5 +1,6 @@
 #pragma once
 
+#include <emmintrin.h>
 #include <stdio.h>
 #include <math.h>
 #include <gtsam/linear/gemmini_functions.h>
@@ -256,6 +257,26 @@ void dense_block_triangle_solve2(float* L, float* B,
 
     L += strideL + 1;
   }
+}
+
+// Solve L.T x = B in place, overwriting B with the answer
+// L is size w x w column major, B is size w x h column major
+// h is typically 1 in our use case
+void dense_block_triangle_solve_tranpose_vector(float* L, float* B, 
+                                                int w, /*int h = 1,*/
+                                                int strideL/*, int strideB*/) {
+    L = L + (w - 1) * (strideL + 1);
+    for(int j = w - 1; j >= 0; j--) {
+        B[j] = B[j] / L[0];
+
+        float* Li = L - strideL;
+        for(int i = j - 1; i >= 0; i--) {
+            B[i] -= *Li * B[j];
+            Li -= strideL;
+        }
+
+        L -= (strideL + 1);
+    }
 }
 
 // Do partial cholesky factorization by first doing as dense cholesky on the diagonal block
@@ -544,6 +565,48 @@ void partial_factorization6(float* AB, int w, int h) {
     AB_JJ += CHOL_BLOCK_SIZE * (h + 1);
     hh -= CHOL_BLOCK_SIZE;
   }
+}
+
+// L is a factorized supernode of height x width
+// x is a dense vector
+// Compute the part of x corresponding to the columns of the supernode
+void partial_backsolve(float* L, int w, int h, int stride, int* ridx,
+                       float* x) {
+    int subdiag_h = h - w - 1;  // Don't count last row
+
+    // Copy last row to x
+    float* L_last_row = L + h - 1;
+    float* x1 = x + ridx[0];
+    for(int i = 0; i < w; i++) {
+        x1[i] = *L_last_row;
+        L_last_row += stride;
+    }
+
+    if(subdiag_h > 0) {
+
+        // Gather relevant x
+        float* x2 = (float*) my_malloc(subdiag_h * sizeof(float));
+
+        for(int i = 0; i < subdiag_h; i++) {
+            x2[i] = x[ridx[i + w]];
+        }
+
+        float* L2 = L + w;
+
+        // Compute y1 -= L2.T x2
+        gemv2(w, subdiag_h,
+              L2, x2,
+              x1, x1,
+              stride,
+              -1, 1, 1,
+              false, false);
+
+        my_free_after(x2);
+    }
+
+    // Solve L1^T x1 = y1 in place
+    dense_block_triangle_solve_tranpose_vector(L, x1, w, stride);
+
 }
 
 void set_strictly_upper_trianguler(float a, float* x, int w, int h, int stride) {
