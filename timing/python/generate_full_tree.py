@@ -376,23 +376,24 @@ if __name__ == "__main__":
         for factor in factors:
             factor["keys"].sort(key=lambda k: nodes[k][1])
 
-        H = np.eye(total_height, total_height)
+        # H = np.eye(total_height, total_height)
+        H = np.zeros((total_height, total_height))
 
-        for clique in cliques:
-            node_size = clique["node_size"]
-            block_indices = clique["block_indices"]
-            print(block_indices, node_size)
-            clique_width = block_indices[node_size - 1][1] + block_indices[node_size - 1][2]
+        # for clique in cliques:
+        #     node_size = clique["node_size"]
+        #     block_indices = clique["block_indices"]
+        #     print(block_indices, node_size)
+        #     clique_width = block_indices[node_size - 1][1] + block_indices[node_size - 1][2]
 
-            clique_m = np.zeros((clique_width, total_height))
+        #     clique_m = np.zeros((clique_width, total_height))
 
-            for key, _, height in block_indices:
-                row = nodes[key][1]
+        #     for key, _, height in block_indices:
+        #         row = nodes[key][1]
 
-                clique_m[:, row:row+height] = multiplier * np.random.standard_normal((clique_width, height))
-            H += clique_m.T @ clique_m
+        #         clique_m[:, row:row+height] = multiplier * np.random.standard_normal((clique_width, height))
+        #     H += clique_m.T @ clique_m
 
-        print(H)
+        # print(H)
 
         H_cor = deepcopy(H)
 
