@@ -3,6 +3,7 @@
 #include <emmintrin.h>
 #include <stdio.h>
 #include <math.h>
+#include <float.h>
 #include <gtsam/linear/gemmini_functions.h>
 #include "memory.h"
 
@@ -850,8 +851,40 @@ void sparse_matrix_add3_2(float* A, int Adim, int Astride, int* Aidx,
     }
 
   }
+}
 
+// Do B += A. Both A and B are square and col major. 
+// A is Adim x Adim. B is Bdim x Bdim. Bdim >= Adim
+// group_block_indices is preprocessed
+// Always do last column separately
+void sparse_matrix_add3_3(float* A, int Adim, int Astride,
+                          float* B, int Bdim, int Bstride,
+                          float Ascale, 
+                          int num_blks, int* A_blk_start, int* B_blk_start, int* blk_width) {
+  
+  for(int J = 0; J < num_blks; J++) {
+    float* A_col = A + A_blk_start[J] * Astride;
+    float* B_col = B + B_blk_start[J] * Bstride;
+    for(int I = J; I < num_blks; I++) {
+      float* A_blk = A_col + A_blk_start[I];
+      float* B_blk = B_col + B_blk_start[I];
+      dense_block_add(A_blk, B_blk, blk_width[I], blk_width[J], Astride, Bstride, 1, 1);
+    }
+  }
+  
+  // Manually add last row
 
+  float* A_col = A + Adim - 1;
+  for(int J = 0; J < num_blks; J++) {
+    float* B_col = B + B_blk_start[J] * Bstride + Bdim - 1;
+    for(int j = 0; j < blk_width[J]; j++) {
+
+      *B_col += *A_col;
+      A_col += Astride;
+      B_col += Bstride;
+    }
+
+  }
 }
 
 // Do B += A. Extend the case of sparse_block_add3 to nonsquare case
@@ -941,7 +974,7 @@ int check_tril_result(float* m, float* m_correct,
       double abs_err = fabs(m_correct[j * stride + i] - m[j * stride + i]);
       double abs_A = fabs(m_correct[j * stride + i]);
       double rel_err = abs_A != 0? abs_err / abs_A :
-                       abs_err == 0? 0 : INFINITY;
+                       abs_err < FLT_EPSILON? 0 : INFINITY;
 
       // printf("%.10e, ", rel_err);
 

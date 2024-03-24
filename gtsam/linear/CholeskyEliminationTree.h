@@ -58,8 +58,8 @@ private:
     // unmappedKeys transforms the sequential remappedKeys back to unmapped keys
     std::vector<Key> unmappedKeys_;
 
-    std::vector<RemappedKey> keyToOrdering_; // Key to index
-    std::vector<size_t> orderingToKey_;         // Index to key
+    std::vector<size_t> keyToOrdering_;       // Key to index
+    std::vector<RemappedKey> orderingToKey_;  // Index to key
 
     size_t orderingVersion_ = 0;
 
@@ -146,6 +146,10 @@ public:
   // Actually, we only care about the sparsity structure, so we should collect
   // the sparsity structure and just generate entries for them later
   void extractSubtree(std::ostream& os, int size) const; 
+
+  void extractFullTree(std::ostream& os) const;
+
+  void extractDelta(std::ostream& os, VectorValues& delta) const;
 
 private:
   // Add new unmapped Key to transform map and return the mapped key, 

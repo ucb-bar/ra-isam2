@@ -1801,6 +1801,79 @@ void CholeskyEliminationTree::extractSubtree(std::ostream& os, int size) const {
   
 }
 
+void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
+
+  os << "ordering" << endl;
+  os << orderingToKey_.size() << endl;
+  for(RemappedKey remappedKey : orderingToKey_) {
+    os << remappedKey << endl;
+  }
+  os << endl;
+
+  os << "factors" << endl;
+  os << factors_.size() << endl;
+  for(sharedFactorWrapper factorWrapper : factors_) {
+    os << factorWrapper->factorIndex() << " " 
+       << factorWrapper->getCachedMatrix().rows() << " " 
+       << factorWrapper->getCachedMatrix().cols() << " " 
+       << factorWrapper->remappedKeys().size() << endl;
+    for(RemappedKey factorKey : factorWrapper->remappedKeys()) {
+      os << factorKey << " ";
+    }
+    os << endl;
+    os << factorWrapper->getCachedMatrix() << endl;
+  }
+  os << endl;
+
+  int clique_count = 0;
+  for(RemappedKey remappedKey : orderingToKey_) {
+    sharedClique clique = nodes_[remappedKey]->clique();
+    if(clique->frontKey() != remappedKey) { continue; }
+    clique_count++;
+  }
+
+  os << "cliques" << endl;
+  os << clique_count << endl;
+
+  for(RemappedKey remappedKey : orderingToKey_) {
+    sharedClique clique = nodes_[remappedKey]->clique();
+    cout << "key = " << remappedKey << " Clique " << *clique << endl;
+    if(clique->frontKey() != remappedKey) { continue; }
+
+    clique_count++;
+
+    os << clique->height() << " " << clique->width() << " "
+       << clique->cliqueSize() << " " << clique->blockIndices.size() << endl;
+    for(int i = 0; i < clique->blockIndices.size(); i++) {
+      const auto&[key, row, height] = clique->blockIndices[i];
+      os << key << " " << row << " " << height << endl;
+    }
+
+    if(clique->gatherSources.size() != 1) {
+      cerr << "Clique is not well formed!" << endl;
+      exit(1);
+    }
+    os << clique->gatherSources.front() << endl;
+
+  }
+  os << endl;
+
+}
+
+void CholeskyEliminationTree::extractDelta(std::ostream& os, VectorValues& delta) const {
+  os << "deltas" << endl;
+  os << delta.size() << endl;
+
+  for(RemappedKey remappedKey = 0; remappedKey < unmappedKeys_.size(); remappedKey++) {
+    if(remappedKey == 0) { continue; } 
+
+    Key unmappedKey = unmapKey(remappedKey);
+
+    os << delta.at(unmappedKey).transpose() << endl;
+  }
+  os << endl;
+}
+
 RemappedKey CholeskyEliminationTree::addRemapKey(const Key unmappedKey) {
 
   // Remap regular keys to start from 1, 0 is for last row (unmappedKey -1)

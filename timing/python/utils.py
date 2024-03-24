@@ -17,3 +17,22 @@ def write_comment_footer(fout):
         fout.write("*")
     fout.write("*/\n\n")
 
+def write_include_guard(fout):
+    fout.write("#pragma once\n\n")
+
+def read_until(fin, s):
+    while True:
+        line = fin.readline()
+        if not line:
+            print("Line not found")
+            exit(0)
+
+        if s in line:
+            break
+
+
+def read_timestep_file(fin):
+
+    read_until(fin, "ordering")
+
+
