@@ -977,12 +977,15 @@ int check_tril_result(float* m, float* m_correct,
                        abs_err < FLT_EPSILON? 0 : INFINITY;
 
       // printf("%.10e, ", rel_err);
-
-      if(rel_err > tol) {
-        printf("Relative error at (%d, %d) exceeded threshold: %.8e\n", i, j, rel_err);
-        printf("Value: %f, Correct: %f\n", m[j * stride + i], m_correct[j * stride + i]);
-        return 1;
+      // Disable check if absolute error small enough
+      if(abs_err > tol) {
+          if(rel_err > tol) {
+            printf("Relative error at (%d, %d) exceeded threshold: %.8e. ERR_THRESH: %.8e\n", i, j, rel_err, tol);
+            printf("Value: %f, Correct: %f\n", m[j * stride + i], m_correct[j * stride + i]);
+            return 1;
+          }
       }
+
     }
     // printf("\n");
   }

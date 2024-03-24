@@ -21,11 +21,12 @@ using namespace std;
 using namespace gtsam;
 using namespace gtsam::symbol_shorthand;
 
-typedef Pose2 Pose;
+typedef Pose3 Pose;
+typedef Point3 Point;
 
 typedef NoiseModelFactor1<Pose> NM1;
 typedef NoiseModelFactor2<Pose,Pose> NM2;
-typedef BearingRangeFactor<Pose,Point2> BR;
+typedef BearingRangeFactor<Pose,Point3> BR;
 
 double chi2_red(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& config) {
     // Compute degrees of freedom (observations - variables)
@@ -113,7 +114,7 @@ int main(int argc, char *argv[]) {
     string datasetFile = findExampleDataFile(dataset_name);
     // string datasetFile = findExampleDataFile("victoria_park");
     std::pair<NonlinearFactorGraph::shared_ptr, Values::shared_ptr> data =
-        load2D(datasetFile);
+        readG2o(datasetFile, true);
 
     NonlinearFactorGraph measurements = *data.first;
     Values initial = *data.second;
@@ -142,7 +143,7 @@ int main(int argc, char *argv[]) {
         if(step == 1) {
             newVariables.insert(0, Pose());
             // Add prior
-            newFactors.addPrior(0, Pose(), noiseModel::Unit::Create(3));
+            newFactors.addPrior(0, Pose(), noiseModel::Unit::Create(6));
         }
         while(nextMeasurement < measurements.size()) {
 
@@ -290,14 +291,13 @@ int main(int argc, char *argv[]) {
 
             isam2.extractFullTree(fout);
             isam2.extractDelta(fout);
+
         }
         K_count++;
         update_times.push_back(d1);
         calc_times.push_back(d2);
 
-
     }
-
 
     Values estimate(isam2.calculateEstimate());
     double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);

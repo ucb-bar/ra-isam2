@@ -5,7 +5,7 @@
 
 #include "cholesky.h"
 #include "memory.h"
-#include "baremetal_tests/w10000_vio_dataset/vio_dataset.h"
+#include "baremetal_tests/vio_w10000_steps-300_vio_lag-10/vio_dataset.h"
 
 int main() {
 

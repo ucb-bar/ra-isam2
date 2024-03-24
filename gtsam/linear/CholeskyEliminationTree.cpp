@@ -1837,7 +1837,6 @@ void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
 
   for(RemappedKey remappedKey : orderingToKey_) {
     sharedClique clique = nodes_[remappedKey]->clique();
-    cout << "key = " << remappedKey << " Clique " << *clique << endl;
     if(clique->frontKey() != remappedKey) { continue; }
 
     clique_count++;
