@@ -6,6 +6,8 @@ SCRIPT_DIR=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 HEADER_DIR=$SCRIPT_DIR/../baremetal_tests
 BUILD_DIR=$SCRIPT_DIR/../../build
 
+$SCRIPT_DIR/build.sh
+
 # ========================== CHANGE HERE ========================== #
 num_steps=300
 vio_lag=10

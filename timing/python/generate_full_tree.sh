@@ -6,6 +6,8 @@ SCRIPT_DIR=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 HEADER_DIR=$SCRIPT_DIR/../baremetal_tests
 BUILD_DIR=$SCRIPT_DIR/../../build
 
+$SCRIPT_DIR/build.sh
+
 num_steps=150
 # This number determines the dimension of the full matrix
 # This number should be less than 3 * num_steps for 2D dataset
