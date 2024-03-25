@@ -304,15 +304,19 @@ if __name__ == "__main__":
             # Transpose the factors
             factor_height = arr[2]
             factor_width = arr[1]
+            num_keys = arr[3]
 
             factors[-1]["index"] = arr[0]
             factors[-1]["height"] = factor_height
             factors[-1]["width"] = factor_width
-            factors[-1]["num_keys"] = arr[3]
+            factors[-1]["num_keys"] = num_keys
             factors[-1]["keys"] = []
 
 
-            factors[-1]["matrix"] = multiplier * np.random.standard_normal((factor_height, factor_width))
+            if num_keys == 2:
+                factors[-1]["matrix"] = multiplier * np.eye(factor_height, factor_width)
+            else:
+                factors[-1]["matrix"] = multiplier * np.random.standard_normal((factor_height, factor_width))
 
             for k in range(4, len(arr)):
                 factors[-1]["keys"].append(arr[k])
@@ -343,7 +347,6 @@ if __name__ == "__main__":
                 if key not in nodes.keys():
                     nodes[key] = [key, -1, height]
                     last_row += height
-
 
 
             read_until(fin, "clique factors")
@@ -408,9 +411,6 @@ if __name__ == "__main__":
             if max_factor_height < height:
                 max_factor_height = height
 
-            if nodes[keys[0]][1] == 0:
-                print("matrix = \n", matrix[:3,:3])
-
             Hi = matrix @ matrix.T
 
             ifrow = 0
@@ -422,12 +422,8 @@ if __name__ == "__main__":
 
                     H_cor[irow:irow+iheight, jrow:jrow+jheight] += Hi[ifrow:ifrow+iheight, jfrow:jfrow+jheight]
                     jfrow += jheight
+
                 ifrow += iheight
-
-
-            if nodes[keys[0]][1] == 0:
-                print(Hi[:3,:3])
-                print(H_cor[:3,:3])
 
         M = deepcopy(H_cor)
 

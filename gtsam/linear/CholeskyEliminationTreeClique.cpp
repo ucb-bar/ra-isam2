@@ -6,6 +6,7 @@
 */
 
 #include "CholeskyEliminationTree.h"
+#include "gtsam/linear/CholeskyEliminationTreeTypes.h"
 #include <gtsam/linear/CholeskyEliminationTreeClique.h>
 #include <gtsam/linear/CholeskyEliminationTreeNode.h>
 #include <iostream>
@@ -282,6 +283,107 @@ void CholeskyEliminationTree::Clique::mergeGatherSources(
         gatherSources.push_back(otherColumns);
       }
     }
+  }
+}
+
+void CholeskyEliminationTree::Clique::mergeClique2(sharedClique childClique) {
+    // Merge children into ourself
+    assert(childClique->parent() == get_ptr());
+    assert(nodes.front()->key != 0);
+    assert(children.find(childClique) != children.end());
+
+    // First merge blockIndices
+    int i1 = 0, i2 = 0;
+    BlockIndexVector thisBlockIndices = std::move(this->blockIndices);
+    BlockIndexVector childBlockIndices = childClique->blockIndices;
+    this->blockIndices.clear();
+    int curRow = 0;
+    while(i1 < childBlockIndices.size() && i2 < thisBlockIndices.size()) {
+      auto&[k1, _1, h1] = childBlockIndices[i1];
+      auto&[k2, _2, h2] = thisBlockIndices[i2];
+      if(k1 == k2) {
+        this->blockIndices.push_back({k1, curRow, h1});
+        curRow += h1;
+        i1++;
+        i2++;
+      }
+      else if(etree->orderingLess_(k1, k2)) {
+        this->blockIndices.push_back({k1, curRow, h1});
+        curRow += h1;
+        i1++;
+      }
+      else {
+        this->blockIndices.push_back({k2, curRow, h2});
+        curRow += h2;
+        i2++;
+      }
+    }
+
+    while(i1 < childBlockIndices.size()) {
+      auto&[k1, _1, h1] = childBlockIndices[i1];
+      this->blockIndices.push_back({k1, curRow, h1});
+      curRow += h1;
+      i1++;
+    }
+
+    while(i2 < thisBlockIndices.size()) {
+      auto&[k2, _2, h2] = thisBlockIndices[i2];
+      this->blockIndices.push_back({k2, curRow, h2});
+      curRow += h2;
+      i2++;
+    }
+
+    int cliqueSize = childClique->cliqueSize() + this->cliqueSize();
+
+    this->nodes.clear();
+    this->nodes.reserve(cliqueSize);
+    for(int i = 0; i < cliqueSize; i++) {
+      RemappedKey k = get<BLOCK_INDEX_KEY>(this->blockIndices[i]);
+      this->addNode(etree->nodes_[k]);
+    }
+
+    // Added clique may have children. We need to adopt the child cliques children
+    vector<sharedClique> childChildren;
+    childChildren.insert(childChildren.begin(), 
+                         childClique->children.begin(),
+                         childClique->children.end());
+    for(sharedClique childClique : childChildren) {
+        childClique->setParent(get_ptr());
+    }
+
+    // Detach child cliques parent
+    // At this point, nothing should point to child anymore
+    childClique->detachParent();
+
+    // Merge CliqueColumns, which are fragments of the previous Cholesky factor
+    mergeGatherSources2(childClique->gatherSources);
+
+}
+
+void CholeskyEliminationTree::Clique::mergeGatherSources2(
+    vector<LocalCliqueColumns>& childGatherSources) {
+  // There are 3 cases
+  // 1. The 2 cliqueColumns used to belong in the same clique. Merge them
+  // 2. The 2 cliqueColumns do not belong in the same clique. Keep them both.
+  // 3. One or both of them are new (gatherSources.empty()). Keep whatever is valid.
+
+  if(childGatherSources.empty()) {
+    // Case 3.1. Do nothing
+  }
+  else if(this->gatherSources.empty()) {
+    // Case 3.2. 
+    this->gatherSources = std::move(childGatherSources);
+  }
+  else {
+    // otherClique should only have a single node, but we can write it to be more flexible
+    for(const LocalCliqueColumns& thisColumns : this->gatherSources) {
+      // If our CliqueColumns can be merged into the child's last CliqueColumn, merge
+      // Otherwise just add it to the list of fragments
+      if(!childGatherSources.back().merge(thisColumns)) {
+        childGatherSources.push_back(thisColumns);
+      }
+    }
+    this->gatherSources = std::move(childGatherSources);
   }
 }
 

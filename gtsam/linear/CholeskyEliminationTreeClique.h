@@ -102,10 +102,16 @@ public:
 
   void setParent(sharedClique newParent);
 
-  // Merge otherClique into this clique
+  // Merge parent otherClique into this clique
   void mergeClique(sharedClique otherClique);
 
   void mergeGatherSources(const std::vector<LocalCliqueColumns>& otherGatherSources);
+  
+  // Merge childClique into this clique
+  // This is to support merging multiple branches
+  void mergeClique2(sharedClique childClique);
+
+  void mergeGatherSources2(std::vector<LocalCliqueColumns>& childGatherSources);
 
   // Merge our column structure based on blockIndices into parentColStructure
   void mergeColStructure(std::vector<RemappedKey>* parentColStructure);

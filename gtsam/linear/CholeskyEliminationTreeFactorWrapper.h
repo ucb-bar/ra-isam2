@@ -272,7 +272,6 @@ public:
       // Higher key represents the column. Don't need last column
       const auto&[lowerKey, srcCol1, srcW1] = blockIndices_.at(i);
       const auto&[destR1, ordering1, status1] = info(i);
-      // std::cout << "checking lowerKey = " << lowerKey << std::endl;
       if(!pred(status1)) {
         continue;
       }
@@ -286,18 +285,36 @@ public:
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
         if(srcCol2 >= srcCol1) {
-          add_block(C.data(), &m(0, 0), 
-                    width, mrows, 
-                    srcCol2, srcCol1, 
-                    destR2, destR1, 
-                    srcW2, srcW1);
+          if(destR2 >= destR1) {
+            add_block(C.data(), &m(0, 0), 
+                      width, mrows, 
+                      srcCol2, srcCol1, 
+                      destR2, destR1, 
+                      srcW2, srcW1);
+          }
+          else {
+            add_block_transpose(C.data(), &m(0, 0), 
+                                width, mrows, 
+                                srcCol2, srcCol1, 
+                                destR1, destR2, 
+                                srcW2, srcW1);
+          }
         }
         else {
-          add_block_transpose(C.data(), &m(0, 0), 
-                              width, mrows, 
-                              srcCol1, srcCol2, 
-                              destR2, destR1, 
-                              srcW1, srcW1);
+          if(destR2 >= destR1) {
+            add_block_transpose(C.data(), &m(0, 0), 
+                                width, mrows, 
+                                srcCol1, srcCol2, 
+                                destR2, destR1, 
+                                srcW1, srcW2);
+          }
+          else {
+            add_block(C.data(), &m(0, 0), 
+                      width, mrows, 
+                      srcCol1, srcCol2, 
+                      destR1, destR2, 
+                      srcW1, srcW2);
+          }
         }
       }
     }

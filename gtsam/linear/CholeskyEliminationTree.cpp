@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <fstream>
 #include <cmath>
+#include <locale>
 #include <stdexcept>
 #include <cstdlib>
 #include <queue>
@@ -232,7 +233,9 @@ void CholeskyEliminationTree::markKey(const RemappedKey key, RemappedKeySet* mar
   sharedNode node = nodes_[key];
 
   sharedClique curClique = node->clique();
-  RemappedKey curKey = key;
+  // datasetgen: when marking a key, mark all the keys in the clique
+  RemappedKey curKey = curClique->frontKey();
+  // RemappedKey curKey = key;
   do {
     // if(curClique->status() != UNMARKED) {
     //   cout << "mark clique " << *curClique << " is not UNMARKED. status = " << curClique->status() << endl;
@@ -242,7 +245,7 @@ void CholeskyEliminationTree::markKey(const RemappedKey key, RemappedKeySet* mar
     if(curClique->orderingVersion != orderingVersion_) {
       curClique->reorderClique();
     }
-
+    
     curClique = curClique->markClique(curKey, markedKeys);
     if(curClique) {
       curKey = curClique->frontKey();
@@ -315,46 +318,57 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
       childClique->mergeColStructure(&colStructure);
   }
 
-  // cout << "col structure: ";
-  // for(Key k : colStructure) {
-  //     cout << k << " ";
+  clique->populateBlockIndices(colStructure);
+
+  // if(clique->nodes.front()->key != 0 &&
+  //     clique->children.size() == 1) {
+  //   // Clique 0 cannot be merged and will always be root
+  //   sharedClique childClique = *(clique->children.begin());
+  //   if(childClique->marked() 
+  //       && colStructure.size() == childClique->blockIndices.size() - childClique->cliqueSize()) {
+  //     clique->mergeClique2(childClique);
+  //     // Need to update clique pointer to current clique, which is the child clique
+  //     assert(childClique.unique());
+  //     childClique.reset();
+
+  //   }
+  //   // gemmini-integrate: trying to merge more cliques together
+  //   else if(childClique->marked() 
+  //       && childClique->cliqueSize() < 4) {
+  //     clique->mergeClique2(childClique);
+  //     // Need to update clique pointer to current clique, which is the child clique
+  //     assert(childClique.unique());
+  //     childClique.reset();
+  //   }
   // }
-  // cout << endl;
-
-  bool mergeFlag = false;
-  bool extendFlag = true;
-  if(clique->nodes.front()->key != 0 &&
-      clique->children.size() == 1) {
+  
+  if(clique->nodes.front()->key != 0) {
     // Clique 0 cannot be merged and will always be root
-    sharedClique childClique = *(clique->children.begin());
-    if(childClique->marked() 
-        && colStructure.size() == childClique->blockIndices.size() - childClique->cliqueSize()) {
-      childClique->mergeClique(clique);
-      // Need to update clique pointer to current clique, which is the child clique
-      assert(clique.unique());
-      clique.reset();
-      clique = childClique;
-      mergeFlag = true;
-    }
-    // gemmini-integrate: trying to merge more cliques together
-    else if(childClique->marked() 
-        && childClique->cliqueSize() < 4) {
-      childClique->mergeClique(clique);
-      // Need to update clique pointer to current clique, which is the child clique
-      assert(clique.unique());
-      clique.reset();
-      clique = childClique;
-      mergeFlag = true;
-      extendFlag = true;    // Need to extend child's block indices since they don't exactly match
-    }
-  }
+    // datasetgen: Try to merge more cliques together into relaxed supernodes
+    vector<sharedClique> childCliques;
+    childCliques.insert(childCliques.begin(), 
+                        clique->children.begin(),
+                        clique->children.end());
+    for(sharedClique childClique : childCliques) {
+      if(!childClique->marked()) { continue; }
 
-  // Need to popoluate our own blockIndices
-  if(!mergeFlag) {
-    clique->populateBlockIndices(colStructure);
-  }
-  else if(extendFlag) {
-    clique->extendBlockIndices(colStructure);
+      bool mergeFlag = false;
+      const int relaxed_supernode_min_size = 24;
+      if(clique->blockIndices.size() == childClique->blockIndices.size() - childClique->cliqueSize()) { 
+        mergeFlag = true; 
+      }
+      else if(get<BLOCK_INDEX_ROW>(childClique->blockIndices[childClique->cliqueSize()]) < relaxed_supernode_min_size)  {
+        mergeFlag = true;
+
+      }
+      else {
+      }
+      if(mergeFlag) {
+        clique->mergeClique2(childClique);
+        assert(childClique.unique());
+        childClique.reset();
+      }
+    }
   }
 
   // Find parent after merging cliques
@@ -561,6 +575,11 @@ void CholeskyEliminationTree::getPartialReordering(
   //   cout << (int) unmapKey(k) << " ";
   // }
   // cout << endl;
+  // cout << "Ordering: ";
+  // for(auto k : *partialOrdering) {
+  //   cout << k << " ";
+  // }
+  // cout << endl;
 }
 
 void CholeskyEliminationTree::updateOrdering(const RemappedKeySet& markedKeys, 
@@ -655,28 +674,29 @@ void CholeskyEliminationTree::postReordering(const vector<RemappedKey>& partialO
   vector<RemappedKey> newOrderingToKey(orderingToKey_);
 
   RemappedKey minReorderedKey = partialOrdering.front();
-  size_t minReorderedIndex = keyToOrdering_[minReorderedKey];
+  int minReorderedIndex = keyToOrdering_[minReorderedKey];
 
   assert(keyToOrdering_[0] == keyToOrdering_.size() - 1);
   assert(orderingToKey_.back() == 0);
   assert(partialOrdering.back() == 0);
 
-  size_t curIndex = minReorderedIndex;
-  for(size_t i = minReorderedIndex; i < orderingToKey_.size(); i++) {
+  // If come across the last key of a clique, reorder all keys in the clique to be 
+  // right in front of it. This is needed for branched relaxed supernodes
+  int curIndex = orderingToKey_.size() - 1; 
+  for(int i = curIndex; i >= minReorderedIndex; i--) {
     RemappedKey key = orderingToKey_[i];
     sharedClique clique = cliques_[key];
 
-    // If come accross the first key of a clique, reorder all keys in the clique
-    // to be right behind the first key
-    if(key == clique->frontKey()) {
-      for(size_t i = 0; i < clique->cliqueSize(); i++) {
-        RemappedKey cliqueKey = get<BLOCK_INDEX_KEY>(clique->blockIndices[i]);
+    if(key == clique->backKey()) {
+      for(int k = clique->cliqueSize() - 1; k >= 0; k--) {
+        RemappedKey cliqueKey = get<BLOCK_INDEX_KEY>(clique->blockIndices[k]);
         assert(curIndex < newOrderingToKey.size());
         newOrderingToKey[curIndex] = cliqueKey;
-        curIndex++;
+        curIndex--;
       }
     }
   }
+
   assert(curIndex == keyToOrdering_.size());
   orderingToKey_ = newOrderingToKey;
 
@@ -847,7 +867,7 @@ void CholeskyEliminationTree::allocateAndGatherClique(sharedClique clique, bool 
   clique->workspaceIndex = workspace_.push_matrices({{totalHeight, totalHeight}});
 
   if(!reconstruct) {
-    // Gather columns from wherever they is living now
+    // Gather columns from wherever they are living now
     // Need to do a scatter operation based on the old blockIndices on to the new one
     // The clique who owns the data shall be responsible for the blockIndices
     GEMMINI_TYPE* matrixData = workspace_.get_ptrs(clique->workspaceIndex)[0];
@@ -1265,8 +1285,17 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
 
   // // DEBUG
   // cout << "Clique: " << *clique << endl << endl;
+  // cout << "block indices: ";
+  // clique->printBlockIndices(cout);
+  // cout << endl;
   // m.triangularView<Eigen::StrictlyUpper>().setZero();
-  // cout << "Before eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
+  // // cout << "Before eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
+
+  // // cout << "Before eliminate" << endl;
+  // // for(int j = 0; j < bWidth; j += 3) {
+  // //     cout << "j = " << j << endl;
+  // //     cout << "m = \n" << block(m, 0, j, totalHeight, 3) << endl << endl;
+  // // }
 
   Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>> D = block(m, 0, 0, bWidth, bWidth);
   Eigen::LLT<Eigen::Ref<Eigen::Block<Eigen::Map<ColMajorMatrix<GEMMINI_TYPE>>>>> llt(D);
@@ -1308,8 +1337,17 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
   }
 
   // // DEBUG
+  // cout << "Clique: " << *clique << endl << endl;
+  // cout << "block indices: ";
+  // clique->printBlockIndices(cout);
+  // cout << endl;
   // m.triangularView<Eigen::StrictlyUpper>().setZero();
-  // cout << "After eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
+  // // cout << "After eliminate. m = \n" << block(m, 0, 0, totalHeight, bWidth) << endl << endl;
+  // // cout << "After eliminate" << endl;
+  // // for(int j = 0; j < bWidth; j += 3) {
+  // //     cout << "j = " << j << endl;
+  // //     cout << "m = \n" << block(m, 0, j, totalHeight, 3) << endl << endl;
+  // // }
 }
 
 void CholeskyEliminationTree::mergeWorkspaceClique(sharedClique clique) {
