@@ -70,6 +70,22 @@ class Timestep:
         for _ in range(self.num_cliques):
             self.cliques.append(Clique(fin))
 
+        read_until(fin, "new keys")
+        self.num_new_keys = int(fin.readline())
+        self.new_keys = []
+
+        for k in range(self.num_new_keys):
+            line = fin.readline()
+            self.new_keys.append(int(line))
+
+        read_until(fin, "relin keys")
+        self.num_relin_keys = int(fin.readline())
+        self.relin_keys = []
+
+        for k in range(self.num_relin_keys):
+            line = fin.readline()
+            self.relin_keys.append(int(line))
+
         read_until(fin, "deltas")
 
         line = fin.readline()
@@ -141,7 +157,7 @@ class Timestep:
             if factor.num_blks > step_factor_max_num_blks:
                 step_factor_max_num_blks = factor.num_blks
 
-        fout.write(f"int step{self.step}_factor_max_num_blks = {step_factor_max_num_blks};\n\n")
+        fout.write(f"const int step{self.step}_factor_max_num_blks = {step_factor_max_num_blks};\n\n")
 
         # This is transposed
         step_factor_max_width = 0
@@ -151,7 +167,7 @@ class Timestep:
             if factor.width > step_factor_max_width:
                 step_factor_max_width = factor.width
 
-        fout.write(f"int step{self.step}_factor_max_height = {step_factor_max_width};\n\n")
+        fout.write(f"const int step{self.step}_factor_max_height = {step_factor_max_width};\n\n")
 
         Factor.print_metadata(fout, factor_indices, self.prefix)
 

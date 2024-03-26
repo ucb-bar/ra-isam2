@@ -310,9 +310,9 @@ int step40_factor142_A_blk_start[] = {0, };
 int step40_factor142_B_blk_start[] = {27, };
 int step40_factor142_blk_width[] = {6, };
 
-int step40_factor_max_num_blks = 1;
+const int step40_factor_max_num_blks = 1;
 
-int step40_factor_max_height = 7;
+const int step40_factor_max_height = 7;
 
 const int step40_num_factors = 22;
 const int step40_factor_height[] = {step40_factor90_height, step40_factor93_height, step40_factor95_height, step40_factor97_height, step40_factor100_height, step40_factor101_height, step40_factor105_height, step40_factor106_height, step40_factor110_height, step40_factor111_height, step40_factor115_height, step40_factor117_height, step40_factor120_height, step40_factor121_height, step40_factor125_height, step40_factor126_height, step40_factor130_height, step40_factor132_height, step40_factor135_height, step40_factor136_height, step40_factor141_height, step40_factor142_height, };

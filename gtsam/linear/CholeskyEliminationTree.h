@@ -87,6 +87,9 @@ private:
     std::vector<std::vector<RemappedKey>> descendants_;
     std::vector<std::vector<RemappedKey>> changedDescendants_;
 
+    std::vector<RemappedKey> datasetgen_newKeys;
+    std::vector<RemappedKey> datasetgen_relinKeys;
+
 public:
   CholeskyEliminationTree();
 

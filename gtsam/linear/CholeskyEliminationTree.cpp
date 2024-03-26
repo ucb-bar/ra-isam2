@@ -44,6 +44,7 @@ CholeskyEliminationTree::CholeskyEliminationTree() : orderingLess_(this) {
 
 void CholeskyEliminationTree::addVariables(const Values& newTheta) {
   // cout << "[CholeskyEliminationTree] addVariables() " << newTheta.size() << endl;
+  datasetgen_newKeys.clear();
   for(const auto& keyValPair : newTheta) {
     const Key& unmappedKey = keyValPair.key;
     const Value& val = keyValPair.value;
@@ -52,6 +53,8 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
     // First remap the key to start from 1
     RemappedKey key = addRemapKey(unmappedKey);
     addNewNode(key, dim);
+
+    datasetgen_newKeys.push_back(key);
     
     // Add regularization factor because problem is too ill conditioned
     double lambda = 1e-3; // This needs to be a large number since the Hessian factor takes in the covariance matrix
@@ -80,6 +83,12 @@ void CholeskyEliminationTree::markAffectedKeys(
   const ISAM2UpdateParams& updateParams,
   RemappedKeySet* affectedKeys,
   RemappedKeySet* observedKeys) {
+
+  datasetgen_relinKeys.clear();
+  for(const Key unmappedRelinKey : relinKeys) {
+    RemappedKey relinKey = getRemapKey(unmappedRelinKey);
+    datasetgen_relinKeys.push_back(relinKey);
+  }
 
   // cout << "[CholeskyEliminationTree] markAffectedKeys()" << endl;
   affectedKeys->clear();
@@ -1894,6 +1903,20 @@ void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
 
   }
   os << endl;
+
+  os << "new keys\n" << datasetgen_newKeys.size() << endl;
+  for(RemappedKey k : datasetgen_newKeys) {
+    os << k << endl;
+  }
+  os << endl;
+
+  os << "relin keys\n" << datasetgen_relinKeys.size() << endl;
+  for(RemappedKey k : datasetgen_relinKeys) {
+    os << k << endl;
+  }
+
+  os << endl;
+
 
 }
 

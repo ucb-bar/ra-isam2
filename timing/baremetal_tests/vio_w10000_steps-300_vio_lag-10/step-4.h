@@ -142,9 +142,9 @@ int step4_factor9_A_blk_start[] = {0, };
 int step4_factor9_B_blk_start[] = {9, };
 int step4_factor9_blk_width[] = {6, };
 
-int step4_factor_max_num_blks = 1;
+const int step4_factor_max_num_blks = 1;
 
-int step4_factor_max_height = 7;
+const int step4_factor_max_height = 7;
 
 const int step4_num_factors = 10;
 const int step4_factor_height[] = {step4_factor0_height, step4_factor1_height, step4_factor2_height, step4_factor3_height, step4_factor4_height, step4_factor5_height, step4_factor6_height, step4_factor7_height, step4_factor8_height, step4_factor9_height, };

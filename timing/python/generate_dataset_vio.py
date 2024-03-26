@@ -147,6 +147,9 @@ if __name__ == "__main__":
             Timestep.print_metadata_vio(fout, timesteps, stepfile_format)
 
     else: # Not vio
+        # 1. Go through all relin and new keys and mark the factors they touch
+        # 2. Determine if a timestep should perform edit or reconstruct
+        # 3. Print out the timestep
         pass
             
 
