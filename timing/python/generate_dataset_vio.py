@@ -140,7 +140,7 @@ if __name__ == "__main__":
                 prev_matrix = timestep.print_header_vio(fout, vio_lag, prev_matrix)
 
         meta_header = f"{outdir}/vio_dataset.h"
-        stepfile_format = f"{outdir}/step-{{}}.h"
+        stepfile_format = "step-{}.h"
         with open(meta_header, "w") as fout:
             write_include_guard(fout)
 
