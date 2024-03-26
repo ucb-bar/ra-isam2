@@ -134,6 +134,25 @@ class Timestep:
             factor_indices.append(factor.index)
             factor.print_factor(fout, inverse_block_indices=inverse_block_indices, key_width=self.key_width, prefix=self.prefix)
 
+        step_factor_max_num_blks = 0
+        for factor in self.factors:
+            if factor is None:
+                continue
+            if factor.num_blks > step_factor_max_num_blks:
+                step_factor_max_num_blks = factor.num_blks
+
+        fout.write(f"int step{self.step}_factor_max_num_blks = {step_factor_max_num_blks};\n\n")
+
+        # This is transposed
+        step_factor_max_width = 0
+        for factor in self.factors:
+            if factor is None:
+                continue
+            if factor.width > step_factor_max_width:
+                step_factor_max_width = factor.width
+
+        fout.write(f"int step{self.step}_factor_max_height = {step_factor_max_width};\n\n")
+
         Factor.print_metadata(fout, factor_indices, self.prefix)
 
         # Calculate correct data, before and after choleksy
@@ -270,6 +289,20 @@ class Timestep:
             if timestep is not None:
                 step = timestep.step
                 fout.write(f"step{step}_factor_data, ")
+        fout.write("};\n\n")
+
+        fout.write(f"int step_factor_max_num_blks[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_factor_max_num_blks, ")
+        fout.write("};\n\n")
+
+        fout.write(f"int step_factor_max_height[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_factor_max_height, ")
         fout.write("};\n\n")
 
         fout.write(f"int* step_factor_num_blks[] = {{")

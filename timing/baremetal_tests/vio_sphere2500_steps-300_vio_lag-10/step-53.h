@@ -414,7 +414,7 @@ const int step53_factor110_height = 13;
 const int step53_factor110_width = 6;
 int step53_factor110_ridx[] = {54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, };
 float step53_factor110_data[] = {
--3.1599801, -0.1129620, 0.0419954, 0.0000000, 0.0000000, 0.0000000, 3.1622801, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, -0.0000000, 
+-3.1599801, -0.1129620, 0.0419954, 0.0000000, 0.0000000, 0.0000000, 3.1622801, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
 0.1130560, -3.1602499, 0.0063873, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 3.1622801, 0.0000000, 0.0000000, 0.0000000, 0.0000000, -0.0000000, 
 -0.0417403, -0.0078841, -3.1619899, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 3.1622801, 0.0000000, 0.0000000, 0.0000000, -0.0000000, 
 -0.0419253, 1.5176300, 0.9275130, -9.9927301, -0.3572160, 0.1328010, 0.0000000, 0.0000000, 0.0000000, 10.0000000, 0.0000000, 0.0000000, -0.0000000, 
@@ -443,6 +443,10 @@ const int step53_factor111_num_blks = 1;
 int step53_factor111_A_blk_start[] = {0, };
 int step53_factor111_B_blk_start[] = {60, };
 int step53_factor111_blk_width[] = {6, };
+
+int step53_factor_max_num_blks = 1;
+
+int step53_factor_max_height = 13;
 
 const int step53_num_factors = 26;
 const int step53_factor_height[] = {step53_factor86_height, step53_factor87_height, step53_factor88_height, step53_factor89_height, step53_factor90_height, step53_factor91_height, step53_factor92_height, step53_factor93_height, step53_factor94_height, step53_factor95_height, step53_factor96_height, step53_factor97_height, step53_factor98_height, step53_factor99_height, step53_factor100_height, step53_factor101_height, step53_factor102_height, step53_factor103_height, step53_factor104_height, step53_factor105_height, step53_factor106_height, step53_factor107_height, step53_factor108_height, step53_factor109_height, step53_factor110_height, step53_factor111_height, };

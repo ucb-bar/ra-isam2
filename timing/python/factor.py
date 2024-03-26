@@ -129,6 +129,8 @@ class Factor:
         fout.write("};\n")
         fout.write("\n")
 
+        self.num_blks = len(blk_width)
+
     @staticmethod
     def print_metadata(fout, factor_indices, prefix):
         fout.write(f"const int {prefix}num_factors = {len(factor_indices)};\n")
