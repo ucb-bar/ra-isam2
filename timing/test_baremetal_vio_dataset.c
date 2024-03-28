@@ -5,7 +5,7 @@
 
 #include "cholesky.h"
 #include "memory.h"
-#include "baremetal_tests/vio_w10000_steps-300_vio_lag-10/vio_dataset.h"
+#include "baremetal_tests/vio_w10000_steps-30_vio_lag-5/vio_dataset.h"
 
 int main() {
 
@@ -73,8 +73,8 @@ int main() {
                                      1, 
                                      num_blks, A_blk_start, B_blk_start, blk_width);
                 my_free_after(workspace);
-
             }
+
 
             int res = check_tril_result(ABC, step_H_correct_data[step], H_w, H_h, H_h, ERR_THRESH);
             if(res != 0) {

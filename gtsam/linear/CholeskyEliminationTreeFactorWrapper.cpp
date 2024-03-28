@@ -28,7 +28,7 @@ void CholeskyEliminationTree::FactorWrapper::markAffectedKeys(RemappedKeySet* af
 
 
 bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
-  assert(cachedLinearFactor != nullptr);
+  // assert(cachedLinearFactor != nullptr);
 
   if(etree->nodes_[highestKey_]->status() == MARGINALIZED) { 
     status_ = REMOVED;

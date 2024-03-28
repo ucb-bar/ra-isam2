@@ -1,11 +1,11 @@
 import numpy as np
 
-def group_block_indices(A_block_indices, B_block_indices):
+def group_block_indices(reduced_sorted_keys, A_block_indices, B_block_indices):
     in_blk = False
     A_blk_start = []
     B_blk_start = []
     blk_width = []
-    for key in A_block_indices.keys():
+    for key in reduced_sorted_keys:
         if key == 0:
             continue
 
@@ -23,9 +23,12 @@ def group_block_indices(A_block_indices, B_block_indices):
     return A_blk_start, B_blk_start, blk_width
 
 class Factor:
-    def __init__(self, fin):
+    def __init__(self, fin, key_to_ordering, key_width):
         line = fin.readline()
         arr = line.split()
+
+        self.key_width = key_width
+        self.key_to_ordering = key_to_ordering
 
         self.index = int(arr[0])
         self.height = int(arr[1])
@@ -51,68 +54,77 @@ class Factor:
             for j in range(self.width):
                 self.matrix[i, j] = float(arr[j])
 
+        # Sort keys and factor matrix
+        self.sorted_keys = sorted(self.keys, key=lambda key : key_to_ordering[key])
+        self.sorted_matrix = np.zeros((self.height, self.width))
+
+        self.block_indices = {}
+        src_col = 0
+        for key in self.keys:
+            width = self.key_width[key]
+            self.block_indices[key] = [key, src_col, width]
+            src_col += width
+
+        self.sorted_block_indices = {}
+        cur_col = 0
+        for sorted_key in self.sorted_keys:
+            _, src_col, width = self.block_indices[sorted_key]
+            self.sorted_matrix[:, cur_col:cur_col+width] = self.matrix[:, src_col:src_col+width]
+            self.sorted_block_indices[sorted_key] = [sorted_key, cur_col, width]
+            cur_col += width
+
 
     def __str__(self):
         return f"Factor {self.index} {self.keys}"
 
-    def print_factor(self, fout, key_width, inverse_block_indices, prefix):
+    def print_factor(self, fout, inverse_block_indices, prefix, lowest_key=-1):
         # Print the transposed factor in a header file
-        # The factor blocks need to be sorted according to the row ordering
 
-        factor_block_indices = {}
-        cur_col = 0
-        for key in self.keys:
-            width = key_width(key)
-            factor_block_indices[key] = [key, cur_col, width]
-            cur_col += width
+        # Factor may be truncated because not all keys are needed
+        reduced_col_start = self.width
+        reduced_index_start = len(self.sorted_keys)
+        for key in reversed(self.sorted_keys):
+            reduced_col_start -= self.key_width[key]
+            reduced_index_start -= 1
+            if key == lowest_key:
+                break
 
-        sorted_keys = []
-        sorted_width = 0
-        for key in self.keys:
-            if key in inverse_block_indices.keys():
-                sorted_keys.append(key)
-                sorted_width += key_width(key)
+        reduced_width = self.width - reduced_col_start
+        self.reduced_keys = [self.sorted_keys[i] for i in range(reduced_index_start, len(self.sorted_keys))]
+        self.reduced_matrix = self.sorted_matrix[:, reduced_col_start:self.width]
 
-        sorted_keys = sorted(sorted_keys, key=lambda key : inverse_block_indices[key][1])
-
-        sorted_matrix = np.zeros((self.height, sorted_width))
-
-        src_block_indices = {}
-        cur_col = 0
-        for key in sorted_keys:
-            _, src_col, width = factor_block_indices[key]
-            src_block_indices[key] = [key, cur_col, width]
-            sorted_matrix[:, cur_col:cur_col+width] = self.matrix[:, src_col:src_col+width]
-            cur_col += width
-
-        self.sorted_matrix = sorted_matrix
-        self.sorted_keys = sorted_keys
+        reduced_block_indices = {}
+        reduced_cur_col = 0
+        for key in self.reduced_keys:
+            _, col, width = self.sorted_block_indices[key]
+            reduced_block_indices[key] = [key, reduced_cur_col, width]
+            reduced_cur_col += width
 
         # Write transpose of factor
-        fout.write(f"const int {prefix}factor{self.index}_height = {sorted_width};\n")
+        fout.write(f"const int {prefix}factor{self.index}_height = {reduced_width};\n")
         fout.write(f"const int {prefix}factor{self.index}_width = {self.height};\n")
         fout.write(f"int {prefix}factor{self.index}_ridx[] = {{")
 
-        for key in sorted_keys:
+        for key in self.reduced_keys:
             _, row, height = inverse_block_indices[key]
             for r in range(row, row+height):
                 fout.write(f"{r}, ")
 
         fout.write("};\n")
 
-        sorted_matrix = sorted_matrix.astype(np.float32)
+        reduced = self.reduced_matrix.astype(np.float32)
 
         fout.write(f"float {prefix}factor{self.index}_data[] = {{\n")
         for j in range(self.height):
-            for i in range(sorted_width):
-                fout.write(f"{sorted_matrix[j, i]:.7f}, ")
+            for i in range(reduced_width):
+                fout.write(f"{self.reduced_matrix[j, i]:.7f}, ")
 
             fout.write("\n")
 
         fout.write("};\n\n")
 
         # Group block indices
-        A_blk_start, B_blk_start, blk_width = group_block_indices(src_block_indices, inverse_block_indices)
+        A_blk_start, B_blk_start, blk_width = group_block_indices(self.reduced_keys, reduced_block_indices, inverse_block_indices)
 
         fout.write(f"const int {prefix}factor{self.index}_num_blks = {len(blk_width)};\n")
         fout.write(f"int {prefix}factor{self.index}_A_blk_start[] = {{")

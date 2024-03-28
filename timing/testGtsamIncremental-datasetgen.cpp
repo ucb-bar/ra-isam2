@@ -40,6 +40,33 @@ double chi2_red(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& c
     return 2. * graph.error(config) / dof; // kaess: added factor 2, graph.error returns half of actual error
 }
 
+map<int, FastList<RemappedKey>> read_relin_keys_file(string& fname) {
+  if(fname == "") {
+    return map<int, FastList<RemappedKey>>();
+  }
+  
+  ifstream fin(fname);
+  if(!fin.is_open()) {
+    cout << "Error opening file: " << fname << endl;
+    return map<int, FastList<RemappedKey>>();
+  }
+
+  map<int, FastList<RemappedKey>> res;
+  int n;
+  fin >> n;
+  for(int i = 0; i < n; i++) {
+    int step, num_keys;
+    fin >> step >> num_keys;
+    res.insert({step, FastList<Key>()});
+    for(int j = 0; j < num_keys; j++) {
+      RemappedKey k;
+      fin >> k;
+      res[step].push_back(k); 
+    }
+  }
+  return res;
+}
+
 int main(int argc, char *argv[]) {
 
     string dataset_name;
@@ -50,6 +77,8 @@ int main(int argc, char *argv[]) {
     double d_error = 0.001;
     int max_iter = 10;
     int num_steps = 1000000;
+    double relin_thresh = 0.1;
+    string relin_keys_file = "";
     string dataset_outdir = "";
 
     // Get experiment setup
@@ -59,6 +88,7 @@ int main(int argc, char *argv[]) {
         {"epsilon", required_argument, 0, 'e'},
         {"max_iter", required_argument, 0, 'm'},
         {"d_error", required_argument, 0, 'd'},
+        {"relin_thresh", required_argument, 0, 'r'},
         {"relinearize_skip", required_argument, 0, 's'},
         {"print_frequency", required_argument, 0, 'p'},
         {"num_steps", required_argument, 0, 't'},
@@ -83,6 +113,9 @@ int main(int argc, char *argv[]) {
             case 'd':
                 d_error = atof(optarg);
                 break;
+            case 'r':
+                relin_thresh = atof(optarg);
+                break;
             case 's':
                 relinearize_skip = atoi(optarg);
                 break;
@@ -92,6 +125,9 @@ int main(int argc, char *argv[]) {
             case 't':
                 num_steps = atoi(optarg);
                 break;
+            case 50:
+                relin_keys_file = string(optarg);
+                break;
             case 51:
                 dataset_outdir = string(optarg);
                 break;
@@ -100,6 +136,8 @@ int main(int argc, char *argv[]) {
                 exit(1);
         }
     }
+
+    auto relin_keys_map = read_relin_keys_file(relin_keys_file);
 
     cout << "Incremental optimization" << endl
          << "Loading " << dataset_name << endl
@@ -124,6 +162,7 @@ int main(int argc, char *argv[]) {
     cout << "Playing forward time steps..." << endl;
 
     ISAM2Params isam2params;
+    isam2params.relinearizeThreshold = relin_thresh;
     isam2params.relinearizeSkip = relinearize_skip;
     ISAM2 isam2(isam2params);
 
@@ -213,7 +252,8 @@ int main(int argc, char *argv[]) {
             K_count = 0;
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
-            isam2.update(newFactors, newVariables, params);
+            FastList<Key> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
+            isam2.update(newFactors, newVariables, params, extraRelinKeys);
             auto update_end = chrono::high_resolution_clock::now();
             // estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();

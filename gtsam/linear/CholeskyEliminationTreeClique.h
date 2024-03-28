@@ -210,6 +210,20 @@ public:
 
   void checkInvariant() const;
 
+  bool match(const std::vector<RemappedKey>& v) const {
+    if(v.size() != blockIndices.size()) {
+      return false;
+    }
+    for(int i = 0; i < v.size(); i++) {
+        auto& [key, row, height] = blockIndices[i];
+        std::cout << key << std::endl;
+        if(v[i] != key) {
+            return false;
+        }
+    }
+    return true;
+  }
+
 };
 
 } // namespace gtsam

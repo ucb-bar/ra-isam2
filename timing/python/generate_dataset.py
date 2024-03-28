@@ -76,6 +76,7 @@ if __name__ == "__main__":
     # Also remove all factors that do no connect to a key that is more recent than current-vio_lag
     if vio:
         for step in range(start_step, end_step+1):
+            print(f"step = {step}")
             timestep = timesteps[step]
             max_key = max(timestep.ordering_to_key)
 
@@ -147,11 +148,48 @@ if __name__ == "__main__":
             Timestep.print_metadata_vio(fout, timesteps, stepfile_format)
 
     else: # Not vio
-        # 1. Go through all relin and new keys and mark the factors they touch
+        # For each timestep
+        # 1. Go through all relin and new keys and mark all the marked cliques and fixed cliques
+        #    A clique is marked if it is directly changed. A clique is fixed if its contribution affects a marked clique
         # 2. Determine if a timestep should perform edit or reconstruct
+        #    a. If the ordering of keys is different from the previous timestep, it must be a reorder
+        #    b. For now, keep everything reconstruct
         # 3. Print out the timestep
-        pass
+        #    a. If reconstructing, print out all the [A B] matrix of each fixed and marked clique
+
+        for step, timestep in enumerate(timesteps):
+            if timestep is None:
+                continue
+
+            timestep.mark_cliques()
+            timestep.fix_cliques()
+
+            prev_timestep = None if step - 1 < 0 else timesteps[step - 1]
+
+            # Determine if edit or reconstruct
+            timestep.is_reconstruct = True
+            if prev_timestep is None:
+                timestep.is_reconstruct = True
+            elif timestep.same_ordering(prev_timestep):
+                timestep.is_reconstruct = True
+            else:
+                timestep.is_reconstruct = True
             
+
+            outfile = f"{outdir}/step-{step}.h"
+            with open(outfile, "w") as fout:
+                write_include_guard(fout)
+                if timestep.is_reconstruct:
+                    timestep.print_header_reconstruct(fout)
+
+
+        meta_header = f"{outdir}/incremental_dataset.h"
+        stepfile_format = "step-{}.h"
+        with open(meta_header, "w") as fout:
+            write_include_guard(fout)
+
+            Timestep.print_metadata_incremental(fout, timesteps, stepfile_format)
+
 
         # print(f"Write to header {outfile}")
 

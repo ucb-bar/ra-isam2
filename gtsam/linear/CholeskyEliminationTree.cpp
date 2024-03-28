@@ -1239,7 +1239,7 @@ void CholeskyEliminationTree::constructLambdaClique(sharedClique clique, const V
       // Handle edits first
       // Subtract Hessian of the cachedLinearFactor from the workspace
       if(factorStatus == RELINEARIZE || factorStatus == REMOVING) {
-        assert(factorWrapper->getLinearFactorType() != NONE);
+        // assert(factorWrapper->getLinearFactorType() != NONE);
 
         info.construct(factorWrapper->remappedKeys(), infoMap);
 
@@ -1314,21 +1314,6 @@ void CholeskyEliminationTree::eliminateClique(sharedClique clique) {
     cout << "D = \n" << D << endl << endl;
     exit(1);
   }
-
-  // vector<int> check_clique = {16, 21, 6, 15, 18, 12, 9};
-  // if(clique->cliqueSize() == check_clique.size()) {
-  //     bool check_clique_flag = true;
-  //     for(int i = 0; i < clique->cliqueSize(); i++) {
-  //         if(clique->nodes[i]->key != check_clique[i]) {
-  //             check_clique_flag = false;
-  //             break;
-  //         }
-  //     }
-  //     if(check_clique_flag) {
-  //         cout << "Exit here" << endl;
-  //         exit(0);
-  //     }
-  // }
 
   auto L = D.triangularView<Eigen::Lower>();
   auto B = block(m, bWidth, 0, bHeight, bWidth);
@@ -1850,10 +1835,10 @@ void CholeskyEliminationTree::extractSubtree(std::ostream& os, int size) const {
 
 void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
 
-  os << "ordering" << endl;
+  os << "ordering and width" << endl;
   os << orderingToKey_.size() << endl;
   for(RemappedKey remappedKey : orderingToKey_) {
-    os << remappedKey << endl;
+    os << remappedKey << " " << colWidth(remappedKey) << endl;
   }
   os << endl;
 
@@ -1899,7 +1884,10 @@ void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
       cerr << "Clique is not well formed!" << endl;
       exit(1);
     }
-    os << clique->gatherSources.front() << endl;
+    
+    auto m = clique->gatherSources.front().matrix();
+    m.triangularView<Eigen::StrictlyUpper>().setZero();
+    os << m << endl;
 
   }
   os << endl;

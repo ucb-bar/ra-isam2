@@ -154,13 +154,18 @@ public:
 
   void extractDelta(std::ostream& os, VectorValues& delta) const;
 
+  // This is so that we can force the relin 
+  std::vector<RemappedKey> extraRelinKeys;
+  void extraRelinRemappedKeys(const std::vector<RemappedKey> relinKeys);
+
+  Key unmapKey(const RemappedKey remappedKey) const;
+
 private:
   // Add new unmapped Key to transform map and return the mapped key, 
   // If key already exists, just return the mapped key
   // The new key is added to the end of the variable ordering (but before the last row)
   RemappedKey addRemapKey(const Key unmappedKey);
   RemappedKey getRemapKey(const Key unmappedKey) const;
-  Key unmapKey(const RemappedKey remappedKey) const;
 
   void addNewNode(const Key unmappedKey, const size_t width);
   

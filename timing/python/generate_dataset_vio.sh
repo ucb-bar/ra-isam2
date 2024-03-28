@@ -9,8 +9,8 @@ BUILD_DIR=$SCRIPT_DIR/../../build
 $SCRIPT_DIR/build.sh
 
 # ========================== CHANGE HERE ========================== #
-num_steps=300
-vio_lag=10
+num_steps=30
+vio_lag=5
 vio_scale=0.9
 # ========================== END CHANGE HERE ========================== #
 
@@ -22,7 +22,7 @@ $BUILD_DIR/timing/testGtsamIncremental-datasetgen -f w10000 --num_steps $num_ste
 
 mkdir -p ${HEADER_DIR}/${dirname}
 
-python3 $SCRIPT_DIR/generate_dataset_vio.py --indir $BUILD_DIR/${dirname} --outdir $HEADER_DIR/${dirname} --start_step 2 --end_step $((${num_steps} - 1)) --vio --vio_lag ${vio_lag} --vio_scale ${vio_scale}
+python3 $SCRIPT_DIR/generate_dataset.py --indir $BUILD_DIR/${dirname} --outdir $HEADER_DIR/${dirname} --start_step 2 --end_step $((${num_steps} - 1)) --vio --vio_lag ${vio_lag} --vio_scale ${vio_scale}
 
 # ========================== CHANGE HERE ========================== #
 num_steps=300
@@ -38,6 +38,6 @@ $BUILD_DIR/timing/testGtsamIncremental3D-datasetgen -f sphere2500 --num_steps $n
 
 mkdir -p ${HEADER_DIR}/${dirname}
 
-python3 $SCRIPT_DIR/generate_dataset_vio.py --indir $BUILD_DIR/${dirname} --outdir $HEADER_DIR/${dirname} --start_step 2 --end_step $((${num_steps} - 1)) --vio --vio_lag ${vio_lag} --vio_scale ${vio_scale}
+python3 $SCRIPT_DIR/generate_dataset.py --indir $BUILD_DIR/${dirname} --outdir $HEADER_DIR/${dirname} --start_step 2 --end_step $((${num_steps} - 1)) --vio --vio_lag ${vio_lag} --vio_scale ${vio_scale}
 
 
