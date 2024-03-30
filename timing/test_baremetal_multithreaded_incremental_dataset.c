@@ -43,8 +43,12 @@ int main() {
         // node_num_children[node] gives the number of active children
         // in this node. When node_done_childre[node] == node_num_children[node]
         // then node is available to work on
+        pthread_mutex_t* node_locks = my_malloc(nnodes * sizeof(pthread_mutex_t));
         int* node_num_children = my_malloc(nnodes * sizeof(int));
         int* node_done_children = my_malloc(nnodes * sizeof(int));
+        int* node_ready_list = my_malloc(nnodes * sizeof(int));
+        int node_ready_index = 0;
+        int node_ready_size = 0;
         my_memset(node_num_children, 0, nnodes * sizeof(int));
         my_memset(node_done_children, 0, nnodes * sizeof(int));
 
