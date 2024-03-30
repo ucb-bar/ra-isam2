@@ -137,7 +137,7 @@ void partial_factorization1(float* AB, int w, int h) {
   for(int j = 0; j < w; j++) {
     hh--;
     if(AB[0] <= 0) {
-        printf("Non positive definite!\n");
+        printf("Not positive definite!\n");
         exit(1);
     }
     float sqrtdiag = sqrt(AB[0]);
