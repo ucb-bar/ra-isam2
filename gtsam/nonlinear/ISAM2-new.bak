@@ -451,13 +451,22 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 
   // Gather involved keys
 
+  vector<pair<Key, double>> keyDeltaVec;
   KeySet relinKeys;
+  KeySet newRelinKeys;
 
-  relinKeys = update.CheckRelinearizationFull(delta_, params_.relinearizeThreshold);
+  keyDeltaVec = update.CheckRelinearizationFull2(delta_, params_.relinearizeThreshold);
 
-  for(RemappedKey remappedKey : *extraRelinKeys) {
-    Key key = eTree_.unmapKey(remappedKey);
-    relinKeys.insert(key);
+  const int64_t remainingCycles = 3.33 * 1e7;
+  eTree_.pickRelinKeys(keyDeltaVec, remainingCycles,
+      *boost::get<double>(&params_.relinearizeThreshold), &newRelinKeys);
+  relinKeys = newRelinKeys;
+
+  if(extraRelinKeys) {
+    for(RemappedKey remappedKey : *extraRelinKeys) {
+      Key key = eTree_.unmapKey(remappedKey);
+      relinKeys.insert(key);
+    }
   }
 
   if (!relinKeys.empty()) {
@@ -465,6 +474,7 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
     // \Theta_{J}:=\Theta_{J}+\Delta_{J}.
     UpdateImpl::ExpmapMasked(delta_, relinKeys, &theta_);
   }
+
 
   eTree_.markAffectedKeys(nonlinearFactors_,
                           result.newFactorsIndices,

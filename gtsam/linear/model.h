@@ -31,7 +31,7 @@ uint64_t predict_AtA_reorder(int max_factor_height, int max_factor_width, int nu
   AtA_scatter_time += num_factor * (factor_height / DIM) * factor_width + num_factor * factor_width / DIM;
 
   uint64_t total_expected = AtA_prefetch_time + AtA_compute_time + AtA_scatter_time;
-  printf("AtA prefetch: %llu, compute: %llu, scatter: %llu, total: %llu\n", AtA_prefetch_time, AtA_compute_time, AtA_scatter_time, total_expected);
+  // printf("AtA prefetch: %llu, compute: %llu, scatter: %llu, total: %llu\n", AtA_prefetch_time, AtA_compute_time, AtA_scatter_time, total_expected);
   return total_expected;
 }
 
@@ -57,7 +57,7 @@ uint64_t predict_AtA_update(int max_factor_height, int max_factor_width, int num
   AtA_scatter_time += num_factor * (factor_height / DIM) * factor_width + num_factor * factor_width / DIM;
   AtA_prefetch_time *= 2;
 
-  printf("supernode height: %d, width: %d\n", supernode_height, supernode_width);
+  // printf("supernode height: %d, width: %d\n", supernode_height, supernode_width);
   uint64_t eff_height = ceil_divide_int(supernode_height, DIM) * DIM; 
   uint64_t eff_width = ceil_divide_int(supernode_width, DIM) * DIM;
   uint64_t eff_subdiag = ceil_divide_int(supernode_height - supernode_width, DIM) * DIM;
@@ -71,7 +71,7 @@ uint64_t predict_AtA_update(int max_factor_height, int max_factor_width, int num
   uint64_t C_recover_time = (C_recover_mem_time + C_recover_comp_time);
 
   uint64_t total_expected = AtA_prefetch_time + AtA_compute_time + AtA_scatter_time + AB_recover_time + C_recover_time;
-  printf("AB recover: %llu, C recover: %llu, AtA prefetch: %llu, compute: %llu, scatter: %llu, total: %llu\n", AB_recover_time, C_recover_time, AtA_prefetch_time, AtA_compute_time, AtA_scatter_time, total_expected);
+  // printf("AB recover: %llu, C recover: %llu, AtA prefetch: %llu, compute: %llu, scatter: %llu, total: %llu\n", AB_recover_time, C_recover_time, AtA_prefetch_time, AtA_compute_time, AtA_scatter_time, total_expected);
   return total_expected;
 }
 
@@ -109,9 +109,27 @@ uint64_t predict_cholesky(int supernode_width, int supernode_height, int chol_ti
   uint64_t memcpy_time = AB_copy_time + next_memset_time;
   
   uint64_t total_expected = block_chol_time + triangle_time + MAX(C_time, memcpy_time);
-  printf("block cholesky time: %llu, triangle solver time: %llu, syrk time: %llu, memcpy time: %llu, total: %llu\n", block_chol_time, triangle_time, C_time, memcpy_time, total_expected);
+  // printf("block cholesky time: %llu, triangle solver time: %llu, syrk time: %llu, memcpy time: %llu, total: %llu\n", block_chol_time, triangle_time, C_time, memcpy_time, total_expected);
 
   return total_expected;
+}
+
+uint64_t predict_syrk(int supernode_width, int supernode_height, int chol_tile_len, int gemm_tile_len, bool next_memset, int next_node_height){
+  int min_bw = MIN(DRAM_BITS, TL_BITS);
+  int chol_block_len = ceil_divide_int(chol_tile_len, DIM) * DIM; 
+  int gemm_block_len = ceil_divide_int(gemm_tile_len, DIM) * DIM; 
+  int num_chol_tile = ceil_divide_int(supernode_width, chol_block_len);
+  uint64_t C_time = 0;
+
+  for(int i = 0; i < supernode_width; i += chol_tile_len){
+    int num_c_row = ceil_divide_int((supernode_height - i), gemm_tile_len);
+    int num_c_blk = (num_c_row * num_c_row) / 2 + num_c_row;
+    uint64_t C_comp_time = num_c_blk * (gemm_block_len * gemm_block_len * chol_block_len) / (DIM  * DIM);
+    uint64_t C_mem_time = num_c_blk * ((chol_block_len * 32) / min_bw * gemm_block_len * 2 + (gemm_block_len * 32) / min_bw * gemm_block_len * 2);
+    C_mem_time += num_c_blk * (gemm_block_len * 32) / DRAM_BITS * gemm_block_len; // DRAM -> L2
+    C_time += MAX(C_comp_time, C_mem_time) + MIN(C_comp_time, C_mem_time) * 0.2;
+  }
+  return C_time;
 }
 
 uint64_t predict_node_add(int supernode_height, int supernode_width){
@@ -120,7 +138,7 @@ uint64_t predict_node_add(int supernode_height, int supernode_width){
   int num_block = C_dim / 6;
   uint64_t scatter_mem_time = num_block * num_block * ((2 * DIM * 32) / min_bw) * (2 * DIM) * 3;
   //scatter_mem_time *= 2;
-  printf("node merge scatter add time: %llu\n", scatter_mem_time);
+  // printf("node merge scatter add time: %llu\n", scatter_mem_time);
   return scatter_mem_time;
 }
 
@@ -143,7 +161,7 @@ uint64_t predict_backsolve(int width, int height, int backsolve_block_len){
   uint64_t backsolve_time = backsolve_scale_time + backsolve_mem_time + backsolve_comp_time;
   backsolve_time *= 2; 
   uint64_t total_time = last_row_time + gemv_time + backsolve_time;
-  printf("total backsolve time: %llu, last row: %llu, gemv: %llu, triangle solve: %llu\n", total_time, last_row_time, gemv_time, backsolve_time);
+  // printf("total backsolve time: %llu, last row: %llu, gemv: %llu, triangle solve: %llu\n", total_time, last_row_time, gemv_time, backsolve_time);
   return total_time;
 }
 
