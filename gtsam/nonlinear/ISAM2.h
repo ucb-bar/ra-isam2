@@ -189,6 +189,11 @@ class GTSAM_EXPORT ISAM2 : public BayesTree<ISAM2Clique> {
                              const ISAM2UpdateParams& updateParams,
                              const boost::optional<FastList<Key> >& extraRelinKeys = boost::none);
 
+  virtual ISAM2Result update_resource_aware(
+                             const NonlinearFactorGraph& newFactors,
+                             const Values& newTheta,
+                             const ISAM2UpdateParams& updateParams);
+
   /** Marginalize out variables listed in leafKeys.  These keys must be leaves
    * in the BayesTree.  Throws MarginalizeNonleafException if non-leaves are
    * requested to be marginalized.  Marginalization leaves a linear

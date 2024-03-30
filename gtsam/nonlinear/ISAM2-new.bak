@@ -451,6 +451,117 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 
   // Gather involved keys
 
+  KeySet relinKeys;
+
+  relinKeys = update.CheckRelinearizationFull(delta_, params_.relinearizeThreshold);
+
+  for(RemappedKey remappedKey : *extraRelinKeys) {
+    Key key = eTree_.unmapKey(remappedKey);
+    relinKeys.insert(key);
+  }
+
+  if (!relinKeys.empty()) {
+    // 6. Update linearization point for marked variables:
+    // \Theta_{J}:=\Theta_{J}+\Delta_{J}.
+    UpdateImpl::ExpmapMasked(delta_, relinKeys, &theta_);
+  }
+
+  eTree_.markAffectedKeys(nonlinearFactors_,
+                          result.newFactorsIndices,
+                          relinKeys,
+                          updateParams,
+                          // updateParams.extraReelimKeys,
+                          &affectedKeys,
+                          &observedKeys);
+
+  // This step is technically not needed, we can just do this in symbolic update
+  eTree_.markAncestors(affectedKeys, &markedKeys);
+
+  static int last_variable_count;
+  static bool reorder_flag;
+  const int reorder_period = 30;
+  // DEBUG
+  // if(/*theta_.size() == 260 || theta_.size() == 280 || */ theta_.size() == 287) {
+  //   reorder_flag = true;
+  // }
+  // if(theta_.size() > 2500 && theta_.size() < 2800) {
+  //   cout << "marked keys size =  " <<  markedKeys.size() << endl;
+  // }
+
+  if(updateParams.constrainedKeys) {
+    // If we have constrained keys, we need to reorder
+    reorder_flag = true;
+  }
+  if(markedKeys.size() > 0
+        && (theta_.size() - last_variable_count >= reorder_period 
+        || affectedKeys.size() * 10 <= markedKeys.size() 
+        || markedKeys.size() * 2 > theta_.size())) {
+      last_variable_count = theta_.size();
+      reorder_flag = true;
+  }
+  if(reorder_flag) {
+      // cout << "reordering" << endl;
+      reorder_flag = false;
+      eTree_.updateOrdering(markedKeys, observedKeys, updateParams);
+  }
+
+  eTree_.symbolicElimination(markedKeys);
+  eTree_.choleskyElimination(theta_);
+
+  const ISAM2GaussNewtonParams& gaussNewtonParams =
+      boost::get<ISAM2GaussNewtonParams>(params_.optimizationParams);
+
+  eTree_.backsolve(&delta_, gaussNewtonParams.wildfireThreshold);
+  eTree_.reset();
+  
+  // cout << "Delta = " << endl;
+  // delta_.print();
+
+  // char t;
+  // cin >> t;
+  // cout << endl;
+
+  return result;
+}
+
+ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
+                                         const Values& newTheta,
+                                         const ISAM2UpdateParams& updateParams) {
+  // 1. Add new factors to list of factors and mark the variables involved
+  // 2. Mark the variables that need to be relinearized (linearize when doing Cholesky for locality)
+  // 3. Find all affected variables in the etree by traversing back up the tree from 
+  // the affected nodes, detach affected nodes from their parents
+  // 4. Determine a new ordering
+  // 5. Do symbolic factorization and construct new etree
+  // 6. Re-eliminate
+  //
+  gttic(ISAM2_update);
+  this->update_count_ += 1;
+  UpdateImpl::LogStartingUpdate(newFactors, *this);
+  ISAM2Result result(params_.enableDetailedResults);
+  UpdateImpl update(params_, updateParams);
+
+  // Update delta if we need it to check relinearization later
+  if (update.relinarizationNeeded(update_count_))
+    updateDelta(updateParams.forceFullSolve);
+
+  // 1. Add new variables first
+  addVariables(newTheta, result.details());
+  eTree_.addVariables(newTheta);
+
+  // 1. Add any new factors \Factors:=\Factors\cup\Factors'.
+  // Also compute keys that are updated
+  RemappedKeySet observedKeys;
+  RemappedKeySet affectedKeys;
+  RemappedKeySet markedKeys;
+
+  result.newFactorsIndices = nonlinearFactors_.add_factors(newFactors, false);
+
+  // Compute involved keys
+  // Compute relin keys
+
+  // Gather involved keys
+
   vector<pair<Key, double>> keyDeltaVec;
   KeySet relinKeys;
   KeySet newRelinKeys;
@@ -462,19 +573,11 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
       *boost::get<double>(&params_.relinearizeThreshold), &newRelinKeys);
   relinKeys = newRelinKeys;
 
-  if(extraRelinKeys) {
-    for(RemappedKey remappedKey : *extraRelinKeys) {
-      Key key = eTree_.unmapKey(remappedKey);
-      relinKeys.insert(key);
-    }
-  }
-
   if (!relinKeys.empty()) {
     // 6. Update linearization point for marked variables:
     // \Theta_{J}:=\Theta_{J}+\Delta_{J}.
     UpdateImpl::ExpmapMasked(delta_, relinKeys, &theta_);
   }
-
 
   eTree_.markAffectedKeys(nonlinearFactors_,
                           result.newFactorsIndices,
