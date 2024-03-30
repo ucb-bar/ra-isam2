@@ -2,20 +2,6 @@
 
 const bool step17_is_reconstruct = true;
 
-const int step17_factor35_height = 7;
-const int step17_factor35_width = 3;
-int step17_factor35_ridx[] = {0, 1, 2, 3, 4, 5, 6, };
-float step17_factor35_data[] = {
-1.0000000, 0.0000000, 0.0000000, -0.9999690, 0.0078332, -0.0004304, 0.0000000, 
-0.0000000, 1.0000000, 0.0000000, -0.0078332, -0.9999690, 0.9758220, -0.0000000, 
-0.0000000, 0.0000000, 1.0000000, -0.0000000, -0.0000000, -1.0000000, 0.0000000, 
-};
-
-const int step17_factor35_num_blks = 1;
-int step17_factor35_A_blk_start[] = {0, };
-int step17_factor35_B_blk_start[] = {0, };
-int step17_factor35_blk_width[] = {6, };
-
 const int step17_factor34_height = 4;
 const int step17_factor34_width = 3;
 int step17_factor34_ridx[] = {3, 4, 5, 6, };
@@ -57,6 +43,20 @@ const int step17_factor32_num_blks = 1;
 int step17_factor32_A_blk_start[] = {0, };
 int step17_factor32_B_blk_start[] = {0, };
 int step17_factor32_blk_width[] = {3, };
+
+const int step17_factor35_height = 7;
+const int step17_factor35_width = 3;
+int step17_factor35_ridx[] = {0, 1, 2, 3, 4, 5, 6, };
+float step17_factor35_data[] = {
+1.0000000, 0.0000000, 0.0000000, -0.9999690, 0.0078332, -0.0004304, 0.0000000, 
+0.0000000, 1.0000000, 0.0000000, -0.0078332, -0.9999690, 0.9758220, -0.0000000, 
+0.0000000, 0.0000000, 1.0000000, -0.0000000, -0.0000000, -1.0000000, 0.0000000, 
+};
+
+const int step17_factor35_num_blks = 1;
+int step17_factor35_A_blk_start[] = {0, };
+int step17_factor35_B_blk_start[] = {0, };
+int step17_factor35_blk_width[] = {6, };
 
 const int step17_node1_num_factors = 1;
 const bool step17_node1_marked = false;
@@ -160,14 +160,14 @@ float step17_node1_M_correct_data[] = {
 const int step17_node2_num_factors = 3;
 const bool step17_node2_marked = true;
 const bool step17_node2_fixed = false;
-int step17_node2_factor_height[] = {step17_factor35_height, step17_factor34_height, step17_factor32_height, };
-int step17_node2_factor_width[] = {step17_factor35_width, step17_factor34_width, step17_factor32_width, };
-int* step17_node2_factor_ridx[] = {step17_factor35_ridx, step17_factor34_ridx, step17_factor32_ridx, };
-float* step17_node2_factor_data[] = {step17_factor35_data, step17_factor34_data, step17_factor32_data, };
-int step17_node2_factor_num_blks[] = {step17_factor35_num_blks, step17_factor34_num_blks, step17_factor32_num_blks, };
-int* step17_node2_factor_A_blk_start[] = {step17_factor35_A_blk_start, step17_factor34_A_blk_start, step17_factor32_A_blk_start, };
-int* step17_node2_factor_B_blk_start[] = {step17_factor35_B_blk_start, step17_factor34_B_blk_start, step17_factor32_B_blk_start, };
-int* step17_node2_factor_blk_width[] = {step17_factor35_blk_width, step17_factor34_blk_width, step17_factor32_blk_width, };
+int step17_node2_factor_height[] = {step17_factor32_height, step17_factor34_height, step17_factor35_height, };
+int step17_node2_factor_width[] = {step17_factor32_width, step17_factor34_width, step17_factor35_width, };
+int* step17_node2_factor_ridx[] = {step17_factor32_ridx, step17_factor34_ridx, step17_factor35_ridx, };
+float* step17_node2_factor_data[] = {step17_factor32_data, step17_factor34_data, step17_factor35_data, };
+int step17_node2_factor_num_blks[] = {step17_factor32_num_blks, step17_factor34_num_blks, step17_factor35_num_blks, };
+int* step17_node2_factor_A_blk_start[] = {step17_factor32_A_blk_start, step17_factor34_A_blk_start, step17_factor35_A_blk_start, };
+int* step17_node2_factor_B_blk_start[] = {step17_factor32_B_blk_start, step17_factor34_B_blk_start, step17_factor35_B_blk_start, };
+int* step17_node2_factor_blk_width[] = {step17_factor32_blk_width, step17_factor34_blk_width, step17_factor35_blk_width, };
 const int step17_node2_parent = 3;
 const int step17_node2_height = 7;
 const int step17_node2_width = 6;

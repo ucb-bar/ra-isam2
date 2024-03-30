@@ -94,6 +94,15 @@ class Timestep:
         for _ in range(self.num_factors):
             self.factors.append(Factor(fin, key_width=self.key_width, key_to_ordering=self.key_to_ordering))
 
+        self.factor_max_height = 0
+        self.factor_max_width = 0
+        for factor in self.factors:
+            if self.factor_max_height < factor.height:
+                self.factor_max_height = factor.height
+            if self.factor_max_width < factor.width:
+                self.factor_max_width = factor.width
+
+
         read_until(fin, "cliques")
 
         self.num_cliques = int(fin.readline())
@@ -533,6 +542,19 @@ class Timestep:
                 timestep_count += 1
 
         fout.write(f"const int num_timesteps = {timestep_count};\n\n")
+
+        max_factor_height = 0
+        max_factor_width = 0
+        for timestep in timesteps:
+            if timestep is not None:
+                if max_factor_height < timestep.factor_max_height:
+                    max_factor_height = timestep.factor_max_height
+                if max_factor_width < timestep.factor_max_width:
+                    max_factor_width = timestep.factor_max_width
+
+        # Transpose height and width
+        fout.write(f"const int max_factor_height = {max_factor_width};\n")
+        fout.write(f"const int max_factor_width = {max_factor_height};\n\n")
 
         fout.write(f"bool step_is_reconstruct[] = {{")
         for timestep in timesteps:

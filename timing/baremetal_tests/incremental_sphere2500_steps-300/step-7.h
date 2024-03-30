@@ -2,6 +2,23 @@
 
 const bool step7_is_reconstruct = true;
 
+const int step7_factor14_height = 7;
+const int step7_factor14_width = 6;
+int step7_factor14_ridx[] = {18, 19, 20, 21, 22, 23, 24, };
+float step7_factor14_data[] = {
+0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 
+};
+
+const int step7_factor14_num_blks = 1;
+int step7_factor14_A_blk_start[] = {0, };
+int step7_factor14_B_blk_start[] = {18, };
+int step7_factor14_blk_width[] = {6, };
+
 const int step7_factor9_height = 13;
 const int step7_factor9_width = 6;
 int step7_factor9_ridx[] = {18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, };
@@ -120,23 +137,6 @@ const int step7_factor8_num_blks = 1;
 int step7_factor8_A_blk_start[] = {0, };
 int step7_factor8_B_blk_start[] = {0, };
 int step7_factor8_blk_width[] = {6, };
-
-const int step7_factor14_height = 7;
-const int step7_factor14_width = 6;
-int step7_factor14_ridx[] = {18, 19, 20, 21, 22, 23, 24, };
-float step7_factor14_data[] = {
-0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 
-};
-
-const int step7_factor14_num_blks = 1;
-int step7_factor14_A_blk_start[] = {0, };
-int step7_factor14_B_blk_start[] = {18, };
-int step7_factor14_blk_width[] = {6, };
 
 const int step7_node0_num_factors = 1;
 const bool step7_node0_marked = false;

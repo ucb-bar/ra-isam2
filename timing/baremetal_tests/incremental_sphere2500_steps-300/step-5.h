@@ -2,6 +2,23 @@
 
 const bool step5_is_reconstruct = true;
 
+const int step5_factor10_height = 7;
+const int step5_factor10_width = 6;
+int step5_factor10_ridx[] = {6, 7, 8, 9, 10, 11, 12, };
+float step5_factor10_data[] = {
+0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 
+0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 
+};
+
+const int step5_factor10_num_blks = 1;
+int step5_factor10_A_blk_start[] = {0, };
+int step5_factor10_B_blk_start[] = {6, };
+int step5_factor10_blk_width[] = {6, };
+
 const int step5_factor9_height = 13;
 const int step5_factor9_width = 6;
 int step5_factor9_ridx[] = {18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, };
@@ -52,23 +69,6 @@ const int step5_factor11_num_blks = 1;
 int step5_factor11_A_blk_start[] = {0, };
 int step5_factor11_B_blk_start[] = {0, };
 int step5_factor11_blk_width[] = {12, };
-
-const int step5_factor10_height = 7;
-const int step5_factor10_width = 6;
-int step5_factor10_ridx[] = {6, 7, 8, 9, 10, 11, 12, };
-float step5_factor10_data[] = {
-0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 0.0000000, 
-0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0010000, 0.0000000, 
-};
-
-const int step5_factor10_num_blks = 1;
-int step5_factor10_A_blk_start[] = {0, };
-int step5_factor10_B_blk_start[] = {6, };
-int step5_factor10_blk_width[] = {6, };
 
 const int step5_node0_num_factors = 1;
 const bool step5_node0_marked = false;
