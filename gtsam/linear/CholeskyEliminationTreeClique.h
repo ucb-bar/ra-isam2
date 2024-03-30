@@ -224,6 +224,17 @@ public:
     return true;
   }
 
+  /**************
+   * Cost computation
+   *************/
+  CostStatus costStatus = COST_UNMARKED;
+  CostStatus nextCostStatus = COST_UNMARKED;
+  int64_t markedCost = 0;
+  int64_t fixedCost = 0;
+
+  int64_t computeCostMarked();
+  int64_t computeCostFixed();
+
 };
 
 } // namespace gtsam

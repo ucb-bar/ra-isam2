@@ -74,6 +74,289 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
   }
 } 
 
+int64_t CholeskyEliminationTree::computeCost(
+    const RemappedKey remappedKey, 
+    vector<sharedClique>* updatedCliques) {
+  updatedCliques->clear();
+  
+  // computeCost(key): (assuming reordering)
+  // 1. First find the lowest-ordered key connected to the key
+  // 2. Go up the tree from the clique
+  //     If clique is marked, stop
+  //     If clique is fixed, upgrade to marked and compute the cost difference
+  //     If clique is unmarked, upgrade to marked and compute cost
+  //
+  //     Go down the tree from each marked clique,
+  //     If descendant is marked, stop (this is an error)
+  //     If descendant is fixed, stop
+  //     If descendant is unmarked, check if need to be fixed and compute cost if fixed
+  //       and propagate to children
+  //
+  //     while clique is not marked, mark the clique and predict cycles
+  //     For each marked clique, find all fixed cliques and predict fixed cost
+
+  sharedNode node = nodes_[remappedKey];
+  int lowestOrder = INT_MAX;
+  RemappedKey lowestKey = node->key;
+  for(sharedFactorWrapper factorWrapper : node->factors) {
+      if(node->key != factorWrapper->lowestKey()) {
+        continue;
+      }
+      for(RemappedKey factorKey : factorWrapper->remappedKeys()) {
+        int order = keyToOrdering_[factorKey];
+        if(order < lowestOrder) {
+          lowestOrder = order;
+          lowestKey = factorKey;
+        }
+      }
+  }
+
+  sharedClique clique = cliques_[lowestKey];
+
+  int64_t cost = 0;
+
+  while(clique != nullptr && clique != root_) {
+    if(clique->costStatus == COST_MARKED) { break; }
+
+    if(clique->nextCostStatus == COST_MARKED) {
+      cout << "clique double visit. clique " << *clique << endl;
+      exit(1);
+    }
+
+    clique->computeCostMarked();
+
+    if(clique->costStatus == COST_FIXED) { 
+      // This check if probably redundant
+      cost += clique->markedCost > clique->fixedCost? clique->markedCost - clique->fixedCost : 0;
+    }
+    else if(clique->costStatus == COST_UNMARKED) {
+      cost += clique->markedCost;
+    }
+
+    clique->nextCostStatus = COST_MARKED;
+    updatedCliques->push_back(clique);
+
+    // Go down unmarked descendants of the marked node
+    vector<sharedClique> stack;
+    for(sharedClique childClique : clique->children) {
+      if(childClique->nextCostStatus == COST_UNMARKED) {
+        stack.push_back(childClique);
+      }
+    }
+
+    while(!stack.empty()) {
+      sharedClique curClique = stack.back();
+      stack.pop_back();
+
+      if(curClique->nextCostStatus == COST_UNMARKED) {
+        // First check if need to be fixed
+        // If second to last key block indices is in this clique
+        // we can just check order(secondToLastKey) <= order(clique first key)
+        RemappedKey secondToLastKey = get<BLOCK_INDEX_KEY>(curClique->blockIndices[curClique->blockIndices.size() - 2]);
+        if(!orderingLess_(secondToLastKey, clique->frontKey())) {
+          cost += curClique->computeCostFixed();
+          curClique->nextCostStatus = COST_FIXED;
+          updatedCliques->push_back(curClique);
+
+          stack.insert(stack.end(), curClique->children.begin(), curClique->children.end());
+        }
+      }
+      else if(curClique->nextCostStatus == COST_FIXED) {
+        stack.insert(stack.end(), curClique->children.begin(), curClique->children.end());
+      }
+      else if(curClique->nextCostStatus == COST_MARKED) {
+        cout << "Unexpected cost status for clique: " << *curClique << " status: " << curClique->nextCostStatus << endl;
+        exit(1);
+      }
+
+    }
+    clique = clique->parent();
+  }
+
+  return cost;
+}
+
+void CholeskyEliminationTree::commitCost(vector<sharedClique>& updatedCliques) {
+  for(sharedClique clique : updatedCliques) {
+    clique->costStatus = clique->nextCostStatus;
+  }
+}
+
+void CholeskyEliminationTree::uncommitCost(vector<sharedClique>& updatedCliques) {
+  for(sharedClique clique : updatedCliques) {
+    clique->nextCostStatus = clique->costStatus;
+  }
+}
+
+void CholeskyEliminationTree::resetCost(vector<sharedClique>& updatedCliques) {
+  for(sharedClique clique : updatedCliques) {
+    clique->costStatus = COST_UNMARKED;
+    clique->nextCostStatus = COST_UNMARKED;
+  }
+}
+
+void CholeskyEliminationTree::pickRelinKeys(
+  const vector<pair<Key, double>>& KeyDeltaVec,
+  int64_t remainingCycles,
+  double relinThresh,
+  KeySet* newRelinKeys) {
+
+  newRelinKeys->clear();
+
+  // First get the new unmapped keys and new factors
+  vector<RemappedKey> newRemappedKeys;
+  for(int index = lastNumKeys - 1; index < orderingToKey_.size() - 1; index++) {
+    newRemappedKeys.push_back(orderingToKey_[index]);
+  }
+  lastNumKeys = orderingToKey_.size();
+  vector<sharedFactorWrapper> newFactors;
+  for(int index = lastNumFactors; index < factors_.size(); index++) {
+    newFactors.push_back(factors_[index]);
+  }
+  lastNumFactors = factors_.size();
+
+  
+  struct IsNewKey {
+    const vector<RemappedKey>& newRemappedKeys;
+    IsNewKey(const vector<RemappedKey>& newRemappedKeys_in) 
+      : newRemappedKeys(newRemappedKeys_in) {}
+
+    bool operator()(const RemappedKey& remappedKey) const {
+      for(const Key& newRemappedKey : newRemappedKeys) {
+        if(newRemappedKey == remappedKey) { return true; }
+      }
+      return false;
+    }
+
+  };
+
+  IsNewKey isNewKey(newRemappedKeys);
+
+  // 1. First compute the cost of new factors
+  //    This is essentially the cost of the AtA of the new factors
+  //    and the of the cholesky from the connected keys to the root
+  set<RemappedKey> affectedOldRemappedKeys;
+  for(sharedFactorWrapper factor : newFactors) {
+    for(RemappedKey remappedKey : factor->remappedKeys()) {
+      if(remappedKey != 0 && !isNewKey(remappedKey)) {
+        affectedOldRemappedKeys.insert(remappedKey);
+      }
+    }
+  }
+
+  vector<sharedClique> allUpdatedCliques;
+
+  for(RemappedKey remappedKey : affectedOldRemappedKeys) {
+    vector<sharedClique> updatedCliques;
+    int64_t cost = computeCost(remappedKey, &updatedCliques);
+    remainingCycles -= cost;
+
+    commitCost(updatedCliques);
+
+    allUpdatedCliques.insert(allUpdatedCliques.end(), 
+                             updatedCliques.begin(), updatedCliques.end());
+
+
+  }
+
+  cout << "remainingCycles = " << remainingCycles << endl;
+
+  if(remainingCycles <= 0) { 
+    cout << "no relin possible!" << endl;
+    resetCost(allUpdatedCliques);
+    return; 
+  }
+
+
+  vector<pair<Key, double>> newKeyDeltaVec;
+  newKeyDeltaVec.reserve(KeyDeltaVec.size());
+
+  static double force_thresh = 3.5;
+  const double min_force_thresh = 2.0;
+  const double max_force_thresh = 3.5;
+
+  int num_relin_keys = 0;
+  int num_min_force_thresh_keys = 0;
+  int min_force_keys_thresh = 10;
+
+  for(auto& p : KeyDeltaVec) {
+    RemappedKey remappedKey = unmapKey(p.first);
+    if(isNewKey(remappedKey)) { continue; }
+    if(p.second > relinThresh) {
+      newKeyDeltaVec.push_back(p);
+      num_relin_keys++;
+    }
+    if(p.second > min_force_thresh) {
+      num_min_force_thresh_keys++;
+    }
+  }
+
+  // double force_rate = num_relin_keys == 0? 0 : num_min_force_thresh_keys / (double) num_relin_keys;
+  // if(force_rate > 0.1) {
+  if(num_min_force_thresh_keys > 10) {
+    force_thresh = max(force_thresh - 0.5, min_force_thresh);
+  }
+  else {
+    force_thresh = min(force_thresh + 0.5, max_force_thresh);
+  }
+
+  int key_count = 0;
+  int relin_count = KeyDeltaVec.size();
+
+  // Sort the relevance in reverse order
+  sort(newKeyDeltaVec.begin(), newKeyDeltaVec.end(), 
+      [](const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+
+  // 1. Go down the list of keys
+  //    For each key,
+  //      Compute the cost of each key
+  double highestUnpickedDelta = 0;
+  for(auto& p : newKeyDeltaVec) {
+    Key& key = p.first;
+    RemappedKey remappedKey = getRemapKey(key);
+
+    vector<sharedClique> updatedCliques;
+    int64_t cost = computeCost(remappedKey, &updatedCliques);
+
+    allUpdatedCliques.insert(allUpdatedCliques.end(), 
+                             updatedCliques.begin(), updatedCliques.end());
+
+    if(cost <= remainingCycles || p.second >= force_thresh) {
+      remainingCycles -= cost;
+      newRelinKeys->insert(key);
+
+      commitCost(updatedCliques);
+
+    }
+    else {
+      uncommitCost(updatedCliques);
+
+      if(highestUnpickedDelta == 0) {
+        highestUnpickedDelta = p.second;
+      }
+    }
+    // cout << "remainingCycles = " << remainingCycles << endl;
+  }
+
+  resetCost(allUpdatedCliques);
+
+  for(sharedClique clique : cliques_) {
+    if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {
+      cout << "invalid cost status at clique " << *clique << " status: " << clique->costStatus << " " << clique->nextCostStatus << endl;
+      exit(1);
+    }
+  }
+
+  cout << "Remaining cycles: " << remainingCycles << " Total relin keys: " << newKeyDeltaVec.size() << " num relin: " << newRelinKeys->size() << " highest unpicked delta: " << highestUnpickedDelta << " force_thresh: " << force_thresh << " num_min_force_thresh_keys: " << num_min_force_thresh_keys << endl;
+
+  cout << "Relin keys: ";
+  for(auto k : *newRelinKeys) {
+    cout << k << " ";
+  }
+  cout << endl;
+
+}
+
 // Mark directly changed keys and keys that we explicitly want to update (extraKeys)
 // observedKeys are the keys associated with the new factors
 void CholeskyEliminationTree::markAffectedKeys(

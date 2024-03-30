@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
             auto start = chrono::high_resolution_clock::now();
             isam2.update(newFactors, newVariables, params);
             auto update_end = chrono::high_resolution_clock::now();
-            // estimate = isam2.calculateEstimate();
+            estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();
             d1 += chrono::duration_cast<chrono::microseconds>(update_end - start).count();
             d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
@@ -230,6 +230,9 @@ int main(int argc, char *argv[]) {
             if(step >= num_steps) {
                 break;
             }
+            
+            last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+            cout << "chi2 = " << last_chi2 << endl;
 
             // last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
             // print_count++;

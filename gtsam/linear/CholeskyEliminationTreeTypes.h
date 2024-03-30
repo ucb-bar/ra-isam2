@@ -33,6 +33,7 @@ namespace gtsam {
   enum MarkedStatus {UNMARKED=0, EDIT=1, RECONSTRUCT=2, NEW=3, MARGINALIZED=4};
   enum FactorStatus {UNLINEARIZED=0, LINEARIZED=1, RELINEARIZE=2, LINEAR=3, 
                      REMOVING=4, REMOVED=5, UNUSED=6};
+  enum CostStatus {COST_UNMARKED = 0, COST_FIXED = 1, COST_MARKED = 2};
 
   static constexpr size_t BLOCK_INDEX_KEY = 0;
   static constexpr size_t BLOCK_INDEX_ROW = 1;

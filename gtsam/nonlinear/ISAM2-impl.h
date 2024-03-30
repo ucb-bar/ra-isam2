@@ -371,6 +371,21 @@ struct GTSAM_EXPORT UpdateImpl {
     return relinKeys;
   }
 
+  static std::vector<std::pair<Key, double>> CheckRelinearizationFull2(
+      const VectorValues& delta,
+      const ISAM2Params::RelinearizationThreshold& relinearizeThreshold) {
+
+    std::vector<std::pair<Key, double>> keyDeltaVec;
+
+    for (const VectorValues::KeyValuePair& key_delta : delta) {
+      double maxDelta = key_delta.second.lpNorm<Eigen::Infinity>();
+      keyDeltaVec.push_back({key_delta.first, maxDelta});
+    }
+    
+
+    return keyDeltaVec;
+  }
+
   // Mark keys in \Delta above threshold \beta:
   KeySet gatherRelinearizeKeys(const ISAM2::Roots& roots,
                                const VectorValues& delta,

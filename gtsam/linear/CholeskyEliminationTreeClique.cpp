@@ -8,9 +8,12 @@
 #include "CholeskyEliminationTree.h"
 #include "gtsam/linear/CholeskyEliminationTreeTypes.h"
 #include <gtsam/linear/CholeskyEliminationTreeClique.h>
+#include <gtsam/linear/CholeskyEliminationTreeFactorWrapper.h>
 #include <gtsam/linear/CholeskyEliminationTreeNode.h>
 #include <iostream>
 #include <cassert>
+
+#include <gtsam/linear/model.h>
 
 using namespace std;
 
@@ -684,6 +687,117 @@ void CholeskyEliminationTree::Clique::checkInvariant() const {
   for(sharedClique child : children) {
     assert(etree->orderingLess_(child->backKey(), frontKey()));
   }
+}
+
+int64_t CholeskyEliminationTree::Clique::computeCostMarked() {
+  int maxFactorHeight = 0;
+  int maxFactorWidth = 0;
+  int num_factors = 0;
+  for(sharedNode node : nodes) {
+    for(sharedFactorWrapper factorWrapper : node->factors) {
+      int r, c;
+
+      if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
+        r = factorWrapper->getCachedMatrix().rows();
+        c = factorWrapper->getCachedMatrix().cols();
+      }
+      else {
+        r = factorWrapper->nonlinearFactor()->dim();
+        c = get<BLOCK_INDEX_ROW>(factorWrapper->blockIndices().back()) + get<BLOCK_INDEX_HEIGHT>(factorWrapper->blockIndices().back());
+      }
+
+      if(r > maxFactorHeight) { maxFactorHeight = r; }
+      if(c > maxFactorWidth) { maxFactorWidth = c; }
+
+      num_factors++;
+    }
+  }
+
+  int cliqueWidth = this->width();
+  int cliqueHeight = this->height();
+  int chol_tile_len = 4;
+  int gemm_tile_len = 4;
+  bool next_memset;
+  int next_node_height;
+
+  if(this->parent() == nullptr || this->parent() == etree->root_) {
+    next_memset = false;
+    next_node_height = 0;
+  }
+  else {
+    next_memset = true;
+    next_node_height = this->parent()->height();
+  }
+
+  // Factor is transposed
+  int64_t AtA_cost = predict_AtA_reorder(maxFactorWidth, maxFactorWidth, num_factors);
+  int64_t chol_cost = predict_cholesky(cliqueWidth, cliqueHeight, chol_tile_len, gemm_tile_len, next_memset, next_node_height);
+  int64_t add_cost = predict_node_add(cliqueWidth, cliqueHeight);
+
+  markedCost = AtA_cost + chol_cost + add_cost;
+
+  // cout << "Clique: " << *this << " AtA: " << AtA_cost << " chol: " << chol_cost << " add: " << add_cost << endl;
+
+  return markedCost;
+
+}
+
+int64_t CholeskyEliminationTree::Clique::computeCostFixed() {
+  int maxFactorHeight = 0;
+  int maxFactorWidth = 0;
+  int num_factors = 0;
+
+  // Note: technically we do not need to 
+  for(sharedNode node : nodes) {
+    for(sharedFactorWrapper factorWrapper : node->factors) {
+
+      if(node->key != factorWrapper->lowestKey()) { continue; }
+
+      int r, c;
+
+      if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
+        r = factorWrapper->getCachedMatrix().rows();
+        c = factorWrapper->getCachedMatrix().cols();
+      }
+      else {
+        r = factorWrapper->nonlinearFactor()->dim();
+        c = get<BLOCK_INDEX_ROW>(factorWrapper->blockIndices().back()) + get<BLOCK_INDEX_HEIGHT>(factorWrapper->blockIndices().back());
+      }
+
+      if(r > maxFactorHeight) { maxFactorHeight = r; }
+      if(c > maxFactorWidth) { maxFactorWidth = c; }
+
+      num_factors++;
+    }
+  }
+
+  int cliqueWidth = this->width();
+  int cliqueHeight = this->height();
+  int chol_tile_len = 8;
+  int gemm_tile_len = 32;
+  bool next_memset;
+  int next_node_height;
+
+  if(this->parent() == nullptr || this->parent() == etree->root_) {
+    next_memset = false;
+    next_node_height = 0;
+  }
+  else {
+    next_memset = true;
+    next_node_height = this->parent()->height();
+  }
+
+  // Factor is transposed
+  int64_t AtA_cost = predict_AtA_reorder(maxFactorWidth, maxFactorWidth, num_factors);
+  int64_t syrk_cost = predict_syrk(cliqueWidth, cliqueHeight, chol_tile_len, gemm_tile_len, next_memset, next_node_height);
+  int64_t add_cost = predict_node_add(cliqueWidth, cliqueHeight);
+
+  fixedCost = AtA_cost + syrk_cost + add_cost;
+
+  // cout << "Clique: " << *this << " AtA: " << AtA_cost << " syrk: " << syrk_cost << " add: " << add_cost << endl;
+
+  return fixedCost;
+
 }
 
 }   // namespace gtsam

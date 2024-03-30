@@ -90,10 +90,19 @@ private:
     std::vector<RemappedKey> datasetgen_newKeys;
     std::vector<RemappedKey> datasetgen_relinKeys;
 
+    int lastNumKeys = 1;
+    int lastNumFactors = 0;
+
 public:
   CholeskyEliminationTree();
 
   void addVariables(const Values& newTheta);
+
+  void pickRelinKeys(
+      const std::vector<std::pair<Key, double>>& KeyDeltaVec,
+      int64_t remainingCycles,
+      double relinThresh,
+      KeySet* newRelinKeys);
   
   // Mark directly changed keys and keys that we explicitly want to update (extraKeys)
   // observedKeys are the keys associated with the new factors
@@ -251,6 +260,17 @@ private:
   void checkInvariant_afterCholesky() const;
   void checkInvariant_afterBackSolve() const;
   void checkInvariant_afterMarginalize() const;
+
+  // When we select a key, we need to commit the cost of the cliques that are updated
+  // due to this key
+  int64_t computeCost(
+      const RemappedKey remappedKey, 
+      std::vector<sharedClique>* updatedCliques);
+
+  void commitCost(std::vector<sharedClique>& updatedCliques);
+  void uncommitCost(std::vector<sharedClique>& updatedCliques);
+
+  void resetCost(std::vector<sharedClique>& updatedCliques);
 
   // Public testing functions
 public:
