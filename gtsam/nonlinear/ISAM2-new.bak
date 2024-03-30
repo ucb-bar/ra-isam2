@@ -455,9 +455,11 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 
   relinKeys = update.CheckRelinearizationFull(delta_, params_.relinearizeThreshold);
 
-  for(RemappedKey remappedKey : *extraRelinKeys) {
-    Key key = eTree_.unmapKey(remappedKey);
-    relinKeys.insert(key);
+  if(extraRelinKeys) {
+    for(RemappedKey remappedKey : *extraRelinKeys) {
+      Key key = eTree_.unmapKey(remappedKey);
+      relinKeys.insert(key);
+    }
   }
 
   if (!relinKeys.empty()) {
