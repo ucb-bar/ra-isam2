@@ -76,6 +76,7 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
 
 int64_t CholeskyEliminationTree::computeCost(
     const RemappedKey remappedKey, 
+    const int num_threads,
     vector<sharedClique>* updatedCliques) {
   updatedCliques->clear();
   
@@ -94,6 +95,9 @@ int64_t CholeskyEliminationTree::computeCost(
   //
   //     while clique is not marked, mark the clique and predict cycles
   //     For each marked clique, find all fixed cliques and predict fixed cost
+  //
+  //     Parallel case: if clique is parallelizable, reduce cost by 1/overhead_const * p (p is the number of threads) (mplier is set to 0.7 for now)
+  //     Root clique is the clique that has root_ as its parent
 
   sharedNode node = nodes_[remappedKey];
   int lowestOrder = INT_MAX;
@@ -111,6 +115,9 @@ int64_t CholeskyEliminationTree::computeCost(
       }
   }
 
+  double overhead_const = 0.75;
+  double mplier = num_threads / 0.75;
+
   sharedClique clique = cliques_[lowestKey];
 
   int64_t cost = 0;
@@ -123,14 +130,17 @@ int64_t CholeskyEliminationTree::computeCost(
       exit(1);
     }
 
+    bool parallelizable = (clique->parent() == root_);
+
     clique->computeCostMarked();
 
     if(clique->costStatus == COST_FIXED) { 
       // This check if probably redundant
-      cost += clique->markedCost > clique->fixedCost? clique->markedCost - clique->fixedCost : 0;
+      double additional_cost = clique->markedCost > clique->fixedCost? clique->markedCost - clique->fixedCost : 0;
+      cost += parallelizable? mplier * additional_cost : additional_cost;
     }
     else if(clique->costStatus == COST_UNMARKED) {
-      cost += clique->markedCost;
+      cost += parallelizable? mplier * clique->markedCost : clique->markedCost;
     }
 
     clique->nextCostStatus = COST_MARKED;
@@ -154,7 +164,7 @@ int64_t CholeskyEliminationTree::computeCost(
         // we can just check order(secondToLastKey) <= order(clique first key)
         RemappedKey secondToLastKey = get<BLOCK_INDEX_KEY>(curClique->blockIndices[curClique->blockIndices.size() - 2]);
         if(!orderingLess_(secondToLastKey, clique->frontKey())) {
-          cost += curClique->computeCostFixed();
+          cost += mplier * curClique->computeCostFixed();
           curClique->nextCostStatus = COST_FIXED;
           updatedCliques->push_back(curClique);
 
@@ -190,14 +200,14 @@ void CholeskyEliminationTree::uncommitCost(vector<sharedClique>& updatedCliques)
 
 void CholeskyEliminationTree::resetCost(vector<sharedClique>& updatedCliques) {
   for(sharedClique clique : updatedCliques) {
-    clique->costStatus = COST_UNMARKED;
-    clique->nextCostStatus = COST_UNMARKED;
+    clique->resetCost();
   }
 }
 
 void CholeskyEliminationTree::pickRelinKeys(
   const vector<pair<Key, double>>& KeyDeltaVec,
   int64_t remainingCycles,
+  int num_threads,
   double relinThresh,
   KeySet* newRelinKeys) {
 
@@ -248,7 +258,7 @@ void CholeskyEliminationTree::pickRelinKeys(
 
   for(RemappedKey remappedKey : affectedOldRemappedKeys) {
     vector<sharedClique> updatedCliques;
-    int64_t cost = computeCost(remappedKey, &updatedCliques);
+    int64_t cost = computeCost(remappedKey, num_threads, &updatedCliques);
     remainingCycles -= cost;
 
     commitCost(updatedCliques);

@@ -229,9 +229,10 @@ public:
    *************/
   CostStatus costStatus = COST_UNMARKED;
   CostStatus nextCostStatus = COST_UNMARKED;
-  int64_t markedCost = 0;
-  int64_t fixedCost = 0;
+  int64_t markedCost = -1;
+  int64_t fixedCost = -1;
 
+  void resetCost();
   int64_t computeCostMarked();
   int64_t computeCostFixed();
 

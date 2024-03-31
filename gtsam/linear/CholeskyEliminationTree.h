@@ -101,6 +101,7 @@ public:
   void pickRelinKeys(
       const std::vector<std::pair<Key, double>>& KeyDeltaVec,
       int64_t remainingCycles,
+      int num_threads,
       double relinThresh,
       KeySet* newRelinKeys);
   
@@ -265,6 +266,7 @@ private:
   // due to this key
   int64_t computeCost(
       const RemappedKey remappedKey, 
+      const int num_threads,
       std::vector<sharedClique>* updatedCliques);
 
   void commitCost(std::vector<sharedClique>& updatedCliques);

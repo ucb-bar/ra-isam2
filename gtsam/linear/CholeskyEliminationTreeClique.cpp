@@ -689,7 +689,17 @@ void CholeskyEliminationTree::Clique::checkInvariant() const {
   }
 }
 
+
+void CholeskyEliminationTree::Clique::resetCost() {
+    costStatus = COST_UNMARKED;
+    nextCostStatus = COST_UNMARKED;
+    markedCost = -1;
+    fixedCost = -1;
+}
+
 int64_t CholeskyEliminationTree::Clique::computeCostMarked() {
+  if(markedCost >= 0) { return markedCost; }
+
   int maxFactorHeight = 0;
   int maxFactorWidth = 0;
   int num_factors = 0;
@@ -743,6 +753,8 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked() {
 }
 
 int64_t CholeskyEliminationTree::Clique::computeCostFixed() {
+  if(fixedCost >= 0) { return fixedCost; }
+
   int maxFactorHeight = 0;
   int maxFactorWidth = 0;
   int num_factors = 0;
