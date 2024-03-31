@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
     double relin_thresh = 0.1;
     string relin_keys_file = "";
     string dataset_outdir = "";
+    bool print_values = false;
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -93,6 +94,7 @@ int main(int argc, char *argv[]) {
         {"print_frequency", required_argument, 0, 'p'},
         {"num_steps", required_argument, 0, 't'},
         {"dataset_outdir", required_argument, 0, 51},
+        {"print_values", no_argument, 0, 52},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -130,6 +132,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 51:
                 dataset_outdir = string(optarg);
+                break;
+            case 52:
+                print_values = true;
                 break;
             default:
                 cerr << "Unrecognized option" << endl;
@@ -328,8 +333,10 @@ int main(int argc, char *argv[]) {
               exit(1);
             }
 
-            isam2.extractFullTree(fout);
-            isam2.extractDelta(fout);
+            isam2.extractFullTree(fout, print_values);
+            if(print_values) {
+                isam2.extractDelta(fout);
+            }
         }
         K_count++;
         update_times.push_back(d1);

@@ -1,3 +1,4 @@
+
 /**
 * @file    CholeskyEliminationTree.h
 * @brief   Elimination tree structure to perform symbolic factorization and Cholesky factorization
@@ -587,6 +588,7 @@ void CholeskyEliminationTree::symbolicElimination(const RemappedKeySet& markedKe
   assert(root_);
 
   // if(postOrder_) {
+  // In the branched relaxed supernode case, must post order every time
   if(true) {
     // sortedMarkedKeys in this case will be exactly the same as partialOrdering
     postReordering(sortedMarkedKeys);
@@ -2136,7 +2138,7 @@ void CholeskyEliminationTree::extractSubtree(std::ostream& os, int size) const {
   
 }
 
-void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
+void CholeskyEliminationTree::extractFullTree(std::ostream& os, bool print_values) const {
 
   os << "ordering and width" << endl;
   os << orderingToKey_.size() << endl;
@@ -2156,7 +2158,9 @@ void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
       os << factorKey << " ";
     }
     os << endl;
-    os << factorWrapper->getCachedMatrix() << endl;
+    if(print_values) {
+      os << factorWrapper->getCachedMatrix() << endl;
+    }
   }
   os << endl;
 
@@ -2188,9 +2192,11 @@ void CholeskyEliminationTree::extractFullTree(std::ostream& os) const {
       exit(1);
     }
     
-    auto m = clique->gatherSources.front().matrix();
-    m.triangularView<Eigen::StrictlyUpper>().setZero();
-    os << m << endl;
+    if(print_values) {
+      auto m = clique->gatherSources.front().matrix();
+      m.triangularView<Eigen::StrictlyUpper>().setZero();
+      os << m << endl;
+    }
 
   }
   os << endl;

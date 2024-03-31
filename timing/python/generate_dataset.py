@@ -28,6 +28,8 @@ if __name__ == "__main__":
                       default=2, help="Starting step, inclusive")
     parser.add_option("--end_step", dest="end_step", type="int",
                       default=30, help="Ending step, inclusive")
+    parser.add_option("--no_values", dest="no_values", 
+                      action="store_true", help="If the generated dataset has no matrix values")
     parser.add_option("--vio", dest="vio", action="store_true",
                       default=None, help="Set if generating vio dataset. That means, generate dataset without reordering and discard all factors that loop back more than vio_lag steps")
     parser.add_option("--vio_lag", dest="vio_lag", type="int",
@@ -44,11 +46,13 @@ if __name__ == "__main__":
     outdir = options.outdir
     start_step = options.start_step
     end_step = options.end_step
+    no_values = options.no_values
     vio = options.vio
     vio_lag = options.vio_lag
     relin_thresh = options.relin_thresh
 
     Timestep.vio_scale = options.vio_scale
+    Timestep.no_values = no_values
 
     if options.seed is not None:
         np.random.seed(options.seed)

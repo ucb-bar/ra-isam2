@@ -298,8 +298,8 @@ class GTSAM_EXPORT ISAM2 : public BayesTree<ISAM2Clique> {
     eTree_.extractSubtree(os, size);
   }
 
-  void extractFullTree(std::ostream& os) const {
-    eTree_.extractFullTree(os);
+  void extractFullTree(std::ostream& os, bool print_values) const {
+    eTree_.extractFullTree(os, print_values);
   }
 
   void extractDelta(std::ostream& os) const {

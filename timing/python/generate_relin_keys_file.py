@@ -36,12 +36,17 @@ if __name__ == "__main__":
                       default=2, help="Starting step, inclusive")
     parser.add_option("--end_step", dest="end_step", type="int",
                       default=30, help="Ending step, inclusive")
+    parser.add_option("--no_values", dest="no_values", 
+                      action="store_true", help="If the generated dataset has no matrix values")
     (options, args) = parser.parse_args()
 
     indir = options.indir
     outfile = options.outfile
     start_step = options.start_step
     end_step = options.end_step
+    no_values = options.no_values
+
+    Timestep.no_values = no_values
 
     files = glob.glob(os.path.join(indir, "step-*.out"))
 

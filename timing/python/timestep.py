@@ -8,7 +8,7 @@ def read_until(fin, s):
     while True:
         line = fin.readline()
         if not line:
-            print("Line not found")
+            print(f"{s} not found")
             exit(0)
 
         if s in line:
@@ -39,6 +39,7 @@ def group_block_indices(A_ridx, B_ridx):
 
 class Timestep:
     vio_scale = 1.0
+    no_values = False
 
     def map_keys_to_cliques(self):
         self.key_to_clique = [None for _ in range(self.num_keys)]
@@ -63,6 +64,9 @@ class Timestep:
         # ======================================== #
         # END Variable initialization
         # ======================================== #
+
+        Clique.no_values = Timestep.no_values
+        Factor.no_values = Timestep.no_values
 
         read_until(fin, "ordering and width")
 
@@ -131,24 +135,25 @@ class Timestep:
             line = fin.readline()
             self.relin_keys.append(int(line))
 
-        read_until(fin, "deltas")
+        if not Timestep.no_values:
+            read_until(fin, "deltas")
 
-        line = fin.readline()
-
-        assert(int(line) == self.num_keys - 1)
-
-        self.deltas = [None for _ in range(self.num_keys)]
-
-        for k in range(1, self.num_keys):
             line = fin.readline()
-            arr = line.split()
-            arr = [float(a) for a in arr]
 
-            vec = np.array(arr)
+            assert(int(line) == self.num_keys - 1)
 
-            self.deltas[k] = vec
+            self.deltas = [None for _ in range(self.num_keys)]
 
-            self.prefix = f"step{self.step}_"
+            for k in range(1, self.num_keys):
+                line = fin.readline()
+                arr = line.split()
+                arr = [float(a) for a in arr]
+
+                vec = np.array(arr)
+
+                self.deltas[k] = vec
+
+        self.prefix = f"step{self.step}_"
 
         self.block_indices = {}
         cur_row = 0
@@ -428,26 +433,27 @@ class Timestep:
             fout.write("\n")
         fout.write("};\n\n")
 
-        fout.write(f"float step_H_correct_cond[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_H_correct_cond, ")
-        fout.write("};\n")
+        if not Timestep.no_values:
+            fout.write(f"float step_H_correct_cond[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_H_correct_cond, ")
+            fout.write("};\n")
 
-        fout.write(f"float* step_H_correct_data[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_H_correct_data, ")
-        fout.write("};\n")
+            fout.write(f"float* step_H_correct_data[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_H_correct_data, ")
+            fout.write("};\n")
 
-        fout.write(f"float* step_M_correct_data[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_M_correct_data, ")
-        fout.write("};\n")
+            fout.write(f"float* step_M_correct_data[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_M_correct_data, ")
+            fout.write("};\n")
         fout.write("\n")
 
     # Go through relin keys and new keys and determine if marked or fixed
@@ -534,20 +540,19 @@ class Timestep:
         fout.write(f"float step{self.step}_x_data[] = {{\n")
         for clique in self.cliques:
             for key in clique.keys:
-                delta = self.deltas[key]
-                if delta is not None:
-                    for i in range(len(delta)):
-                        fout.write(f"0, ")
+                for i in range(self.key_width[key]):
+                    fout.write(f"0, ")
         fout.write("};\n")
 
-        fout.write(f"float step{self.step}_x_correct_data[] = {{\n")
-        for clique in self.cliques:
-            for key in clique.keys:
-                delta = self.deltas[key]
-                if delta is not None:
-                    for i in range(len(delta)):
-                        fout.write(f"{delta[i]}, ")
-        fout.write("};\n")
+        if not Timestep.no_values:
+            fout.write(f"float step{self.step}_x_correct_data[] = {{\n")
+            for clique in self.cliques:
+                for key in clique.keys:
+                    delta = self.deltas[key]
+                    if delta is not None:
+                        for i in range(len(delta)):
+                            fout.write(f"{delta[i]}, ")
+            fout.write("};\n")
 
 
     @staticmethod
@@ -562,6 +567,11 @@ class Timestep:
                     start_step = timestep.step
 
         fout.write("\n\n")
+
+        if Timestep.no_values:
+            fout.write(f"const bool no_values = true;\n\n")
+        else:
+            fout.write(f"const bool no_values = false;\n\n")
 
         fout.write(f"const int timestep_start = {start_step};\n\n")
 
@@ -584,8 +594,10 @@ class Timestep:
                 if max_nnode < timestep.num_cliques:
                     max_nnode = timestep.num_cliques
 
-        # Transpose height and width
         fout.write(f"#define MAX_NNODE {max_nnode}\n\n")
+        # Transpose height and width
+        fout.write(f"#define MAX_FACTOR_HEIGHT {max_factor_width}\n\n")
+        fout.write(f"#define MAX_FACTOR_WIDTH {max_factor_height}\n\n")
         fout.write(f"const int max_factor_height = {max_factor_width};\n")
         fout.write(f"const int max_factor_width = {max_factor_height};\n\n")
 
@@ -645,12 +657,13 @@ class Timestep:
                 fout.write(f"step{step}_node_factor_ridx, ")
         fout.write("};\n")
 
-        fout.write(f"float*** step_node_factor_data[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_node_factor_data, ")
-        fout.write("};\n")
+        if not Timestep.no_values:
+            fout.write(f"float*** step_node_factor_data[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_node_factor_data, ")
+            fout.write("};\n")
 
         fout.write(f"int** step_node_factor_num_blks[] = {{")
         for timestep in timesteps:
@@ -736,26 +749,27 @@ class Timestep:
                 fout.write(f"step{step}_node_blk_width, ")
         fout.write("};\n")
 
-        fout.write(f"float* step_node_H_correct_cond[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_node_H_correct_cond, ")
-        fout.write("};\n")
+        if not Timestep.no_values:
+            fout.write(f"float* step_node_H_correct_cond[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_node_H_correct_cond, ")
+            fout.write("};\n")
 
-        fout.write(f"float** step_node_H_correct_data[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_node_H_correct_data, ")
-        fout.write("};\n")
+            fout.write(f"float** step_node_H_correct_data[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_node_H_correct_data, ")
+            fout.write("};\n")
 
-        fout.write(f"float** step_node_M_correct_data[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_node_M_correct_data, ")
-        fout.write("};\n")
+            fout.write(f"float** step_node_M_correct_data[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_node_M_correct_data, ")
+            fout.write("};\n")
 
         fout.write(f"int** step_node_ridx[] = {{")
         for timestep in timesteps:
@@ -771,12 +785,13 @@ class Timestep:
                 fout.write(f"step{step}_x_data, ")
         fout.write("};\n")
 
-        fout.write(f"float* step_x_correct_data[] = {{")
-        for timestep in timesteps:
-            if timestep is not None:
-                step = timestep.step
-                fout.write(f"step{step}_x_correct_data, ")
-        fout.write("};\n")
+        if not Timestep.no_values:
+            fout.write(f"float* step_x_correct_data[] = {{")
+            for timestep in timesteps:
+                if timestep is not None:
+                    step = timestep.step
+                    fout.write(f"step{step}_x_correct_data, ")
+            fout.write("};\n")
 
         fout.write("\n\n")
 

@@ -23,6 +23,8 @@ def group_block_indices(reduced_sorted_keys, A_block_indices, B_block_indices):
     return A_blk_start, B_blk_start, blk_width
 
 class Factor:
+    no_values = False
+
     def __init__(self, fin, key_to_ordering, key_width):
         line = fin.readline()
         arr = line.split()
@@ -47,13 +49,13 @@ class Factor:
 
         self.matrix = np.zeros((self.height, self.width))
 
-        for i in range(self.height):
-            line = fin.readline()
-            arr = line.split()
-            print(arr, self.width)
-            assert(len(arr) == self.width)
-            for j in range(self.width):
-                self.matrix[i, j] = float(arr[j])
+        if not Factor.no_values:
+            for i in range(self.height):
+                line = fin.readline()
+                arr = line.split()
+                assert(len(arr) == self.width)
+                for j in range(self.width):
+                    self.matrix[i, j] = float(arr[j])
 
         # Sort keys and factor matrix
         self.sorted_keys = sorted(self.keys, key=lambda key : key_to_ordering[key])
@@ -115,14 +117,16 @@ class Factor:
 
         reduced = self.reduced_matrix.astype(np.float32)
 
-        fout.write(f"float {prefix}factor{self.index}_data[] = {{\n")
-        for j in range(self.height):
-            for i in range(reduced_width):
-                fout.write(f"{self.reduced_matrix[j, i]:.7f}, ")
+        if not Factor.no_values:
+            fout.write(f"float {prefix}factor{self.index}_data[] = {{\n")
+            for j in range(self.height):
+                for i in range(reduced_width):
+                    fout.write(f"{self.reduced_matrix[j, i]:.7f}, ")
 
-            fout.write("\n")
+                fout.write("\n")
 
-        fout.write("};\n\n")
+            fout.write("};\n")
+        fout.write("\n")
 
         # Group block indices
         A_blk_start, B_blk_start, blk_width = group_block_indices(self.reduced_keys, reduced_block_indices, inverse_block_indices)
@@ -159,10 +163,11 @@ class Factor:
         for index in factor_indices:
             fout.write(f"{prefix}factor{index}_ridx, ")
         fout.write("};\n")
-        fout.write(f"float* {prefix}factor_data[] = {{")
-        for index in factor_indices:
-            fout.write(f"{prefix}factor{index}_data, ")
-        fout.write("};\n")
+        if not Factor.no_values:
+            fout.write(f"float* {prefix}factor_data[] = {{")
+            for index in factor_indices:
+                fout.write(f"{prefix}factor{index}_data, ")
+            fout.write("};\n")
         fout.write(f"int {prefix}factor_num_blks[] = {{")
         for index in factor_indices:
             fout.write(f"{prefix}factor{index}_num_blks, ")

@@ -23,6 +23,9 @@ def group_block_indices(reduced_sorted_keys, A_block_indices, B_block_indices):
     return A_blk_start, B_blk_start, blk_width
 
 class Clique:
+
+    no_values = False
+
     def __init__(self, fin, index=0):
         # ======================================== #
         # Variable initialization
@@ -61,12 +64,13 @@ class Clique:
 
         self.matrix = np.zeros((self.height, self.width))
 
-        for i in range(self.height):
-            line = fin.readline()
-            arr = line.split()
-            assert(len(arr) == self.width)
-            for j in range(self.width):
-                self.matrix[i, j] = float(arr[j])
+        if not Clique.no_values:
+            for i in range(self.height):
+                line = fin.readline()
+                arr = line.split()
+                assert(len(arr) == self.width)
+                for j in range(self.width):
+                    self.matrix[i, j] = float(arr[j])
 
         self.ancestor_block_indices = {}
         for key, row, height in self.block_indices:
@@ -138,10 +142,11 @@ class Clique:
             fout.write(f"step{step}_factor{factor_index}_ridx, ")
         fout.write("};\n")
 
-        fout.write(f"float* step{step}_node{self.index}_factor_data[] = {{")
-        for factor_index in self.active_factor_indices:
-            fout.write(f"step{step}_factor{factor_index}_data, ")
-        fout.write("};\n")
+        if not Clique.no_values:
+            fout.write(f"float* step{step}_node{self.index}_factor_data[] = {{")
+            for factor_index in self.active_factor_indices:
+                fout.write(f"step{step}_factor{factor_index}_data, ")
+            fout.write("};\n")
 
         fout.write(f"int step{step}_node{self.index}_factor_num_blks[] = {{")
         for factor_index in self.active_factor_indices:
@@ -170,6 +175,7 @@ class Clique:
 
         fout.write(f"const int step{step}_node{self.index}_height = {self.height};\n")
         fout.write(f"const int step{step}_node{self.index}_width = {self.width};\n")
+
         fout.write(f"float step{step}_node{self.index}_data[] = {{\n")
 
         if self.marked:
@@ -207,28 +213,29 @@ class Clique:
             fout.write(f"{a}, ")
         fout.write("};\n")
 
-        LA = self.matrix[:self.width, :self.width]
-        LAB = self.matrix[:, :self.width]
+        if not Clique.no_values:
+            LA = self.matrix[:self.width, :self.width]
+            LAB = self.matrix[:, :self.width]
 
-        H_correct = LAB @ LA.T
+            H_correct = LAB @ LA.T
 
-        cond = np.linalg.cond(H_correct)
+            cond = np.linalg.cond(H_correct)
 
-        fout.write(f"const float step{step}_node{self.index}_H_correct_cond = {cond};\n")
+            fout.write(f"const float step{step}_node{self.index}_H_correct_cond = {cond};\n")
 
-        fout.write(f"float step{step}_node{self.index}_H_correct_data[] = {{\n")
-        for j in range(self.width):
-            for i in range(self.height):
-                fout.write(f"{H_correct[i, j]}, ")
-            fout.write("\n")
-        fout.write("};\n")
+            fout.write(f"float step{step}_node{self.index}_H_correct_data[] = {{\n")
+            for j in range(self.width):
+                for i in range(self.height):
+                    fout.write(f"{H_correct[i, j]}, ")
+                fout.write("\n")
+            fout.write("};\n")
 
-        fout.write(f"float step{step}_node{self.index}_M_correct_data[] = {{\n")
-        for j in range(self.width):
-            for i in range(self.height):
-                fout.write(f"{self.matrix[i, j]}, ")
-            fout.write("\n")
-        fout.write("};\n")
+            fout.write(f"float step{step}_node{self.index}_M_correct_data[] = {{\n")
+            for j in range(self.width):
+                for i in range(self.height):
+                    fout.write(f"{self.matrix[i, j]}, ")
+                fout.write("\n")
+            fout.write("};\n")
 
         fout.write("\n\n")
 
@@ -269,7 +276,8 @@ class Clique:
 
         Clique.print_clique_variable(fout, t="int**", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_ridx")
 
-        Clique.print_clique_variable(fout, t="float**", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_data")
+        if not Clique.no_values:
+            Clique.print_clique_variable(fout, t="float**", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_data")
 
         Clique.print_clique_variable(fout, t="int*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_num_blks")
 
@@ -295,11 +303,12 @@ class Clique:
 
         Clique.print_clique_variable(fout, t="int*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="blk_width")
 
-        Clique.print_clique_variable(fout, t="float", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="H_correct_cond")
+        if not Clique.no_values:
+            Clique.print_clique_variable(fout, t="float", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="H_correct_cond")
 
-        Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="H_correct_data")
+            Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="H_correct_data")
 
-        Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="M_correct_data")
+            Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="M_correct_data")
 
         Clique.print_clique_variable(fout, t="int*", prefix=f"step{step}", pred=lambda i : True, max_clique=max_clique, default="0", postfix="ridx")
 

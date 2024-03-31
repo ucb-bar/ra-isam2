@@ -160,7 +160,7 @@ public:
   // the sparsity structure and just generate entries for them later
   void extractSubtree(std::ostream& os, int size) const; 
 
-  void extractFullTree(std::ostream& os) const;
+  void extractFullTree(std::ostream& os, bool print_values=true) const;
 
   void extractDelta(std::ostream& os, VectorValues& delta) const;
 
