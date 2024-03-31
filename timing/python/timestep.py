@@ -574,16 +574,20 @@ class Timestep:
 
         max_factor_height = 0
         max_factor_width = 0
+        max_nnode = 0
         for timestep in timesteps:
             if timestep is not None:
                 if max_factor_height < timestep.factor_max_height:
                     max_factor_height = timestep.factor_max_height
                 if max_factor_width < timestep.factor_max_width:
                     max_factor_width = timestep.factor_max_width
+                if max_nnode < timestep.num_cliques:
+                    max_nnode = timestep.num_cliques
 
         # Transpose height and width
         fout.write(f"const int max_factor_height = {max_factor_width};\n")
-        fout.write(f"const int max_factor_width = {max_factor_height};\n\n")
+        fout.write(f"const int max_factor_width = {max_factor_height};\n")
+        fout.write(f"const int max_nnode = {max_nnode};\n\n")
 
         fout.write(f"bool step_is_reconstruct[] = {{")
         for timestep in timesteps:
