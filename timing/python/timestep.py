@@ -517,7 +517,7 @@ class Timestep:
         for clique in self.cliques:
             if clique.marked or clique.fixed:
                 clique_indices.append(clique.index)
-                clique.print_clique(fout, step=self.step)
+                clique.print_clique(fout, step=self.step, deltas=self.deltas)
 
         Clique.print_clique_metadata(fout, step=self.step, active_clique_indices=clique_indices, max_clique=len(self.cliques))
 
@@ -722,6 +722,13 @@ class Timestep:
             if timestep is not None:
                 step = timestep.step
                 fout.write(f"step{step}_node_M_correct_data, ")
+        fout.write("};\n")
+
+        fout.write(f"float** step_node_delta_correct_data[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_node_delta_correct_data, ")
         fout.write("};\n")
 
         fout.write("\n\n")

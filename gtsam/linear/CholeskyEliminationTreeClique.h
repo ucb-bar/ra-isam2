@@ -235,6 +235,7 @@ public:
   void resetCost();
   int64_t computeCostMarked();
   int64_t computeCostFixed();
+  int64_t computeCostBacksolve();
 
 };
 

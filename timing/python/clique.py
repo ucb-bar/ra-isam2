@@ -111,7 +111,7 @@ class Clique:
             self.inverse_block_indices[key] = [key, row, height]
 
 
-    def print_clique(self, fout, step):
+    def print_clique(self, fout, step, deltas):
         self.active_factor_indices = sorted(self.active_factor_indices)
 
         print(f"step = {step}, clique = {self.index}, block_indices = {self.block_indices}")
@@ -229,6 +229,18 @@ class Clique:
                 fout.write(f"{self.matrix[i, j]}, ")
             fout.write("\n")
         fout.write("};\n")
+
+        fout.write(f"float step{step}_node{self.index}_delta_correct_data[] = {{\n")
+        for key in self.keys:
+            delta = deltas[key]
+            if delta is None:
+                continue
+
+            for a in delta.astype(np.float32):
+                fout.write(f"{a}, ")
+            fout.write("\n")
+        fout.write("};\n")
+                
         
         fout.write("\n\n")
 
@@ -292,6 +304,8 @@ class Clique:
         Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="H_correct_data")
 
         Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="M_correct_data")
+
+        Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="delta_correct_data")
 
 
         fout.write("\n\n")

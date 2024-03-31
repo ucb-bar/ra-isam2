@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
             K_count = 0;
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
-            isam2.update_resource_aware(newFactors, newVariables, params);
+            isam2.update_resource_aware(newFactors, newVariables, params, 3);
             auto update_end = chrono::high_resolution_clock::now();
             estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();

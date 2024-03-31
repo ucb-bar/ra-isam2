@@ -116,7 +116,7 @@ int64_t CholeskyEliminationTree::computeCost(
   }
 
   double overhead_const = 0.75;
-  double mplier = num_threads / 0.75;
+  double mplier = (1 / 0.75) / num_threads;
 
   sharedClique clique = cliques_[lowestKey];
 
@@ -130,7 +130,7 @@ int64_t CholeskyEliminationTree::computeCost(
       exit(1);
     }
 
-    bool parallelizable = (clique->parent() == root_);
+    bool parallelizable = (clique->parent() != root_);
 
     clique->computeCostMarked();
 
@@ -269,6 +269,15 @@ void CholeskyEliminationTree::pickRelinKeys(
 
   }
 
+  // Compute cost of backsolve
+  double mplier = (1 / 0.75) / num_threads;
+  int64_t backsolve_cost = 0;
+  for(sharedNode node : nodes_) {
+    sharedClique clique = node->clique();
+    if(clique->frontKey() != node->key) { continue; }
+    if(node->key == 0 || clique == root_) { continue; }
+  }
+
   cout << "remainingCycles = " << remainingCycles << endl;
 
   if(remainingCycles <= 0) { 
@@ -326,7 +335,7 @@ void CholeskyEliminationTree::pickRelinKeys(
     RemappedKey remappedKey = getRemapKey(key);
 
     vector<sharedClique> updatedCliques;
-    int64_t cost = computeCost(remappedKey, &updatedCliques);
+    int64_t cost = computeCost(remappedKey, num_threads, &updatedCliques);
 
     allUpdatedCliques.insert(allUpdatedCliques.end(), 
                              updatedCliques.begin(), updatedCliques.end());
