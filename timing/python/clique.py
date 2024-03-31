@@ -111,7 +111,7 @@ class Clique:
             self.inverse_block_indices[key] = [key, row, height]
 
 
-    def print_clique(self, fout, step, deltas):
+    def print_clique(self, fout, step):
         self.active_factor_indices = sorted(self.active_factor_indices)
 
         print(f"step = {step}, clique = {self.index}, block_indices = {self.block_indices}")
@@ -230,19 +230,15 @@ class Clique:
             fout.write("\n")
         fout.write("};\n")
 
-        fout.write(f"float step{step}_node{self.index}_delta_correct_data[] = {{\n")
-        for key in self.keys:
-            delta = deltas[key]
-            if delta is None:
-                continue
-
-            for a in delta.astype(np.float32):
-                fout.write(f"{a}, ")
-            fout.write("\n")
-        fout.write("};\n")
-                
-        
         fout.write("\n\n")
+
+    def print_clique_ridx(self, fout, step, block_indices):
+        fout.write(f"int step{step}_node{self.index}_ridx[] = {{\n")
+        for key, row, height in self.block_indices:
+            _, total_row, _ = block_indices[key]
+            for i in range(height):
+                fout.write(f"{total_row + i}, ")
+        fout.write("};\n")
 
     @staticmethod
     def print_clique_variable(fout, t, prefix, postfix, pred, default, max_clique):
@@ -305,7 +301,7 @@ class Clique:
 
         Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="M_correct_data")
 
-        Clique.print_clique_variable(fout, t="float*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="delta_correct_data")
+        Clique.print_clique_variable(fout, t="int*", prefix=f"step{step}", pred=lambda i : True, max_clique=max_clique, default="0", postfix="ridx")
 
 
         fout.write("\n\n")

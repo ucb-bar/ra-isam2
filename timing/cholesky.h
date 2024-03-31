@@ -583,6 +583,9 @@ void partial_backsolve(float* L, int w, int h, int stride, int* ridx,
         L_last_row += stride;
     }
 
+    // printf("x1 = \n");
+    // print_col_major(x1, w, 1, 1);
+
     if(subdiag_h > 0) {
 
         // Gather relevant x
@@ -592,7 +595,11 @@ void partial_backsolve(float* L, int w, int h, int stride, int* ridx,
             x2[i] = x[ridx[i + w]];
         }
 
+        // print_col_major(x2, subdiag_h, 1, 1);
+
         float* L2 = L + w;
+
+        // print_col_major(L2, w, subdiag_h, h);
 
         // Compute y1 -= L2.T x2
         gemv2(w, subdiag_h,

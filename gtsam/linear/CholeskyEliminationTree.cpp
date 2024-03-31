@@ -586,7 +586,8 @@ void CholeskyEliminationTree::symbolicElimination(const RemappedKeySet& markedKe
   }
   assert(root_);
 
-  if(postOrder_) {
+  // if(postOrder_) {
+  if(true) {
     // sortedMarkedKeys in this case will be exactly the same as partialOrdering
     postReordering(sortedMarkedKeys);
   }

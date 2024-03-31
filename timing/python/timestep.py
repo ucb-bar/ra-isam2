@@ -150,6 +150,13 @@ class Timestep:
 
             self.prefix = f"step{self.step}_"
 
+        self.block_indices = {}
+        cur_row = 0
+        for key in self.ordering_to_key:
+            height = self.key_width[key]
+            self.block_indices[key] = [key, cur_row, height]
+            cur_row += height
+
     def print_header_vio(self, fout, vio_lag, prev_matrix):
         fout.write(f"const bool step{self.step}_is_reconstruct = true;\n\n")
 
@@ -517,9 +524,31 @@ class Timestep:
         for clique in self.cliques:
             if clique.marked or clique.fixed:
                 clique_indices.append(clique.index)
-                clique.print_clique(fout, step=self.step, deltas=self.deltas)
+                clique.print_clique(fout, step=self.step)
+        
+        for clique in self.cliques:
+            clique.print_clique_ridx(fout, step=self.step, block_indices=self.block_indices)
 
         Clique.print_clique_metadata(fout, step=self.step, active_clique_indices=clique_indices, max_clique=len(self.cliques))
+
+        fout.write(f"float step{self.step}_x_data[] = {{\n")
+        for clique in self.cliques:
+            for key in clique.keys:
+                delta = self.deltas[key]
+                if delta is not None:
+                    for i in range(len(delta)):
+                        fout.write(f"0, ")
+        fout.write("};\n")
+
+        fout.write(f"float step{self.step}_x_correct_data[] = {{\n")
+        for clique in self.cliques:
+            for key in clique.keys:
+                delta = self.deltas[key]
+                if delta is not None:
+                    for i in range(len(delta)):
+                        fout.write(f"{delta[i]}, ")
+        fout.write("};\n")
+
 
     @staticmethod
     def print_metadata_incremental(fout, timesteps, stepfile_format):
@@ -724,11 +753,25 @@ class Timestep:
                 fout.write(f"step{step}_node_M_correct_data, ")
         fout.write("};\n")
 
-        fout.write(f"float** step_node_delta_correct_data[] = {{")
+        fout.write(f"int** step_node_ridx[] = {{")
         for timestep in timesteps:
             if timestep is not None:
                 step = timestep.step
-                fout.write(f"step{step}_node_delta_correct_data, ")
+                fout.write(f"step{step}_node_ridx, ")
+        fout.write("};\n")
+
+        fout.write(f"float* step_x_data[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_x_data, ")
+        fout.write("};\n")
+
+        fout.write(f"float* step_x_correct_data[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_x_correct_data, ")
         fout.write("};\n")
 
         fout.write("\n\n")
