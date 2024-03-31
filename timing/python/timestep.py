@@ -585,9 +585,9 @@ class Timestep:
                     max_nnode = timestep.num_cliques
 
         # Transpose height and width
+        fout.write(f"#define MAX_NNODE {max_nnode}\n\n")
         fout.write(f"const int max_factor_height = {max_factor_width};\n")
-        fout.write(f"const int max_factor_width = {max_factor_height};\n")
-        fout.write(f"const int max_nnode = {max_nnode};\n\n")
+        fout.write(f"const int max_factor_width = {max_factor_height};\n\n")
 
         fout.write(f"bool step_is_reconstruct[] = {{")
         for timestep in timesteps:
