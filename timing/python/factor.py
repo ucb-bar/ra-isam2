@@ -117,15 +117,14 @@ class Factor:
 
         reduced = self.reduced_matrix.astype(np.float32)
 
-        if not Factor.no_values:
-            fout.write(f"float {prefix}factor{self.index}_data[] = {{\n")
-            for j in range(self.height):
-                for i in range(reduced_width):
-                    fout.write(f"{self.reduced_matrix[j, i]:.7f}, ")
+        fout.write(f"float {prefix}factor{self.index}_data[] = {{\n")
+        for j in range(self.height):
+            for i in range(reduced_width):
+                fout.write(f"{self.reduced_matrix[j, i]:.7f}, ")
 
-                fout.write("\n")
+            fout.write("\n")
 
-            fout.write("};\n")
+        fout.write("};\n")
         fout.write("\n")
 
         # Group block indices
@@ -163,11 +162,10 @@ class Factor:
         for index in factor_indices:
             fout.write(f"{prefix}factor{index}_ridx, ")
         fout.write("};\n")
-        if not Factor.no_values:
-            fout.write(f"float* {prefix}factor_data[] = {{")
-            for index in factor_indices:
-                fout.write(f"{prefix}factor{index}_data, ")
-            fout.write("};\n")
+        fout.write(f"float* {prefix}factor_data[] = {{")
+        for index in factor_indices:
+            fout.write(f"{prefix}factor{index}_data, ")
+        fout.write("};\n")
         fout.write(f"int {prefix}factor_num_blks[] = {{")
         for index in factor_indices:
             fout.write(f"{prefix}factor{index}_num_blks, ")

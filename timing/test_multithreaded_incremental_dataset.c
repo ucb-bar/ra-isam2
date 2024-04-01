@@ -87,17 +87,20 @@ void* worker_cholesky(void* args_ptr) {
             
         printf("thread %d node = %d\n", thread_id, node);
 
+        bool marked = node_marked[node];
+        bool fixed = node_fixed[node];
+
+        if(!marked && !fixed) {
+            printf("Node not marked or fixed!\n");
+            exit(1);
+        }
+
         double ERR_THRESH = FLT_EPSILON * node_H_correct_cond[node] * 100;
 
         // Technically we don't need to lock node because no two threads can
         // grab the same node. But lock it anyways
 
         pthread_mutex_lock(&node_locks[node]);
-
-        bool marked = node_marked[node];
-        bool fixed = node_fixed[node];
-
-        if(!marked && !fixed) { continue; }
 
         int parent = node_parent[node];
         int H_h = node_height[node];

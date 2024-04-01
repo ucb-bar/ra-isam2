@@ -142,11 +142,10 @@ class Clique:
             fout.write(f"step{step}_factor{factor_index}_ridx, ")
         fout.write("};\n")
 
-        if not Clique.no_values:
-            fout.write(f"float* step{step}_node{self.index}_factor_data[] = {{")
-            for factor_index in self.active_factor_indices:
-                fout.write(f"step{step}_factor{factor_index}_data, ")
-            fout.write("};\n")
+        fout.write(f"float* step{step}_node{self.index}_factor_data[] = {{")
+        for factor_index in self.active_factor_indices:
+            fout.write(f"step{step}_factor{factor_index}_data, ")
+        fout.write("};\n")
 
         fout.write(f"int step{step}_node{self.index}_factor_num_blks[] = {{")
         for factor_index in self.active_factor_indices:
@@ -276,8 +275,7 @@ class Clique:
 
         Clique.print_clique_variable(fout, t="int**", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_ridx")
 
-        if not Clique.no_values:
-            Clique.print_clique_variable(fout, t="float**", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_data")
+        Clique.print_clique_variable(fout, t="float**", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_data")
 
         Clique.print_clique_variable(fout, t="int*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_num_blks")
 

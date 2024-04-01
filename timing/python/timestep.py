@@ -657,13 +657,12 @@ class Timestep:
                 fout.write(f"step{step}_node_factor_ridx, ")
         fout.write("};\n")
 
-        if not Timestep.no_values:
-            fout.write(f"float*** step_node_factor_data[] = {{")
-            for timestep in timesteps:
-                if timestep is not None:
-                    step = timestep.step
-                    fout.write(f"step{step}_node_factor_data, ")
-            fout.write("};\n")
+        fout.write(f"float*** step_node_factor_data[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_node_factor_data, ")
+        fout.write("};\n")
 
         fout.write(f"int** step_node_factor_num_blks[] = {{")
         for timestep in timesteps:

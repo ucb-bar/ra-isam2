@@ -19,8 +19,6 @@ int node_ready_size = 0;
 int* node_ready_queue;
 int num_active_nodes = 0;
 
-float fake_factor_data[MAX_FACTOR_HEIGHT * MAX_FACTOR_WIDTH] = {0};
-
 typedef struct worker_args_t {
     int thread_id;
     int step;
@@ -48,6 +46,7 @@ void* worker_cholesky(void* args_ptr) {
     int* node_num_factors = step_node_num_factors[step];
     int** node_factor_height = step_node_factor_height[step];
     int** node_factor_width = step_node_factor_width[step];
+    float*** node_factor_data = step_node_factor_data[step];
     int** node_factor_num_blks = step_node_factor_num_blks[step];
     int*** node_factor_A_blk_start = step_node_factor_A_blk_start[step];
     int*** node_factor_B_blk_start = step_node_factor_B_blk_start[step];
@@ -85,15 +84,18 @@ void* worker_cholesky(void* args_ptr) {
             
         printf("thread %d node = %d\n", thread_id, node);
 
+        bool marked = node_marked[node];
+        bool fixed = node_fixed[node];
+
+        if(!marked && !fixed) {
+            printf("Node not marked or fixed!\n");
+            exit(1);
+        }
+
         // Technically we don't need to lock node because no two threads can
         // grab the same node. But lock it anyways
 
         pthread_mutex_lock(&node_locks[node]);
-
-        bool marked = node_marked[node];
-        bool fixed = node_fixed[node];
-
-        if(!marked && !fixed) { continue; }
 
         int parent = node_parent[node];
         int H_h = node_height[node];
@@ -103,6 +105,7 @@ void* worker_cholesky(void* args_ptr) {
         int num_factors = node_num_factors[node];
         int* factor_height = node_factor_height[node];
         int* factor_width = node_factor_width[node];
+        float** factor_data = node_factor_data[node];
         int* factor_num_blks = node_factor_num_blks[node];
         int** factor_A_blk_start = node_factor_A_blk_start[node];
         int** factor_B_blk_start = node_factor_B_blk_start[node];
@@ -130,7 +133,7 @@ void* worker_cholesky(void* args_ptr) {
         for(int i = 0; i < num_factors; i++) {
             int h = factor_height[i];
             int w = factor_width[i];
-            float* data = fake_factor_data;
+            float* data = factor_data[i];
 
             int num_blks = factor_num_blks[i];
             int* A_blk_start = factor_A_blk_start[i];
