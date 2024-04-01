@@ -257,10 +257,12 @@ void CholeskyEliminationTree::pickRelinKeys(
 
   vector<sharedClique> allUpdatedCliques;
 
+  int64_t new_factor_cost = 0;
+
   for(RemappedKey remappedKey : affectedOldRemappedKeys) {
     vector<sharedClique> updatedCliques;
     int64_t cost = computeCost(remappedKey, num_threads, &updatedCliques);
-    remainingCycles -= cost;
+    new_factor_cost += cost;
 
     commitCost(updatedCliques);
 
@@ -274,12 +276,16 @@ void CholeskyEliminationTree::pickRelinKeys(
   double mplier = (1 / 0.75) / num_threads;
   int64_t backsolve_cost = 0;
   for(sharedNode node : nodes_) {
+    if(isNewKey(node->key)) { continue; }
     sharedClique clique = node->clique();
     if(clique->frontKey() != node->key) { continue; }
     if(node->key == 0 || clique == root_) { continue; }
+    backsolve_cost += mplier * clique->computeCostBacksolve();
   }
 
-  cout << "remainingCycles = " << remainingCycles << endl;
+  remainingCycles -= new_factor_cost + backsolve_cost;
+
+  cout << "backsolve cost = " << backsolve_cost << " new_factor_cost = " << new_factor_cost << " remainingCycles = " << remainingCycles << endl;
 
   if(remainingCycles <= 0) { 
     cout << "no relin possible!" << endl;

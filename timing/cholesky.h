@@ -431,18 +431,20 @@ void partial_factorization4(float* AB, int w, int h) {
     hh -= CHOL_BLOCK_SIZE;
   }
 
-  // This is LC = C - LB LB^T computation
-  int dim_I = h - w, dim_J = dim_I, dim_K = w;
-  float* B = AB + w;
-  float* C = AB + w * (h + 1);
-  int stride_B = h, stride_C = h;
-  float scale_factor_A = -1, scale_factor_B = 1;
-  bool transpose_A = true, transpose_B = false;
+  if(h - w > 0) {
+      // This is LC = C - LB LB^T computation
+      int dim_I = h - w, dim_J = dim_I, dim_K = w;
+      float* B = AB + w;
+      float* C = AB + w * (h + 1);
+      int stride_B = h, stride_C = h;
+      float scale_factor_A = -1, scale_factor_B = 1;
+      bool transpose_A = true, transpose_B = false;
 
-  blocked_syrk(dim_I, dim_K,
-               B, C,
-               stride_B, stride_C,
-               scale_factor_A);
+      blocked_syrk(dim_I, dim_K,
+                   B, C,
+                   stride_B, stride_C,
+                   scale_factor_A);
+  }
 }
 
 // Seah's impl of partial_factorization4

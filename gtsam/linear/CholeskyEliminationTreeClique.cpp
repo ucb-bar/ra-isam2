@@ -812,4 +812,14 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed() {
 
 }
 
+int64_t CholeskyEliminationTree::Clique::computeCostBacksolve() {
+  int cliqueWidth = this->width();
+  int cliqueHeight = this->height();
+  int backsolve_block_len = 4;
+  int64_t backsolve_cost = predict_backsolve(cliqueWidth, cliqueHeight, backsolve_block_len);
+
+  return backsolve_cost;
+
+}
+
 }   // namespace gtsam

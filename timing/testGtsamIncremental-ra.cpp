@@ -51,6 +51,7 @@ int main(int argc, char *argv[]) {
     int max_iter = 10;
     int num_steps = 1000000;
     double relin_thresh = 0.1;
+    int num_threads = 1;
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -63,6 +64,7 @@ int main(int argc, char *argv[]) {
         {"relinearize_skip", required_argument, 0, 's'},
         {"print_frequency", required_argument, 0, 'p'},
         {"num_steps", required_argument, 0, 't'},
+        {"num_threads", required_argument, 0, 50},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -94,6 +96,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 't':
                 num_steps = atoi(optarg);
+                break;
+            case 50:
+                num_threads = atoi(optarg);
                 break;
             default:
                 cerr << "Unrecognized option" << endl;
@@ -214,7 +219,7 @@ int main(int argc, char *argv[]) {
             K_count = 0;
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
-            isam2.update_resource_aware(newFactors, newVariables, params, 2);
+            isam2.update_resource_aware(newFactors, newVariables, params, num_threads);
             auto update_end = chrono::high_resolution_clock::now();
             // estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();
