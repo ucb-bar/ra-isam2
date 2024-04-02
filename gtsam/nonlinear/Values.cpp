@@ -25,6 +25,9 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/linear/VectorValues.h>
 
+#include <gtsam/geometry/Pose2.h>
+#include <gtsam/geometry/Pose3.h>
+
 #include <boost/iterator/transform_iterator.hpp>
 
 #include <list>
@@ -73,6 +76,29 @@ namespace gtsam {
       cout << "Value " << keyFormatter(key_value->key) << ": ";
       key_value->value.print("");
       cout << "\n";
+    }
+  }
+
+  void print_kitti(std::ostream& os, const Matrix4& m4) {
+    for(int i = 0; i < 4; i++) {
+      for(int j = 0; j < 4; j++) {
+        os << m4(i, j) << " ";
+      }
+    }
+    os << endl;
+  }
+
+  void Values::print_kitti_pose2(std::ostream& os) const {
+    for(auto key_value = begin(); key_value != end(); ++key_value) {
+      Matrix m4 = at<gtsam::Pose2>(key_value->key).matrix_SE3();
+      print_kitti(os, m4);
+    }
+  }
+
+  void Values::print_kitti_pose3(std::ostream& os) const {
+    for(auto key_value = begin(); key_value != end(); ++key_value) {
+      Matrix m4 = at<Pose3>(key_value->key).matrix();
+      print_kitti(os, m4);
     }
   }
 

@@ -1,3 +1,4 @@
+#include "gtsam/linear/NoiseModel.h"
 #include <gtsam/slam/dataset.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/sam/BearingRangeFactor.h>
@@ -51,6 +52,8 @@ int main(int argc, char *argv[]) {
     int max_iter = 10;
     int num_steps = 1000000;
     double relin_thresh = 0.1;
+    NoiseFormat noiseFormat = gtsam::NoiseFormatAUTO;
+
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -63,6 +66,7 @@ int main(int argc, char *argv[]) {
         {"relinearize_skip", required_argument, 0, 's'},
         {"print_frequency", required_argument, 0, 'p'},
         {"num_steps", required_argument, 0, 't'},
+        {"noise_format", required_argument, 0, 53},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -95,6 +99,28 @@ int main(int argc, char *argv[]) {
             case 't':
                 num_steps = atoi(optarg);
                 break;
+            case 53: {
+                string noiseFormatString = string(optarg);
+                if(noiseFormatString == "g2o") {
+                  noiseFormat = NoiseFormatG2O;
+                }
+                else if(noiseFormatString == "toro") {
+                  noiseFormat = NoiseFormatTORO;
+                }
+                else if(noiseFormatString == "graph") {
+                  noiseFormat = NoiseFormatGRAPH;
+                }
+                else if(noiseFormatString == "cov") {
+                  noiseFormat = NoiseFormatCOV;
+                }
+                else if(noiseFormatString == "auto") {
+                  noiseFormat = NoiseFormatAUTO;
+                }
+                else {
+                  noiseFormat = NoiseFormatAUTO;
+                }
+                break;
+            }
             default:
                 cerr << "Unrecognized option" << endl;
                 exit(1);
@@ -113,7 +139,7 @@ int main(int argc, char *argv[]) {
     string datasetFile = findExampleDataFile(dataset_name);
     // string datasetFile = findExampleDataFile("victoria_park");
     std::pair<NonlinearFactorGraph::shared_ptr, Values::shared_ptr> data =
-        load2D(datasetFile);
+        load2D(datasetFile, SharedNoiseModel(), 0, false, true, noiseFormat);
 
     NonlinearFactorGraph measurements = *data.first;
     Values initial = *data.second;
@@ -168,32 +194,34 @@ int main(int argc, char *argv[]) {
                 newFactors.push_back(measurement);
 
                 // Initialize the new variable
-                if(measurement->key1() == step && measurement->key2() == step-1) {
+                if(!newVariables.exists(step)) {
+                  if(measurement->key1() == step && measurement->key2() == step-1) {
                     Pose newPose;
                     if(step == 1) {
-                        newPose = measurement->measured().inverse();
+                      newPose = measurement->measured().inverse();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
-                        }
-                        newPose = prevPose * measurement->measured().inverse();
+                      if(isam2.valueExists(step - 1)) {
+                        prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                      }
+                      newPose = prevPose * measurement->measured().inverse();
                     }
                     newVariables.insert(step, newPose);
                     prevPose = newPose;
-                } else if(measurement->key2() == step && measurement->key1() == step-1) {
+                  } else if(measurement->key2() == step && measurement->key1() == step-1) {
                     Pose newPose;
                     if(step == 1) {
-                        newPose = measurement->measured();
+                      newPose = measurement->measured();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
-                        }
-                        newPose = prevPose * measurement->measured();
+                      if(isam2.valueExists(step - 1)) {
+                        prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                      }
+                      newPose = prevPose * measurement->measured();
                     }
                     newVariables.insert(step, newPose);
                     prevPose = newPose;
+                  }
                 }
             }
             else {

@@ -695,9 +695,10 @@ void CholeskyEliminationTree::Clique::resetCost() {
     nextCostStatus = COST_UNMARKED;
     markedCost = -1;
     fixedCost = -1;
+    backsolveCost = -1;
 }
 
-int64_t CholeskyEliminationTree::Clique::computeCostMarked() {
+int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
   if(markedCost >= 0) { return markedCost; }
 
   int maxFactorHeight = 0;
@@ -706,6 +707,8 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked() {
   for(sharedNode node : nodes) {
     for(sharedFactorWrapper factorWrapper : node->factors) {
       int r, c;
+
+      if(node->key != factorWrapper->lowestKey()) { continue; }
 
       if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
         r = factorWrapper->getCachedMatrix().rows();
@@ -725,8 +728,8 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked() {
 
   int cliqueWidth = this->width();
   int cliqueHeight = this->height();
-  int chol_tile_len = 4;
-  int gemm_tile_len = 4;
+  int chol_tile_len = 8;
+  int gemm_tile_len = 32;
   bool next_memset;
   int next_node_height;
 
@@ -740,30 +743,54 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked() {
   }
 
   // Factor is transposed
-  int64_t AtA_cost = predict_AtA_reorder(maxFactorWidth, maxFactorWidth, num_factors);
-  int64_t chol_cost = predict_cholesky(cliqueWidth, cliqueHeight, chol_tile_len, gemm_tile_len, next_memset, next_node_height);
-  int64_t add_cost = predict_node_add(cliqueWidth, cliqueHeight);
+  int64_t pred_AtA = predict_AtA_reorder(maxFactorWidth, maxFactorHeight, num_factors);
+  int64_t pred_chol = predict_cholesky(cliqueWidth, cliqueHeight, chol_tile_len, gemm_tile_len, next_memset, next_node_height);
+  int64_t pred_add = predict_node_add(cliqueHeight, cliqueWidth);
 
-  markedCost = AtA_cost + chol_cost + add_cost;
+  int64_t AtA_overhead = 2500;
+  int64_t chol_overhead = 0;
+  int64_t add_overhead = 1000;
 
-  // cout << "Clique: " << *this << " AtA: " << AtA_cost << " chol: " << chol_cost << " add: " << add_cost << endl;
+  // This is used for single node profiling
+  AtACost = AtA_overhead + pred_AtA;
+  cholCost = chol_overhead + pred_chol;
+  addCost = add_overhead + pred_add;
+
+  // We assume that the top 2 nodes closest to root cannot be parallelized
+  if(get_ptr() == etree->root_ 
+      || this->parent() == etree->root_ 
+      || this->parent()->parent() == etree->root_) {
+    markedCost = AtACost + cholCost + addCost;
+  }
+  else {
+    markedCost = (pred_AtA + pred_chol + pred_add) / num_threads + (AtA_overhead + chol_overhead + add_overhead);
+  }
 
   return markedCost;
 
 }
 
-int64_t CholeskyEliminationTree::Clique::computeCostFixed() {
-  if(fixedCost >= 0) { return fixedCost; }
+int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
 
   int maxFactorHeight = 0;
   int maxFactorWidth = 0;
   int num_factors = 0;
 
-  // Note: technically we do not need to 
   for(sharedNode node : nodes) {
     for(sharedFactorWrapper factorWrapper : node->factors) {
 
       if(node->key != factorWrapper->lowestKey()) { continue; }
+
+      // Only consider factor if a key in it is marked
+      bool flag = false;
+      for(RemappedKey remappedKey : factorWrapper->remappedKeys()) {
+        if(etree->cliques_[remappedKey]->nextCostStatus == COST_MARKED) {
+          flag = true;
+          break;
+        }
+      }
+
+      // if(!flag) { continue; }
 
       int r, c;
 
@@ -800,25 +827,54 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed() {
   }
 
   // Factor is transposed
-  int64_t AtA_cost = predict_AtA_reorder(maxFactorWidth, maxFactorWidth, num_factors);
-  int64_t syrk_cost = predict_syrk(cliqueWidth, cliqueHeight, chol_tile_len, gemm_tile_len, next_memset, next_node_height);
-  int64_t add_cost = predict_node_add(cliqueWidth, cliqueHeight);
+  int64_t pred_AtA = predict_AtA_reorder(maxFactorWidth, maxFactorHeight, num_factors);
+  int64_t pred_syrk = predict_syrk(cliqueWidth, cliqueHeight, next_memset, next_node_height);
+  int64_t pred_add = predict_node_add(cliqueHeight, cliqueWidth);
 
-  fixedCost = AtA_cost + syrk_cost + add_cost;
+  int64_t AtA_min = 2000;
+  int64_t AtA_overhead = pred_AtA < AtA_min? AtA_min : 0;
+  int64_t syrk_min = 2000;
+  int64_t chol_overhead = pred_syrk < syrk_min? syrk_min : 0;
+  int64_t add_overhead = 1000;
 
-  // cout << "Clique: " << *this << " AtA: " << AtA_cost << " syrk: " << syrk_cost << " add: " << add_cost << endl;
+  // This is used for single node profiling
+  AtACost = AtA_overhead + pred_AtA;
+  syrkCost = chol_overhead + pred_syrk;
+  addCost = add_overhead + pred_add;
+
+  // We assume that the top 2 nodes closest to root cannot be parallelized
+  if(get_ptr() == etree->root_ 
+      || this->parent() == etree->root_ 
+      || this->parent()->parent() == etree->root_) {
+    fixedCost = AtACost + syrkCost + addCost;
+  }
+  else {
+    fixedCost = (pred_AtA + pred_syrk + pred_add) / num_threads + (AtA_overhead + chol_overhead + add_overhead);
+  }
 
   return fixedCost;
 
 }
 
-int64_t CholeskyEliminationTree::Clique::computeCostBacksolve() {
+int64_t CholeskyEliminationTree::Clique::computeCostBacksolve(int num_threads) {
   int cliqueWidth = this->width();
   int cliqueHeight = this->height();
   int backsolve_block_len = 4;
-  int64_t backsolve_cost = predict_backsolve(cliqueWidth, cliqueHeight, backsolve_block_len);
 
-  return backsolve_cost;
+  int64_t backsolve_overhead = 0;
+  int64_t pred_backsolve = predict_backsolve(cliqueWidth, cliqueHeight, backsolve_block_len);
+
+
+  if(get_ptr() == etree->root_ 
+      || this->parent() == etree->root_ 
+      || this->parent()->parent() == etree->root_) {
+    backsolveCost = backsolve_overhead + pred_backsolve;
+  }
+  else {
+    backsolveCost = (pred_backsolve) / num_threads + backsolve_overhead;
+  }
+
+  return backsolveCost;
 
 }
 

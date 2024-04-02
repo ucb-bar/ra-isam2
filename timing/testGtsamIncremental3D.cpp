@@ -169,32 +169,34 @@ int main(int argc, char *argv[]) {
                 newFactors.push_back(measurement);
 
                 // Initialize the new variable
-                if(measurement->key1() == step && measurement->key2() == step-1) {
+                if(!newVariables.exists(step)) {
+                  if(measurement->key1() == step && measurement->key2() == step-1) {
                     Pose newPose;
                     if(step == 1) {
-                        newPose = measurement->measured().inverse();
+                      newPose = measurement->measured().inverse();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
-                        }
-                        newPose = prevPose * measurement->measured().inverse();
+                      if(isam2.valueExists(step - 1)) {
+                        prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                      }
+                      newPose = prevPose * measurement->measured().inverse();
                     }
                     newVariables.insert(step, newPose);
                     prevPose = newPose;
-                } else if(measurement->key2() == step && measurement->key1() == step-1) {
+                  } else if(measurement->key2() == step && measurement->key1() == step-1) {
                     Pose newPose;
                     if(step == 1) {
-                        newPose = measurement->measured();
+                      newPose = measurement->measured();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
-                        }
-                        newPose = prevPose * measurement->measured();
+                      if(isam2.valueExists(step - 1)) {
+                        prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                      }
+                      newPose = prevPose * measurement->measured();
                     }
                     newVariables.insert(step, newPose);
                     prevPose = newPose;
+                  }
                 }
             }
             else {
