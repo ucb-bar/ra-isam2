@@ -306,6 +306,10 @@ class GTSAM_EXPORT ISAM2 : public BayesTree<ISAM2Clique> {
     eTree_.extractDelta(os, delta_);
   }
 
+  void extractPredictedCycles(std::ostream& os, int num_threads) {
+    eTree_.extractPredictedCycles(os, num_threads);
+  }
+
   /// @}
 
  protected:

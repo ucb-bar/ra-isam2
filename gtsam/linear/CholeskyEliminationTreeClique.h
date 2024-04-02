@@ -231,11 +231,18 @@ public:
   CostStatus nextCostStatus = COST_UNMARKED;
   int64_t markedCost = -1;
   int64_t fixedCost = -1;
+  int64_t AtACost = -1;
+  int64_t syrkCost = -1;
+  int64_t addCost = -1;
+  int64_t cholCost = -1;
+  int64_t backsolveCost = -1;
 
   void resetCost();
-  int64_t computeCostMarked();
-  int64_t computeCostFixed();
-  int64_t computeCostBacksolve();
+  // Even though each clique is assumed to run under 1 thread
+  // We still split the cost of the clique by num_threads except for the root clique
+  int64_t computeCostMarked(int num_threads);
+  int64_t computeCostFixed(int num_threads);
+  int64_t computeCostBacksolve(int num_threads);
 
 };
 

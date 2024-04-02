@@ -47,6 +47,16 @@ Matrix3 Pose2::matrix() const {
 }
 
 /* ************************************************************************* */
+Matrix4 Pose2::matrix_SE3() const {
+  Matrix2 R = r_.matrix();
+  Matrix4 m4 = Matrix4::Identity();
+  m4.block<2, 2>(0, 0) = R;
+  m4(0, 3) = t_.x();
+  m4(1, 3) = t_.y();
+  return m4;
+}
+
+/* ************************************************************************* */
 void Pose2::print(const string& s) const {
   std::cout << (s.empty() ? s : s + " ") << *this << std::endl;
 }

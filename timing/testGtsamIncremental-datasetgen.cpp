@@ -337,6 +337,17 @@ int main(int argc, char *argv[]) {
             if(print_values) {
                 isam2.extractDelta(fout);
             }
+
+            string pred_outfile = dataset_outdir + "/step-" + to_string(step) + "-pred_cycles.out";
+            ofstream pred_fout(pred_outfile);
+
+            if(!pred_fout.is_open()) {
+              cerr << "Cannot open file: " << pred_outfile << endl;
+              exit(1);
+            }
+
+            int num_threads = 1;
+            isam2.extractPredictedCycles(pred_fout, num_threads);
         }
         K_count++;
         update_times.push_back(d1);

@@ -170,6 +170,10 @@ namespace gtsam {
     /** Test whether the sets of keys and values are identical */
     bool equals(const Values& other, double tol=1e-9) const;
 
+    void print_kitti_pose2(std::ostream& os) const;
+    
+    void print_kitti_pose3(std::ostream& os) const;
+
     /// @}
 
     /** Retrieve a variable by key \c j.  The type of the value associated with

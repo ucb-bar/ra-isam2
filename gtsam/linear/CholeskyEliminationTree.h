@@ -164,6 +164,8 @@ public:
 
   void extractDelta(std::ostream& os, VectorValues& delta) const;
 
+  void extractPredictedCycles(std::ostream& os, int num_threads);
+
   // This is so that we can force the relin 
   std::vector<RemappedKey> extraRelinKeys;
   void extraRelinRemappedKeys(const std::vector<RemappedKey> relinKeys);
@@ -269,8 +271,10 @@ private:
       const int num_threads,
       std::vector<sharedClique>* updatedCliques);
 
-  void commitCost(std::vector<sharedClique>& updatedCliques);
-  void uncommitCost(std::vector<sharedClique>& updatedCliques);
+  void commitCost(std::vector<sharedClique>& updatedCliques, 
+                  std::vector<sharedClique>* allUpdatedCliques);
+  void uncommitCost(std::vector<sharedClique>& updatedCliques,
+                    std::vector<sharedClique>* allUpdatedCliques);
 
   void resetCost(std::vector<sharedClique>& updatedCliques);
 

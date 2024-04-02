@@ -235,6 +235,8 @@ public:
   //// return transformation matrix
   GTSAM_EXPORT Matrix3 matrix() const;
 
+  GTSAM_EXPORT Matrix4 matrix_SE3() const;
+
   /**
    * Calculate bearing to a landmark
    * @param point 2D location of landmark
