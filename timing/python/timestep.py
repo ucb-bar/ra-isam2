@@ -580,6 +580,8 @@ class Timestep:
             if timestep is not None:
                 timestep_count += 1
 
+        fout.write(f"#define NUM_TIMESTEPS {timestep_count}\n\n")
+
         fout.write(f"const int num_timesteps = {timestep_count};\n\n")
 
         max_factor_height = 0
