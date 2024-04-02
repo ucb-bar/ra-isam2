@@ -133,10 +133,10 @@ if __name__ == "__main__":
 
         fout.write("#pragma once\n\n")
 
-        fout.write(f"#define N {N}\n\n")
-        fout.write(f"#define M {M}\n\n")
-        fout.write(f"#define NUM_AGENTS {num_agents}\n\n")
-        fout.write(f"#define HORIZON {horizon}\n\n")
+        fout.write(f"#define CONTROL_N {N}\n\n")
+        fout.write(f"#define CONTROL_M {M}\n\n")
+        fout.write(f"#define CONTROL_NUM_AGENTS {num_agents}\n\n")
+        fout.write(f"#define CONTROL_HORIZON {horizon}\n\n")
 
         for agent in range(num_agents):
             write_matrix(fout, A[agent], f"A{agent}")
