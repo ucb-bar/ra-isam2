@@ -117,12 +117,17 @@ class Factor:
 
         reduced = self.reduced_matrix.astype(np.float32)
 
-        fout.write(f"float {prefix}factor{self.index}_data[] = {{\n")
-        for j in range(self.height):
-            for i in range(reduced_width):
-                fout.write(f"{self.reduced_matrix[j, i]:.7f}, ")
-
+        fout.write(f"float {prefix}factor{self.index}_data[{reduced_width * self.height}] = {{")
+        if not Factor.no_values:
             fout.write("\n")
+            for j in range(self.height):
+                for i in range(reduced_width):
+                    fout.write(f"{self.reduced_matrix[j, i]:.7f}, ")
+
+                fout.write("\n")
+        else:
+            fout.write("0")
+
 
         fout.write("};\n")
         fout.write("\n")
