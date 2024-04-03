@@ -10,7 +10,7 @@ BUILD_DIR=$SCRIPT_DIR/../../build
 start_step=2
 num_steps=300
 print_values=0
-num_threads=2
+num_threads=3
 # ========================== END CHANGE HERE ========================== #
 
 if [ $print_values -eq 1 ]
