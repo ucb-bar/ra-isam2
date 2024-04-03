@@ -699,7 +699,9 @@ void CholeskyEliminationTree::Clique::resetCost() {
 }
 
 int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
-  if(markedCost >= 0) { return markedCost; }
+  double mplier = 1.25;
+
+  if(markedCost >= 0) { return markedCost * mplier; }
 
   int maxFactorHeight = 0;
   int maxFactorWidth = 0;
@@ -763,14 +765,15 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
     markedCost = AtACost + cholCost + addCost;
   }
   else {
-    markedCost = (pred_AtA + pred_chol + pred_add) / num_threads + (AtA_overhead + chol_overhead + add_overhead);
+    markedCost = (pred_AtA + pred_chol) / num_threads + (pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
-  return markedCost;
+  return markedCost * mplier;
 
 }
 
 int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
+  double mplier = 1.25;
 
   int maxFactorHeight = 0;
   int maxFactorWidth = 0;
@@ -849,14 +852,16 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
     fixedCost = AtACost + syrkCost + addCost;
   }
   else {
-    fixedCost = (pred_AtA + pred_syrk + pred_add) / num_threads + (AtA_overhead + chol_overhead + add_overhead);
+    fixedCost = (pred_AtA + pred_syrk) / num_threads + (pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
-  return fixedCost;
+  return fixedCost * mplier;
 
 }
 
 int64_t CholeskyEliminationTree::Clique::computeCostBacksolve(int num_threads) {
+  double mplier = 1.25;
+
   int cliqueWidth = this->width();
   int cliqueHeight = this->height();
   int backsolve_block_len = 4;
@@ -874,7 +879,7 @@ int64_t CholeskyEliminationTree::Clique::computeCostBacksolve(int num_threads) {
     backsolveCost = (pred_backsolve) / num_threads + backsolve_overhead;
   }
 
-  return backsolveCost;
+  return backsolveCost * mplier;
 
 }
 
