@@ -80,9 +80,12 @@ namespace gtsam {
   }
 
   void print_kitti(std::ostream& os, const Matrix4& m4) {
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 3; i++) {
       for(int j = 0; j < 4; j++) {
-        os << m4(i, j) << " ";
+        os << m4(i, j);
+        if(i != 2 && j != 3) {
+          os << " ";
+        }
       }
     }
     os << endl;

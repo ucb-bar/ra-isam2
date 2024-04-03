@@ -372,6 +372,7 @@ void CholeskyEliminationTree::pickRelinKeys(
     else if(clique->costStatus == COST_FIXED) {
       totalCost += clique->fixedCost;
     }
+    totalCost += clique->backsolveCost;
   }
 
   resetCost(allUpdatedCliques);

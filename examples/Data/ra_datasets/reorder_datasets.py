@@ -2,8 +2,6 @@ import sys
 from optparse import OptionParser
 from copy import deepcopy
 
-
-
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("--infile", dest="infile",
