@@ -573,7 +573,8 @@ ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
 
   keyDeltaVec = update.CheckRelinearizationFull2(delta_, params_.relinearizeThreshold);
 
-  const int64_t remainingCycles = 3.33 * 1e7;
+  // const int64_t remainingCycles = 3.33 * 1e7;
+  const int64_t remainingCycles = 1 * 1e7;
   eTree_.pickRelinKeys(keyDeltaVec, remainingCycles, num_threads,
       *boost::get<double>(&params_.relinearizeThreshold), &newRelinKeys);
   relinKeys = newRelinKeys;

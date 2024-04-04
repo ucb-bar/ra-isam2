@@ -83,7 +83,7 @@ namespace gtsam {
     for(int i = 0; i < 3; i++) {
       for(int j = 0; j < 4; j++) {
         os << m4(i, j);
-        if(i != 2 && j != 3) {
+        if(i != 2 || j != 3) {
           os << " ";
         }
       }
@@ -93,14 +93,14 @@ namespace gtsam {
 
   void Values::print_kitti_pose2(std::ostream& os) const {
     for(auto key_value = begin(); key_value != end(); ++key_value) {
-      Matrix m4 = at<gtsam::Pose2>(key_value->key).matrix_SE3();
+      Matrix4 m4 = at<gtsam::Pose2>(key_value->key).matrix_SE3();
       print_kitti(os, m4);
     }
   }
 
   void Values::print_kitti_pose3(std::ostream& os) const {
     for(auto key_value = begin(); key_value != end(); ++key_value) {
-      Matrix m4 = at<Pose3>(key_value->key).matrix();
+      Matrix4 m4 = at<Pose3>(key_value->key).matrix();
       print_kitti(os, m4);
     }
   }

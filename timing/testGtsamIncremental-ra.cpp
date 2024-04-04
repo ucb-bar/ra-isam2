@@ -54,6 +54,9 @@ int main(int argc, char *argv[]) {
     string num_threads_infile = "";
     int num_threads = 1;
     string dataset_outdir = "";
+    bool print_dataset = false;
+    bool print_pred = false;
+    bool print_traj = false;
     bool print_values = false;
 
     // Get experiment setup
@@ -71,6 +74,9 @@ int main(int argc, char *argv[]) {
         {"dataset_outdir", required_argument, 0, 51},
         {"print_values", no_argument, 0, 52},
         {"num_threads_infile", required_argument, 0, 53},
+        {"print_dataset", no_argument, 0, 150},
+        {"print_pred", no_argument, 0, 151},
+        {"print_traj", no_argument, 0, 152},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -114,6 +120,15 @@ int main(int argc, char *argv[]) {
                 break;
             case 53:
                 num_threads_infile = string(optarg);
+                break;
+            case 150:
+                print_dataset = true;
+                break;
+            case 151:
+                print_pred = true;
+                break;
+            case 152:
+                print_traj = true;
                 break;
             default:
                 cerr << "Unrecognized option" << endl;
@@ -251,7 +266,7 @@ int main(int argc, char *argv[]) {
 
             isam2.update_resource_aware(newFactors, newVariables, params, num_threads);
             auto update_end = chrono::high_resolution_clock::now();
-            // estimate = isam2.calculateEstimate();
+            estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();
             d1 += chrono::duration_cast<chrono::microseconds>(update_end - start).count();
             d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
@@ -315,29 +330,47 @@ int main(int argc, char *argv[]) {
             newFactors = NonlinearFactorGraph();
 
             if(dataset_outdir != "") {
-                string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
-                ofstream fout(outfile);
+                if(print_dataset) {
+                  string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
+                  ofstream fout(outfile);
 
-                if(!fout.is_open()) {
+                  if(!fout.is_open()) {
                     cerr << "Cannot open file: " << outfile << endl;
                     exit(1);
-                }
+                  }
 
-                isam2.extractFullTree(fout, print_values);
-                if(print_values) {
+                  isam2.extractFullTree(fout, print_values);
+                  if(print_values) {
                     isam2.extractDelta(fout);
+                  }
                 }
 
-                string pred_outfile = dataset_outdir + "/step-" + to_string(step) + "-pred_cycles.out";
-                ofstream pred_fout(pred_outfile);
+                if(print_pred) {
+                  string pred_outfile = dataset_outdir + "/step-" + to_string(step) + "-pred_cycles.out";
+                  ofstream pred_fout(pred_outfile);
 
-                if(!pred_fout.is_open()) {
+                  if(!pred_fout.is_open()) {
                     cerr << "Cannot open file: " << pred_outfile << endl;
                     exit(1);
+                  }
+
+                  int num_threads = 1;
+                  isam2.extractPredictedCycles(pred_fout, num_threads);
                 }
 
-                int num_threads = 1;
-                isam2.extractPredictedCycles(pred_fout, num_threads);
+                if(print_traj) {
+                  string traj_outfile = dataset_outdir + "/step-" + to_string(step) + "_traj.txt";
+
+                  cout << traj_outfile << endl;
+                  ofstream traj_fout(traj_outfile);
+
+                  if(!traj_fout.is_open()) {
+                    cerr << "Cannot open file: " << traj_outfile << endl;
+                    exit(1);
+                  }
+
+                  estimate.print_kitti_pose2(traj_fout);
+                }
             }
         }
         K_count++;
