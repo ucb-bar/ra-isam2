@@ -19,11 +19,13 @@ num_threads_file=$BUILD_DIR/num_threads_speech.txt
 
 # ========================== END CHANGE HERE ========================== #
 
+python3 $SCRIPT_DIR/generate_num_threads_speech.py --rel_period 5 --outfile $num_threads_file
+
 $SCRIPT_DIR/build.sh
 
 mkdir -p ${BUILD_DIR}/${src_dirname}
 
-# $BUILD_DIR/timing/testGtsamIncremental3D-ra -f sphere2500 --num_steps=$num_steps --relin_thresh $relin_thresh --num_threads $num_threads --dataset_outdir ${BUILD_DIR}/${src_dirname}
+$BUILD_DIR/timing/testGtsamIncremental3D-ra -f sphere2500 --num_steps=$num_steps --relin_thresh $relin_thresh --num_threads $num_threads --dataset_outdir ${BUILD_DIR}/${src_dirname}
 
 if [ $print_values -eq 1 ]
 then

@@ -385,14 +385,14 @@ void CholeskyEliminationTree::pickRelinKeys(
     sharedClique clique = cliques_[key];
     if(clique->frontKey() != key) { continue; }
     if(clique->costStatus == COST_MARKED) {
-      // cout << "Clique: " << *clique << " AtACost = " << clique->AtACost << " cholCost = " << clique->cholCost << " mergeCost = " << clique->addCost;
+      cout << "Clique: " << *clique << " parallel: " << clique->parallelizable << " AtACost = " << clique->AtACost << " cholCost = " << clique->cholCost << " mergeCost = " << clique->addCost << " " << clique->height() << " " << clique->width();
       totalCost += clique->markedCost;
     }
     else if(clique->costStatus == COST_FIXED) {
-      // cout << "Clique: " << *clique << " AtACost = " << clique->AtACost << " syrkCost = " << clique->syrkCost << " mergeCost = " << clique->addCost;
+      cout << "Clique: " << *clique << " parallel: " << clique->parallelizable << " AtACost = " << clique->AtACost << " syrkCost = " << clique->syrkCost << " mergeCost = " << clique->addCost << " " << clique->height() << " " << clique->width();
       totalCost += clique->fixedCost;
     }
-    // cout << " backsolveCost = " << clique->backsolveCost << endl;
+    cout << " backsolveCost = " << clique->backsolveCost << endl;
     totalCost += clique->backsolveCost;
   }
 
