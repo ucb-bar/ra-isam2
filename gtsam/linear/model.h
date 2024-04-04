@@ -151,6 +151,7 @@ uint64_t predict_node_add(int supernode_height, int supernode_width){
 }
 
 uint64_t predict_backsolve(int width, int height, int backsolve_block_len){
+  /*
   int min_bw = MIN(DRAM_BITS, TL_BITS);
   int eff_width = ceil_divide_int(width, DIM) * DIM;
   int eff_diag = ceil_divide_int(height - width - 1, DIM) * DIM;
@@ -167,6 +168,27 @@ uint64_t predict_backsolve(int width, int height, int backsolve_block_len){
   uint64_t backsolve_mem_time = num_blk * (DIM * (backsolve_block_len * 32) / min_bw + backsolve_block_len * (avg_width * 32) / min_bw + 2 * DIM * (avg_width * 32) / min_bw);
   uint64_t backsolve_comp_time = num_blk * ((DIM * backsolve_block_len * avg_width) / (DIM * DIM));
   uint64_t backsolve_time = backsolve_scale_time + backsolve_mem_time + backsolve_comp_time;
+  uint64_t total_time = last_row_time + gemv_time + backsolve_time;
+  // printf("total backsolve time: %llu, last row: %llu, gemv: %llu, triangle solve: %llu\n", total_time, last_row_time, gemv_time, backsolve_time);
+  return total_time;
+  */
+  int min_bw = MIN(DRAM_BITS, TL_BITS);
+  int eff_width = ceil_divide_int(width, DIM) * DIM;
+  int eff_diag = ceil_divide_int(height - width - 1, DIM) * DIM;
+  uint64_t last_row_time = width * ceil_divide_int(32, min_bw) * DIM + 500; // config overhead time
+
+  uint64_t gemv_memory_time = DIM * (eff_diag * 32) / min_bw + (eff_width * 32) / min_bw * eff_diag + 2 * (eff_width * 32) / min_bw * DIM;
+  gemv_memory_time += (eff_diag * 32) / DRAM_BITS + (eff_width * 32) / DRAM_BITS * eff_diag + (eff_width * 32) / DRAM_BITS;
+  uint64_t gemv_comp_time = (DIM * eff_width * eff_diag) / (DIM * DIM);
+  uint64_t gemv_time = gemv_comp_time + gemv_memory_time;
+
+  uint64_t num_blk = ceil_divide_int(width, backsolve_block_len);
+  uint64_t avg_width = ceil_divide_int(width, 2 * DIM) * DIM;
+  uint64_t backsolve_scale_time = num_blk * 2 * (backsolve_block_len * ceil_divide_int(32, min_bw)) + 2 * 32 * backsolve_block_len * num_blk;
+  uint64_t backsolve_mem_time = num_blk * (DIM * (backsolve_block_len * 32) / min_bw + backsolve_block_len * (avg_width * 32) / min_bw + 2 * DIM * (avg_width * 32) / min_bw);
+  uint64_t backsolve_comp_time = num_blk * ((DIM * backsolve_block_len * avg_width) / (DIM * DIM));
+  uint64_t backsolve_time = backsolve_scale_time + backsolve_mem_time + backsolve_comp_time;
+  backsolve_time *= 2; 
   uint64_t total_time = last_row_time + gemv_time + backsolve_time;
   // printf("total backsolve time: %llu, last row: %llu, gemv: %llu, triangle solve: %llu\n", total_time, last_row_time, gemv_time, backsolve_time);
   return total_time;

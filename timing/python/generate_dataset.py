@@ -24,6 +24,8 @@ if __name__ == "__main__":
                       default=None, help="The path to the input directory")
     parser.add_option("--outdir", dest="outdir", 
                       default=None, help="The path to the output directory")
+    parser.add_option("--num_threads_file", dest="num_threads_file", 
+                      default=None, help="The file path to the threads file that we use")
     parser.add_option("--start_step", dest="start_step", type="int",
                       default=2, help="Starting step, inclusive")
     parser.add_option("--end_step", dest="end_step", type="int",
@@ -44,6 +46,7 @@ if __name__ == "__main__":
 
     indir = options.indir
     outdir = options.outdir
+    num_threads_file = options.num_threads_file
     start_step = options.start_step
     end_step = options.end_step
     no_values = options.no_values
@@ -56,6 +59,21 @@ if __name__ == "__main__":
 
     if options.seed is not None:
         np.random.seed(options.seed)
+
+    step_num_threads = None
+    if num_threads_file is not None:
+        step_num_threads = []
+        with open(num_threads_file, "r") as fin:
+            while True:
+                line = fin.readline()
+                if not line:
+                    break
+                step_num_threads.append(int(line))
+        Timestep.step_num_threads = step_num_threads
+
+        Timestep.max_num_threads = max(step_num_threads)
+        Timestep.min_num_threads = min(step_num_threads)
+
 
     files = glob.glob(os.path.join(indir, "step-*.out"))
 
@@ -193,7 +211,6 @@ if __name__ == "__main__":
             write_include_guard(fout)
 
             Timestep.print_metadata_incremental(fout, timesteps, stepfile_format)
-
 
         # print(f"Write to header {outfile}")
 

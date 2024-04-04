@@ -80,7 +80,6 @@ int64_t CholeskyEliminationTree::computeCost(
     const RemappedKey remappedKey, 
     const int num_threads,
     vector<sharedClique>* updatedCliques) {
-  updatedCliques->clear();
   
   // computeCost(key): (assuming reordering)
   // 1. First find the lowest-ordered key connected to the key
@@ -101,43 +100,24 @@ int64_t CholeskyEliminationTree::computeCost(
   //     Parallel case: if clique is parallelizable, reduce cost by 1/overhead_const * p (p is the number of threads) (mplier is set to 0.7 for now)
   //     Root clique is the clique that has root_ as its parent
 
-  sharedNode node = nodes_[remappedKey];
-  int lowestOrder = INT_MAX;
-  RemappedKey lowestKey = node->key;
-  for(sharedFactorWrapper factorWrapper : node->factors) {
-      if(node->key != factorWrapper->lowestKey()) {
-        continue;
-      }
-      for(RemappedKey factorKey : factorWrapper->remappedKeys()) {
-        int order = keyToOrdering_[factorKey];
-        if(order < lowestOrder) {
-          lowestOrder = order;
-          lowestKey = factorKey;
-        }
-      }
-  }
-
-  sharedClique clique = cliques_[lowestKey];
+  sharedClique clique = cliques_[remappedKey];
 
 
   int64_t cost = 0;
 
   while(clique != nullptr && clique != root_) {
-    if(clique->costStatus == COST_MARKED) { break; }
-
-    if(clique->nextCostStatus == COST_MARKED) {
-      cout << "clique double visit. clique " << *clique << endl;
-      exit(1);
+    if(clique->costStatus == COST_MARKED || clique->nextCostStatus == COST_MARKED) {
+      break;
     }
 
     clique->computeCostMarked(num_threads);
 
-    if(clique->costStatus == COST_FIXED) { 
+    if(clique->nextCostStatus == COST_FIXED) { 
       // This check if probably redundant
       int64_t additional_cost = clique->markedCost - clique->fixedCost;
       cost += additional_cost;
     }
-    else if(clique->costStatus == COST_UNMARKED) {
+    else if(clique->nextCostStatus == COST_UNMARKED) {
       cost += clique->markedCost;
     }
 
@@ -172,7 +152,6 @@ int64_t CholeskyEliminationTree::computeCost(
       else if(curClique->nextCostStatus == COST_FIXED) {
         int64_t oldFixedCost = curClique->fixedCost;
         cost += curClique->computeCostFixed(num_threads) - oldFixedCost;
-        updatedCliques->push_back(curClique);
         stack.insert(stack.end(), curClique->children.begin(), curClique->children.end());
       }
       else if(curClique->nextCostStatus == COST_MARKED) {
@@ -209,12 +188,45 @@ void CholeskyEliminationTree::resetCost(vector<sharedClique>& updatedCliques) {
   }
 }
 
+void CholeskyEliminationTree::checkCliqueParallelizable() {
+  sharedClique curClique = root_;
+  while(curClique) {
+    curClique->parallelizable = false;
+    if(curClique->children.size() == 1) {
+      curClique = *(curClique->children.begin());
+    }
+    else {
+      break;
+    }
+  }
+}
+
+void CholeskyEliminationTree::resetCliqueParallelizable() {
+  sharedClique curClique = root_;
+  while(curClique) {
+    curClique->parallelizable = true;
+    if(curClique->children.size() == 1) {
+      curClique = *(curClique->children.begin());
+    }
+    else {
+      break;
+    }
+  }
+}
+
 void CholeskyEliminationTree::pickRelinKeys(
   const vector<pair<Key, double>>& KeyDeltaVec,
   int64_t remainingCycles,
   int num_threads,
   double relinThresh,
   KeySet* newRelinKeys) {
+
+  for(sharedClique clique : cliques_) {
+    if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {
+      cout << "invalid cost status at clique " << *clique << " status: " << clique->costStatus << " " << clique->nextCostStatus << endl;
+      exit(1);
+    }
+  }
 
   newRelinKeys->clear();
 
@@ -258,6 +270,8 @@ void CholeskyEliminationTree::pickRelinKeys(
       }
     }
   }
+
+  checkCliqueParallelizable();
 
   vector<sharedClique> allUpdatedCliques;
 
@@ -339,11 +353,15 @@ void CholeskyEliminationTree::pickRelinKeys(
     Key& key = p.first;
     RemappedKey remappedKey = getRemapKey(key);
 
-    vector<sharedClique> updatedCliques;
-    int64_t cost = computeCost(remappedKey, num_threads, &updatedCliques);
+    sharedNode node = nodes_[remappedKey];
 
-    allUpdatedCliques.insert(allUpdatedCliques.end(), 
-                             updatedCliques.begin(), updatedCliques.end());
+    int64_t cost = 0;
+    vector<sharedClique> updatedCliques;
+    for(sharedFactorWrapper factorWrapper : node->factors) {
+      RemappedKey lowestKey = factorWrapper->lowestKey();
+      cost += computeCost(lowestKey, num_threads, &updatedCliques);
+
+    }
 
     if(cost <= remainingCycles || p.second >= force_thresh) {
       remainingCycles -= cost;
@@ -367,15 +385,19 @@ void CholeskyEliminationTree::pickRelinKeys(
     sharedClique clique = cliques_[key];
     if(clique->frontKey() != key) { continue; }
     if(clique->costStatus == COST_MARKED) {
+      // cout << "Clique: " << *clique << " AtACost = " << clique->AtACost << " cholCost = " << clique->cholCost << " mergeCost = " << clique->addCost;
       totalCost += clique->markedCost;
     }
     else if(clique->costStatus == COST_FIXED) {
+      // cout << "Clique: " << *clique << " AtACost = " << clique->AtACost << " syrkCost = " << clique->syrkCost << " mergeCost = " << clique->addCost;
       totalCost += clique->fixedCost;
     }
+    // cout << " backsolveCost = " << clique->backsolveCost << endl;
     totalCost += clique->backsolveCost;
   }
 
   resetCost(allUpdatedCliques);
+  resetCliqueParallelizable();
 
   for(sharedClique clique : cliques_) {
     if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {
@@ -2257,6 +2279,7 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
     }
   }
 
+  checkCliqueParallelizable();
 
   // Run cost model for known relin keys and new keys
   int total_predicted_cost = 0;
@@ -2271,8 +2294,12 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
     }
   }
   for(RemappedKey k : datasetgen_relinKeys) {
-    total_predicted_cost += computeCost(k, num_threads, &updatedCliques);
-    commitCost(updatedCliques, &allUpdatedCliques);
+    sharedNode node = nodes_[k];
+    for(sharedFactorWrapper factor : node->factors) {
+      RemappedKey lowestKey = factor->lowestKey();
+      total_predicted_cost += computeCost(lowestKey, num_threads, &updatedCliques);
+      commitCost(updatedCliques, &allUpdatedCliques);
+    }
   }
 
   int clique_count = 0;
@@ -2314,6 +2341,7 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
   os << endl;
 
   resetCost(allUpdatedCliques);
+  resetCliqueParallelizable();
 
   for(auto clique : cliques_) {
     if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {

@@ -698,10 +698,11 @@ void CholeskyEliminationTree::Clique::resetCost() {
     backsolveCost = -1;
 }
 
-int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
-  double mplier = 1.25;
+const double cost_mplier = 1.25;
 
-  if(markedCost >= 0) { return markedCost * mplier; }
+int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
+
+  if(markedCost >= 0) { return markedCost * cost_mplier; }
 
   int maxFactorHeight = 0;
   int maxFactorWidth = 0;
@@ -758,22 +759,19 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
   cholCost = chol_overhead + pred_chol;
   addCost = add_overhead + pred_add;
 
-  // We assume that the top 2 nodes closest to root cannot be parallelized
-  if(get_ptr() == etree->root_ 
-      || this->parent() == etree->root_ 
-      || this->parent()->parent() == etree->root_) {
+  if(!this->parallelizable) {
     markedCost = AtACost + cholCost + addCost;
   }
   else {
     markedCost = (pred_AtA + pred_chol) / num_threads + (pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
-  return markedCost * mplier;
+  return markedCost * cost_mplier;
 
 }
 
+
 int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
-  double mplier = 1.25;
 
   int maxFactorHeight = 0;
   int maxFactorWidth = 0;
@@ -845,22 +843,18 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
   syrkCost = chol_overhead + pred_syrk;
   addCost = add_overhead + pred_add;
 
-  // We assume that the top 2 nodes closest to root cannot be parallelized
-  if(get_ptr() == etree->root_ 
-      || this->parent() == etree->root_ 
-      || this->parent()->parent() == etree->root_) {
+  if(!this->parallelizable) {
     fixedCost = AtACost + syrkCost + addCost;
   }
   else {
     fixedCost = (pred_AtA + pred_syrk) / num_threads + (pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
-  return fixedCost * mplier;
+  return fixedCost * cost_mplier;
 
 }
 
 int64_t CholeskyEliminationTree::Clique::computeCostBacksolve(int num_threads) {
-  double mplier = 1.25;
 
   int cliqueWidth = this->width();
   int cliqueHeight = this->height();
@@ -869,17 +863,14 @@ int64_t CholeskyEliminationTree::Clique::computeCostBacksolve(int num_threads) {
   int64_t backsolve_overhead = 0;
   int64_t pred_backsolve = predict_backsolve(cliqueWidth, cliqueHeight, backsolve_block_len);
 
-
-  if(get_ptr() == etree->root_ 
-      || this->parent() == etree->root_ 
-      || this->parent()->parent() == etree->root_) {
+  if(!this->parallelizable) {
     backsolveCost = backsolve_overhead + pred_backsolve;
   }
   else {
     backsolveCost = (pred_backsolve) / num_threads + backsolve_overhead;
   }
 
-  return backsolveCost * mplier;
+  return backsolveCost * cost_mplier;
 
 }
 

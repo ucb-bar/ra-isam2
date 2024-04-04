@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 #include "cholesky.h"
-#include "baremetal_tests/incremental_w10000_steps-300/incremental_dataset.h"
+#include "baremetal_tests/sphere2500-num_threads-2_900-1000/incremental_dataset.h"
 
 float** node_workspaces = NULL;
 pthread_mutex_t* node_locks;
@@ -200,6 +200,8 @@ void* worker_cholesky(void* args_ptr) {
             if(node_workspaces[parent] == 0) {
                 node_workspaces[parent] = malloc(next_H_h * next_H_h * sizeof(float));
                 memset(node_workspaces[parent], 0, next_H_h * next_H_h * sizeof(float));
+
+                printf("parent workspace allocated: %p\n", node_workspaces[parent]);
             }
 
             float* next_H_data = node_workspaces[parent];
@@ -388,7 +390,7 @@ int main() {
         node_workspaces = malloc(nnodes * sizeof(float*));
         memset(node_workspaces, 0, nnodes * sizeof(float*));
 
-        const int num_threads = 12;
+        const int num_threads = 1;
         pthread_t threads[num_threads];
         worker_args args[num_threads];
         for(int thread = 0; thread < num_threads; thread++) {

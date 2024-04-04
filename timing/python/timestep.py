@@ -40,6 +40,9 @@ def group_block_indices(A_ridx, B_ridx):
 class Timestep:
     vio_scale = 1.0
     no_values = False
+    step_num_threads = None
+    max_num_threads = 0
+    min_num_threads = 0
 
     def map_keys_to_cliques(self):
         self.key_to_clique = [None for _ in range(self.num_keys)]
@@ -164,6 +167,7 @@ class Timestep:
 
     def print_header_vio(self, fout, vio_lag, prev_matrix):
         fout.write(f"const bool step{self.step}_is_reconstruct = true;\n\n")
+
 
         # For VIO, the tree structure is not important, we just need to pick
         # keys that are within vio_lag of the current timestep
@@ -496,6 +500,16 @@ class Timestep:
     def print_header_reconstruct(self, fout):
         fout.write(f"const bool step{self.step}_is_reconstruct = true;\n\n")
 
+        if Timestep.step_num_threads is not None:
+            num_threads = Timestep.step_num_threads[-1] if self.step >= len(Timestep.step_num_threads) else Timestep.step_num_threads[self.step]
+            run_model = "false" if num_threads == Timestep.max_num_threads else "true"
+        else:
+            num_threads = -1
+            run_model = "false"
+
+        fout.write(f"const int step{self.step}_num_threads = {num_threads};\n\n")
+        fout.write(f"const bool step{self.step}_run_model = {run_model};\n\n")
+
         for clique in self.cliques:
             clique.build_inverse_block_indices()
 
@@ -537,12 +551,10 @@ class Timestep:
 
         Clique.print_clique_metadata(fout, step=self.step, active_clique_indices=clique_indices, max_clique=len(self.cliques))
 
-        fout.write(f"float step{self.step}_x_data[] = {{\n")
+        step_width = 0
         for clique in self.cliques:
-            for key in clique.keys:
-                for i in range(self.key_width[key]):
-                    fout.write(f"0, ")
-        fout.write("};\n")
+            step_width += clique.width
+        fout.write(f"float step{self.step}_x_data[{step_width}] = {{}};\n")
 
         if not Timestep.no_values:
             fout.write(f"float step{self.step}_x_correct_data[] = {{\n")
@@ -608,6 +620,20 @@ class Timestep:
             if timestep is not None:
                 step = timestep.step
                 fout.write(f"step{step}_is_reconstruct, ")
+        fout.write("};\n")
+
+        fout.write(f"int step_num_threads[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_num_threads, ")
+        fout.write("};\n")
+
+        fout.write(f"bool step_run_model[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_run_model, ")
         fout.write("};\n")
 
         fout.write(f"int step_nnodes[] = {{")

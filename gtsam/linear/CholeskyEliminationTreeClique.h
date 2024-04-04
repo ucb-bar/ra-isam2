@@ -227,6 +227,7 @@ public:
   /**************
    * Cost computation
    *************/
+  bool parallelizable = true;
   CostStatus costStatus = COST_UNMARKED;
   CostStatus nextCostStatus = COST_UNMARKED;
   int64_t markedCost = -1;

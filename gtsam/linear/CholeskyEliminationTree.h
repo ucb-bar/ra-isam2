@@ -278,6 +278,9 @@ private:
 
   void resetCost(std::vector<sharedClique>& updatedCliques);
 
+  void checkCliqueParallelizable();
+  void resetCliqueParallelizable();
+
   // Public testing functions
 public:
   void testFactorWrapper(const Values& theta);
