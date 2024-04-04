@@ -3,7 +3,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define MEMORY_SIZE 1638400 // bytes
+#ifndef MAX_WORKSPACE_NEEDED
+#define MAX_WORKSPACE_NEEDED 1638400
+#endif
+
+#define MEMORY_SIZE MAX_WORKSPACE_NEEDED // bytes
 
 
 // Define a char array to represent the memory space
@@ -13,17 +17,17 @@ static int stack_ptr = 0;
 // Function to allocate memory
 void* my_malloc(unsigned int size) {
   
+  int size_div_8 = (size + 7) / 8;
   
   // Check memory bound
-  if(stack_ptr + size >= MEMORY_SIZE) {
+  if(stack_ptr + size_div_8 >= MEMORY_SIZE / 8) {
+    printf("Out of memory!\n");
     exit(1);
     return 0;
   }
 
-  int remainder = size & 0b111;
-  int size8 = remainder == 0? size / 8 : size / 8 + 1;
   double* ret = _memory + stack_ptr;
-  stack_ptr += size8;
+  stack_ptr += size_div_8;
 
   return (void*) ret;
 }

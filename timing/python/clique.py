@@ -88,6 +88,8 @@ class Clique:
             self.C_block_indices[key] = [key, cur_row, height]
             cur_row += height
 
+        self.workspace_size = self.height * self.height * 4 + 100 # Padding
+
 
     def __str__(self):
         if self.marked:

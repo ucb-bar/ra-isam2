@@ -564,7 +564,13 @@ class Timestep:
                     if delta is not None:
                         for i in range(len(delta)):
                             fout.write(f"{delta[i]}, ")
-            fout.write("};\n")
+            fout.write("};\n\n")
+
+        self.workspace_needed = 0
+        for clique in self.cliques:
+            if clique.marked or clique.fixed:
+                self.workspace_needed += clique.workspace_size
+        fout.write(f"const int step{self.step}_workspace_needed = {self.workspace_needed};\n\n");
 
 
     @staticmethod
@@ -595,6 +601,13 @@ class Timestep:
         fout.write(f"#define NUM_TIMESTEPS {timestep_count}\n\n")
 
         fout.write(f"const int num_timesteps = {timestep_count};\n\n")
+
+        max_workspace_needed = 0
+        for timestep in timesteps:
+            if timestep is not None:
+                if timestep.workspace_needed > max_workspace_needed:
+                    max_workspace_needed = timestep.workspace_needed
+        fout.write(f"#define MAX_WORKSPACE_NEEDED {max_workspace_needed}\n\n")
 
         max_factor_height = 0
         max_factor_width = 0
