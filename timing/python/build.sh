@@ -9,4 +9,4 @@ cd $BUILD_DIR
 
 cmake ..
 
-make -j4 testGtsamIncremental testGtsamIncremental3D testGtsamIncremental-treegen testGtsamIncremental3D-treegen testGtsamIncremental-datasetgen testGtsamIncremental3D-datasetgen
+make -j4 testGtsamIncremental testGtsamIncremental3D testGtsamIncremental-treegen testGtsamIncremental3D-treegen testGtsamIncremental-datasetgen testGtsamIncremental3D-datasetgen testGtsamIncremental-ra testGtsamIncremental3D-ra
