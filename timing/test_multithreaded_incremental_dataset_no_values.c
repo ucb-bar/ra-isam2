@@ -3,9 +3,14 @@
 #include <math.h>
 #include <float.h>
 #include <pthread.h>
+#include <stdbool.h>
+
+#include "baremetal_tests/sphere2500-num_threads-2_900-1000/incremental_dataset.h"
 
 #include "cholesky.h"
-#include "baremetal_tests/sphere2500-num_threads-2_900-1000/incremental_dataset.h"
+#include "memory.h"
+
+#define VALGRIND 1
 
 float** node_workspaces = NULL;
 pthread_mutex_t* node_locks;
@@ -112,8 +117,10 @@ void* worker_cholesky(void* args_ptr) {
         int** factor_blk_width = node_factor_blk_width[node];
 
         if(node_workspaces[node] == NULL) {
-            node_workspaces[node] = malloc(H_h * H_h * sizeof(float));
+            node_workspaces[node] = (float*) my_malloc(H_h * H_h * sizeof(float));
             memset(node_workspaces[node], 0, H_h * H_h * sizeof(float));
+
+            printf("thread %d node %d malloc node %d\n", thread_id, node, node);
         }
 
         float* ABC = node_workspaces[node];
@@ -140,14 +147,16 @@ void* worker_cholesky(void* args_ptr) {
             int* B_blk_start = factor_B_blk_start[i];
             int* blk_width = factor_blk_width[i];
 
-            float* workspace = malloc(h * h * sizeof(float));
+            float* workspace = (float*) malloc(h * h * sizeof(float));
             memset(workspace, 0, h * h * sizeof(float));
 
+#ifndef VALGRIND
             matmul(h, h, w, 
                    data, data, workspace,
                    h, h, h,
                    1, 1, 
                    true, false);
+#endif
 
             sparse_matrix_add3_3(workspace, h, h, 
                                  ABC, H_h, H_h, 
@@ -166,7 +175,9 @@ void* worker_cholesky(void* args_ptr) {
             }
 
             // 2. Cholesky
+#ifndef VALGRIND
             partial_factorization4(ABC, H_w, H_h);
+#endif
 
             // 4. Copy [A B] back from workspace
             memcpy(H_data, ABC, H_w * H_h * sizeof(float));
@@ -178,11 +189,13 @@ void* worker_cholesky(void* args_ptr) {
             float* LB = H_data + H_w;
             float* LC = ABC + H_w * (H_h + 1);
 
+#ifndef VALGRIND
             matmul(subdiag_h, subdiag_h, H_w,
                    LB, LB, LC,
                    H_h, H_h, H_h,
                    -1, 1,
                    true, false);
+#endif
         }
 
         // 3. Add LC to parent
@@ -198,10 +211,10 @@ void* worker_cholesky(void* args_ptr) {
             int next_H_w = node_width[parent];
 
             if(node_workspaces[parent] == 0) {
-                node_workspaces[parent] = malloc(next_H_h * next_H_h * sizeof(float));
+                node_workspaces[parent] = (float*) my_malloc(next_H_h * next_H_h * sizeof(float));
                 memset(node_workspaces[parent], 0, next_H_h * next_H_h * sizeof(float));
 
-                printf("parent workspace allocated: %p\n", node_workspaces[parent]);
+                printf("thread %d node %d malloc parent %d\n", thread_id, node, parent);
             }
 
             float* next_H_data = node_workspaces[parent];
@@ -228,7 +241,7 @@ void* worker_cholesky(void* args_ptr) {
         }
 
         // 4. Free this nodes workspace
-        free(node_workspaces[node]);
+        // free(node_workspaces[node]);
         node_workspaces[node] = NULL;
 
         pthread_mutex_unlock(&node_locks[node]);
@@ -291,7 +304,9 @@ void* worker_backsolve(void* args_ptr) {
         int height = node_height[node];
         int* ridx = node_ridx[node];
         
+#ifndef VALGRIND
         partial_backsolve(node_data[node], width, height, height, ridx, x_data);
+#endif
 
         pthread_mutex_lock(&queue_lock);
         for(int i = 0; i < node_num_children[node]; i++) {
@@ -402,6 +417,8 @@ int main() {
         for(int thread = 0; thread < num_threads; thread++) {
             pthread_join(threads[thread], NULL);
         }
+
+        my_free_all(NULL);
 
         // Reset the ready queue for backsolve
         node_ready_index = 0;

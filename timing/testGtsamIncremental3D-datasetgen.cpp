@@ -261,6 +261,11 @@ int main(int argc, char *argv[]) {
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
             FastList<Key> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
+            for(Key k : extraRelinKeys) {
+                cout << k << " ";
+            }
+            cout << endl;
+
             isam2.update(newFactors, newVariables, params, extraRelinKeys);
             auto update_end = chrono::high_resolution_clock::now();
             // estimate = isam2.calculateEstimate();

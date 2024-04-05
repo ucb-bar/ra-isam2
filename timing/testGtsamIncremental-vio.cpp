@@ -55,7 +55,8 @@ int main(int argc, char *argv[]) {
     double relin_thresh = 0.1;
     NoiseFormat noiseFormat = gtsam::NoiseFormatAUTO;
     string outdirname = "";
-
+    bool run_lc = false;
+    int lc_period = 30;
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -71,6 +72,8 @@ int main(int argc, char *argv[]) {
         {"vio_lag", required_argument, 0, 52},
         {"noise_format", required_argument, 0, 53},
         {"outdirname", required_argument, 0, 54},
+        {"run_lc", no_argument, 0, 55},
+        {"lc_period", required_argument, 0, 56},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -131,6 +134,12 @@ int main(int argc, char *argv[]) {
             case 54:
                 outdirname = string(optarg);
                 break;
+            case 55:
+                run_lc = true;
+                break;
+            case 56:
+                lc_period = atoi(optarg);
+                break;
             default:
                 cerr << "Unrecognized option" << endl;
                 exit(1);
@@ -175,6 +184,8 @@ int main(int argc, char *argv[]) {
     NonlinearFactorGraph newFactors;
 
     NonlinearFactorGraph LCFactors;
+
+    int lc_counter = 0;
 
     for(size_t step=1; nextMeasurement < measurements.size(); ++step) {
 
@@ -261,6 +272,14 @@ int main(int argc, char *argv[]) {
                 throw std::runtime_error("Unknown factor type read from data file");
             }
             ++ nextMeasurement;
+        }
+
+        if(run_lc && lc_counter >= lc_period) {
+          newFactors.add_factors(LCFactors);
+          LCFactors = NonlinearFactorGraph();
+        }
+        else {
+          lc_counter++;
         }
 
         // Update iSAM2

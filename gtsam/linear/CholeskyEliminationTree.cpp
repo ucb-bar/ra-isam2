@@ -59,7 +59,7 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
     datasetgen_newKeys.push_back(key);
     
     // Add regularization factor because problem is too ill conditioned
-    double lambda = 1e-3; // This needs to be a large number since the Hessian factor takes in the covariance matrix
+    double lambda = 1e-2; // This needs to be a large number since the Hessian factor takes in the covariance matrix
     Vector mu = Matrix::Zero(dim, 1);
     Matrix sigma = lambda * Matrix::Identity(dim, dim);
     JacobianFactor::shared_ptr regularization_factor 
