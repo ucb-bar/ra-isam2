@@ -188,7 +188,6 @@ uint64_t predict_backsolve(int width, int height, int backsolve_block_len){
   uint64_t backsolve_mem_time = num_blk * (DIM * (backsolve_block_len * 32) / min_bw + backsolve_block_len * (avg_width * 32) / min_bw + 2 * DIM * (avg_width * 32) / min_bw);
   uint64_t backsolve_comp_time = num_blk * ((DIM * backsolve_block_len * avg_width) / (DIM * DIM));
   uint64_t backsolve_time = backsolve_scale_time + backsolve_mem_time + backsolve_comp_time;
-  backsolve_time *= 2; 
   uint64_t total_time = last_row_time + gemv_time + backsolve_time;
   // printf("total backsolve time: %llu, last row: %llu, gemv: %llu, triangle solve: %llu\n", total_time, last_row_time, gemv_time, backsolve_time);
   return total_time;

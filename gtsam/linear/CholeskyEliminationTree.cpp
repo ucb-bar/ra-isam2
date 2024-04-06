@@ -76,6 +76,41 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
   }
 } 
 
+#define FACTOR7_3_COST 15000
+#define FACTOR13_6_COST 30000
+
+int64_t CholeskyEliminationTree::computeCostRelin(
+    const RemappedKey remappedKey,
+    int num_threads,
+    const vector<CostStatus>& curRelinCostStatus) {
+
+  sharedNode node = nodes_[remappedKey];
+  
+  int64_t cost = 0;
+  for(sharedFactorWrapper factorWrapper : node->factors) {
+    if(factorWrapper->status() == LINEAR) { continue; }
+    bool addCostFlag = true;
+    for(int i = 0; i < 2; i++) {
+      RemappedKey k = factorWrapper->remappedKeys()[i];
+      if(curRelinCostStatus[k] == COST_RELIN) {
+        addCostFlag = false;
+        break;
+      }
+    }
+
+    if(addCostFlag) {
+      int lastIndex = factorWrapper->blockIndices().size() - 1;
+      if(get<BLOCK_INDEX_ROW>(factorWrapper->blockIndices()[lastIndex]) == 12) {
+        cost += FACTOR13_6_COST;
+      } 
+      else {
+        cost += FACTOR7_3_COST;
+      }
+    }
+  }
+  return cost / num_threads;
+}
+
 int64_t CholeskyEliminationTree::computeCost(
     const RemappedKey remappedKey, 
     const int num_threads,
@@ -348,14 +383,18 @@ void CholeskyEliminationTree::pickRelinKeys(
   // 1. Go down the list of keys
   //    For each key,
   //      Compute the cost of each key
+  vector<CostStatus> curRelinCostStatus(nodes_.size(), COST_UNMARKED);
   double highestUnpickedDelta = 0;
+  int64_t total_relin_cost = 0;
   for(auto& p : newKeyDeltaVec) {
     Key& key = p.first;
     RemappedKey remappedKey = getRemapKey(key);
 
     sharedNode node = nodes_[remappedKey];
 
-    int64_t cost = 0;
+    int64_t relin_cost = computeCostRelin(remappedKey, num_threads, curRelinCostStatus);
+    // cout << "relin_cost = " << relin_cost << endl;
+    int64_t cost = relin_cost;
     vector<sharedClique> updatedCliques;
     for(sharedFactorWrapper factorWrapper : node->factors) {
       RemappedKey lowestKey = factorWrapper->lowestKey();
@@ -367,7 +406,9 @@ void CholeskyEliminationTree::pickRelinKeys(
       remainingCycles -= cost;
       newRelinKeys->insert(key);
 
+      curRelinCostStatus[remappedKey] = COST_RELIN;
       commitCost(updatedCliques, &allUpdatedCliques);
+      total_relin_cost += relin_cost;
 
     }
     else {
@@ -385,14 +426,11 @@ void CholeskyEliminationTree::pickRelinKeys(
     sharedClique clique = cliques_[key];
     if(clique->frontKey() != key) { continue; }
     if(clique->costStatus == COST_MARKED) {
-      cout << "Clique: " << *clique << " parallel: " << clique->parallelizable << " AtACost = " << clique->AtACost << " cholCost = " << clique->cholCost << " mergeCost = " << clique->addCost << " " << clique->height() << " " << clique->width();
       totalCost += clique->markedCost;
     }
     else if(clique->costStatus == COST_FIXED) {
-      cout << "Clique: " << *clique << " parallel: " << clique->parallelizable << " AtACost = " << clique->AtACost << " syrkCost = " << clique->syrkCost << " mergeCost = " << clique->addCost << " " << clique->height() << " " << clique->width();
       totalCost += clique->fixedCost;
     }
-    cout << " backsolveCost = " << clique->backsolveCost << endl;
     totalCost += clique->backsolveCost;
   }
 
@@ -407,7 +445,14 @@ void CholeskyEliminationTree::pickRelinKeys(
   }
 
 
-  cout << "Remaining cycles: " << remainingCycles << " Total relin keys: " << newKeyDeltaVec.size() << " num relin: " << newRelinKeys->size() << " highest unpicked delta: " << highestUnpickedDelta << " force_thresh: " << force_thresh << " num_min_force_thresh_keys: " << num_min_force_thresh_keys << " total_cost: " << totalCost << endl;
+  cout << "Remaining cycles: " << remainingCycles 
+       << " Total relin keys: " << newKeyDeltaVec.size() 
+       << " num relin: " << newRelinKeys->size() 
+       << " relin_cost " << total_relin_cost 
+       <<  " highest unpicked delta: " << highestUnpickedDelta 
+       << " force_thresh: " << force_thresh 
+       << " num_min_force_thresh_keys: " << num_min_force_thresh_keys 
+       << " total_cost: " << totalCost << endl;
 
   cout << "Relin keys: ";
   for(auto k : *newRelinKeys) {
@@ -2293,8 +2338,11 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
       commitCost(updatedCliques, &allUpdatedCliques);
     }
   }
+  int relin_cost = 0;
+  vector<CostStatus> curRelinCostStatus(nodes_.size(), COST_UNMARKED);
   for(RemappedKey k : datasetgen_relinKeys) {
     sharedNode node = nodes_[k];
+    relin_cost += computeCostRelin(k, num_threads, curRelinCostStatus);
     for(sharedFactorWrapper factor : node->factors) {
       RemappedKey lowestKey = factor->lowestKey();
       total_predicted_cost += computeCost(lowestKey, num_threads, &updatedCliques);
@@ -2311,6 +2359,7 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
     total_predicted_cost += clique->computeCostBacksolve(num_threads);
   }
 
+  os << "relinCost: " << relin_cost << endl;
   os << "cliques" << endl;
   os << clique_count << endl;
 

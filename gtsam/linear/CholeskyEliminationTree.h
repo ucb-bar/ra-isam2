@@ -271,6 +271,11 @@ private:
       const int num_threads,
       std::vector<sharedClique>* updatedCliques);
 
+  int64_t computeCostRelin(
+      const RemappedKey remappedKey,
+      int num_threads,
+      const std::vector<CostStatus>& curRelinCostStatus);
+
   void commitCost(std::vector<sharedClique>& updatedCliques, 
                   std::vector<sharedClique>* allUpdatedCliques);
   void uncommitCost(std::vector<sharedClique>& updatedCliques,
