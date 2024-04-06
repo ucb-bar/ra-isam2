@@ -19,7 +19,7 @@ num_threads_file=$BUILD_DIR/num_threads_speech.txt
 
 # ========================== END CHANGE HERE ========================== #
 
-python3 $SCRIPT_DIR/generate_num_threads_speech.py --rel_period 5 --outfile $num_threads_file
+# python3 $SCRIPT_DIR/generate_num_threads_speech.py --rel_period 5 --outfile $num_threads_file
 
 # $SCRIPT_DIR/build.sh
 

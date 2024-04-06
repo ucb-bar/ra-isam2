@@ -1,5 +1,7 @@
 import numpy as np
 
+MAX_DENSE_BLOCK_SIZE = 48
+
 def group_block_indices(reduced_sorted_keys, A_block_indices, B_block_indices):
     in_blk = False
     A_blk_start = []
@@ -19,6 +21,9 @@ def group_block_indices(reduced_sorted_keys, A_block_indices, B_block_indices):
             blk_width.append(A_width)
         else:
             blk_width[-1] += A_width
+
+        if blk_width[-1] >= Factor.MAX_DENSE_BLOCK_SIZE:
+            in_blk = False
 
     return A_blk_start, B_blk_start, blk_width
 

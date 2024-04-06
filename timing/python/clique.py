@@ -20,6 +20,9 @@ def group_block_indices(reduced_sorted_keys, A_block_indices, B_block_indices):
         else:
             blk_width[-1] += A_width
 
+        if blk_width[-1] >= Clique.MAX_DENSE_BLOCK_SIZE:
+            in_blk = False
+
     return A_blk_start, B_blk_start, blk_width
 
 class Clique:

@@ -14,35 +14,13 @@ def read_until(fin, s):
         if s in line:
             break
 
-def group_block_indices(A_ridx, B_ridx):
-    in_blk = False
-    Ai = 0
-    A_blk_start = []
-    B_blk_start = []
-    blk_width = []
-    for Bi in range(len(B_ridx) - 1):   # Don't do last row
-        if A_ridx[Ai] == B_ridx[Bi]:
-            if not in_blk:
-                in_blk = True
-                A_blk_start.append(Ai)
-                B_blk_start.append(Bi)
-                blk_width.append(1)
-            else:
-                blk_width[-1] += 1
-            Ai += 1
-        else:
-            if in_blk:
-                in_blk = False
-
-    return A_blk_start, B_blk_start, blk_width
-
-
 class Timestep:
     vio_scale = 1.0
     no_values = False
     step_num_threads = None
     max_num_threads = 0
     min_num_threads = 0
+    MAX_DENSE_BLOCK_SIZE = 48
 
     def map_keys_to_cliques(self):
         self.key_to_clique = [None for _ in range(self.num_keys)]
@@ -70,6 +48,9 @@ class Timestep:
 
         Clique.no_values = Timestep.no_values
         Factor.no_values = Timestep.no_values
+
+        Clique.MAX_DENSE_BLOCK_SIZE = Timestep.MAX_DENSE_BLOCK_SIZE
+        Factor.MAX_DENSE_BLOCK_SIZE = Timestep.MAX_DENSE_BLOCK_SIZE
 
         read_until(fin, "ordering and width")
 
