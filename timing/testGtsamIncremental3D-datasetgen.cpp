@@ -50,7 +50,7 @@ map<int, FastList<RemappedKey>> read_relin_keys_file(string& fname) {
   ifstream fin(fname);
   if(!fin.is_open()) {
     cout << "Error opening file: " << fname << endl;
-    return map<int, FastList<RemappedKey>>();
+    exit(1);
   }
 
   map<int, FastList<RemappedKey>> res;
