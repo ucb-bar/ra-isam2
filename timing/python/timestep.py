@@ -34,13 +34,15 @@ class Timestep:
                 parent_key = clique.block_indices[clique.clique_size][0]
                 clique.parent = self.key_to_clique[parent_key]
 
-    def __init__(self, fin, step, vio=False):
+    def __init__(self, fin, step, vio=False, num_threads=-1, relin_cost=-1):
         # ======================================== #
         # Variable initialization
         # ======================================== #
 
         self.step = step
         self.is_reconstruct = True
+        self.relin_cost = relin_cost
+        self.num_threads = num_threads
 
         # ======================================== #
         # END Variable initialization
@@ -485,10 +487,11 @@ class Timestep:
             num_threads = Timestep.step_num_threads[-1] if self.step >= len(Timestep.step_num_threads) else Timestep.step_num_threads[self.step]
             run_model = "false" if num_threads == Timestep.max_num_threads else "true"
         else:
-            num_threads = -1
+            num_threads = 1
             run_model = "false"
 
-        fout.write(f"const int step{self.step}_num_threads = {num_threads};\n\n")
+        fout.write(f"const int step{self.step}_num_threads = {self.num_threads};\n\n")
+        fout.write(f"const uint64_t step{self.step}_scaled_relin_cost = {self.relin_cost};\n\n");
         fout.write(f"const bool step{self.step}_run_model = {run_model};\n\n")
 
         for clique in self.cliques:
@@ -556,6 +559,9 @@ class Timestep:
 
     @staticmethod
     def print_metadata_incremental(fout, timesteps, stepfile_format):
+        fout.write("#include <stdint.h>\n")
+        fout.write("#include <stdbool.h>\n")
+        fout.write("\n")
         start_step = None
         for timestep in timesteps:
             if timestep is not None:
@@ -621,6 +627,13 @@ class Timestep:
             if timestep is not None:
                 step = timestep.step
                 fout.write(f"step{step}_num_threads, ")
+        fout.write("};\n")
+
+        fout.write(f"uint64_t step_scaled_relin_cost[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_scaled_relin_cost, ")
         fout.write("};\n")
 
         fout.write(f"bool step_run_model[] = {{")

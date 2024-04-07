@@ -4,8 +4,9 @@
 #include <float.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-#include "baremetal_tests/sphere2500-num_threads-2_900-1000/incremental_dataset.h"
+#include "baremetal_tests/incremental_sphere2500_steps-1000/incremental_dataset.h"
 
 #include "cholesky.h"
 #include "memory.h"

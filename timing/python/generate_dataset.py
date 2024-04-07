@@ -18,6 +18,16 @@ import glob
 import os
 from timestep import Timestep
 
+def read_until(fin, s):
+    while True:
+        line = fin.readline()
+        if not line:
+            print(f"Pattern {s} not found!")
+            exit(0)
+
+        if s in line:
+            break
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("--indir", dest="indir", 
@@ -82,17 +92,30 @@ if __name__ == "__main__":
     for step in range(start_step, end_step+1):
         infile_pattern = f"step-{step}.out"
         infile = None
+        pred_infile_pattern = f"step-{step}-pred_cycles.out"
+        pred_infile = None
 
         for filename in files:
             if infile_pattern in filename:
                 infile = filename
+                break
 
-        if infile is None:
-            print(f"Step {step} file not found!")
-            exit(0)
+        for filename in files:
+            if pred_infile_pattern in filename:
+                pred_infile = filename
+                break
+
+        num_threads = -1
+        relin_cost = -1
+        if pred_infile is not None:
+            with open(pred_infile, "r") as fin:
+                read_until(fin, "num threads")
+                num_threads = int(fin.readline())
+                read_until(fin, "relin cost")
+                relin_cost = int(fin.readline())
 
         with open(infile, "r") as fin:
-            timesteps[step] = Timestep(fin, step)
+            timesteps[step] = Timestep(fin, step, num_threads=num_threads, relin_cost=relin_cost)
 
     # If vio, remove all factors that span over vio_lag steps
     # Also remove all factors that do no connect to a key that is more recent than current-vio_lag

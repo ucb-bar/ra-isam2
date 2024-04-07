@@ -2359,7 +2359,10 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
     total_predicted_cost += clique->computeCostBacksolve(num_threads);
   }
 
-  os << "relinCost: " << relin_cost << endl;
+  os << "num threads " << endl 
+     << num_threads << endl
+     << "relin cost " << endl
+     << relin_cost << endl;
   os << "cliques" << endl;
   os << clique_count << endl;
 
