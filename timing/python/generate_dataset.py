@@ -40,6 +40,8 @@ if __name__ == "__main__":
                       default=2, help="Starting step, inclusive")
     parser.add_option("--end_step", dest="end_step", type="int",
                       default=30, help="Ending step, inclusive")
+    parser.add_option("--period", dest="period", type="int",
+                      default=1, help="Step size of incrementing timesteps")
     parser.add_option("--no_values", dest="no_values", 
                       action="store_true", help="If the generated dataset has no matrix values")
     parser.add_option("--vio", dest="vio", action="store_true",
@@ -59,6 +61,7 @@ if __name__ == "__main__":
     num_threads_file = options.num_threads_file
     start_step = options.start_step
     end_step = options.end_step
+    period = options.period
     no_values = options.no_values
     vio = options.vio
     vio_lag = options.vio_lag
@@ -90,6 +93,9 @@ if __name__ == "__main__":
     timesteps = [None for _ in range(0, end_step+1)]
     
     for step in range(start_step, end_step+1):
+        if step % 25 != 0:
+            continue
+
         infile_pattern = f"step-{step}.out"
         infile = None
         pred_infile_pattern = f"step-{step}-pred_cycles.out"
@@ -114,6 +120,10 @@ if __name__ == "__main__":
                 read_until(fin, "relin cost")
                 relin_cost = int(fin.readline())
 
+        if infile is None:
+            print(infile_pattern)
+            assert(0)
+    
         with open(infile, "r") as fin:
             timesteps[step] = Timestep(fin, step, num_threads=num_threads, relin_cost=relin_cost)
 
@@ -201,6 +211,12 @@ if __name__ == "__main__":
         #    b. For now, keep everything reconstruct
         # 3. Print out the timestep
         #    a. If reconstructing, print out all the [A B] matrix of each fixed and marked clique
+
+        # This is for full dataset eval
+        for step in range(start_step, end_step + 1):
+            if step % period != 0:
+                print(f"step {step} is set to None")
+                timesteps[step] = None
 
         for step, timestep in enumerate(timesteps):
             if timestep is None:
