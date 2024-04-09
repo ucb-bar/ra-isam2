@@ -378,7 +378,7 @@ int main(int argc, char *argv[]) {
                     exit(1);
                   }
 
-                  estimate.print_kitti_pose2(traj_fout);
+                  estimate.print_kitti_pose3(traj_fout);
                 }
             }
         }

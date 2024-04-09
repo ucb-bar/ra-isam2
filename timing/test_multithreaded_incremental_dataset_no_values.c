@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "baremetal_tests/incremental_sphere2500_steps-2500_period-25/incremental_dataset.h"
+#include "baremetal_tests/incremental_CAB1_steps-360_360_period-1/incremental_dataset.h"
 
 #include "cholesky.h"
 #include "memory.h"
@@ -118,10 +118,9 @@ void* worker_cholesky(void* args_ptr) {
         int** factor_blk_width = node_factor_blk_width[node];
 
         if(node_workspaces[node] == NULL) {
+            printf("thread %d node %d malloc node %d\n", thread_id, node, node);
             node_workspaces[node] = (float*) my_malloc(H_h * H_h * sizeof(float));
             memset(node_workspaces[node], 0, H_h * H_h * sizeof(float));
-
-            printf("thread %d node %d malloc node %d\n", thread_id, node, node);
         }
 
         float* ABC = node_workspaces[node];
@@ -212,10 +211,9 @@ void* worker_cholesky(void* args_ptr) {
             int next_H_w = node_width[parent];
 
             if(node_workspaces[parent] == 0) {
+                printf("thread %d node %d malloc parent %d\n", thread_id, node, parent);
                 node_workspaces[parent] = (float*) my_malloc(next_H_h * next_H_h * sizeof(float));
                 memset(node_workspaces[parent], 0, next_H_h * next_H_h * sizeof(float));
-
-                printf("thread %d node %d malloc parent %d\n", thread_id, node, parent);
             }
 
             float* next_H_data = node_workspaces[parent];

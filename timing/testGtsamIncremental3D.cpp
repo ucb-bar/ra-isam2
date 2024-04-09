@@ -234,6 +234,7 @@ int main(int argc, char *argv[]) {
                 break;
             }
             
+            /*
             last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
             cout << "chi2 = " << last_chi2 << endl;
 
@@ -281,6 +282,7 @@ int main(int argc, char *argv[]) {
                     break;
                 }
             }
+            */
 
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
