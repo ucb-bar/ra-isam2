@@ -92,6 +92,8 @@ class Timestep:
             if self.factor_max_width < factor.width:
                 self.factor_max_width = factor.width
 
+        self.is3D = False if self.factor_max_height <= 3 else True
+
 
         read_until(fin, "cliques")
 
@@ -528,7 +530,7 @@ class Timestep:
         for clique in self.cliques:
             if clique.marked or clique.fixed:
                 clique_indices.append(clique.index)
-                clique.print_clique(fout, step=self.step)
+                clique.print_clique(fout, step=self.step, num_threads=self.num_threads, is3D=self.is3D)
         
         for clique in self.cliques:
             clique.print_clique_ridx(fout, step=self.step, block_indices=self.block_indices)
@@ -669,6 +671,13 @@ class Timestep:
             if timestep is not None:
                 step = timestep.step
                 fout.write(f"step{step}_node_num_factors, ")
+        fout.write("};\n")
+
+        fout.write(f"int* step_node_relin_cost[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_node_relin_cost, ")
         fout.write("};\n")
 
         fout.write(f"int** step_node_factor_height[] = {{")

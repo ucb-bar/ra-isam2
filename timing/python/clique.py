@@ -29,6 +29,9 @@ class Clique:
 
     no_values = False
 
+    RELIN_COST_7_3 = 15000
+    RELIN_COST_13_6 = 30000
+
     def __init__(self, fin, index=0):
         # ======================================== #
         # Variable initialization
@@ -120,13 +123,16 @@ class Clique:
             self.inverse_block_indices[key] = [key, row, height]
 
 
-    def print_clique(self, fout, step):
+    def print_clique(self, fout, step, num_threads, is3D):
         self.active_factor_indices = sorted(self.active_factor_indices)
 
         print(f"step = {step}, clique = {self.index}, block_indices = {self.block_indices}")
 
         # Print all the factors related to this clique
         fout.write(f"const int step{step}_node{self.index}_num_factors = {len(self.active_factor_indices)};\n")
+        relin_cost = len(self.active_factor_indices) * (Clique.RELIN_COST_13_6 if is3D else Clique.RELIN_COST_7_3) // num_threads
+        fout.write(f"const int step{step}_node{self.index}_relin_cost = {relin_cost};\n")
+
         marked_str = "true" if self.marked else "false"
         fixed_str = "true" if self.fixed else "false"
         fout.write(f"const bool step{step}_node{self.index}_marked = {marked_str};\n")
@@ -278,6 +284,8 @@ class Clique:
         Clique.print_clique_variable(fout, t="bool", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="false", postfix="fixed")
 
         Clique.print_clique_variable(fout, t="int", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="num_factors")
+
+        Clique.print_clique_variable(fout, t="int", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="relin_cost")
 
         Clique.print_clique_variable(fout, t="int*", prefix=f"step{step}", pred=pred, max_clique=max_clique, default="0", postfix="factor_height")
 
