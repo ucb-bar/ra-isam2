@@ -93,7 +93,7 @@ if __name__ == "__main__":
     timesteps = [None for _ in range(0, end_step+1)]
     
     for step in range(start_step, end_step+1):
-        if step % 25 != 0:
+        if step % period != 0:
             continue
 
         infile_pattern = f"step-{step}.out"
