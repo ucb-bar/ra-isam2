@@ -19,7 +19,7 @@ dataset:
         path:           "sphere2500"
         relin_thresh:   0.05
         start_step:     2
-        end_step:       2500    # Inclusive
+        end_step:       2499    # Inclusive
         period:         1
     w10000: 
         is3D:           false
@@ -48,7 +48,7 @@ metadata:
     scriptdir: "."
     builddir: "../../build"
     headerdir: "../baremetal_tests"
-    recompile: false     # True if C++ sources changed
+    recompile: true     # True if C++ sources changed
     make_flags: "-j"
     target_binary:
         - testGtsamIncremental
