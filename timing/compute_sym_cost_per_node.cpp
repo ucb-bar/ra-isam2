@@ -23,15 +23,16 @@ int main() {
 
         for(int node = 0; node < nnodes; node++) {
             if(!node_marked[node] && !node_fixed[node]) {
-                cout << 0 << " ";
+                // cout << 0 << " ";
                 continue;
             }
             int num_keys = node_width[node] / max_factor_width;
             int relin_cost = num_keys * SYM_COST_REORDER;
-            cout << relin_cost << " ";
+            // cout << relin_cost << " ";
             total_cost += relin_cost;
         }
-        cout << endl;
+        // cout << endl;
+        cout << total_cost << endl;
     }
 
 }
