@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
             if(step >= num_steps) {
                 break;
             }
-            
+
             /*
             last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
             cout << "chi2 = " << last_chi2 << endl;

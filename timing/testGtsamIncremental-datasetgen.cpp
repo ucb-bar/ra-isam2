@@ -80,6 +80,9 @@ int main(int argc, char *argv[]) {
     double relin_thresh = 0.1;
     string relin_keys_file = "";
     string dataset_outdir = "";
+    bool print_dataset = false;
+    bool print_pred = false;
+    bool print_traj = false;
     bool print_values = false;
 
     // Get experiment setup
@@ -95,6 +98,9 @@ int main(int argc, char *argv[]) {
         {"num_steps", required_argument, 0, 't'},
         {"dataset_outdir", required_argument, 0, 51},
         {"print_values", no_argument, 0, 52},
+        {"print_dataset", no_argument, 0, 150},
+        {"print_pred", no_argument, 0, 151},
+        {"print_traj", no_argument, 0, 152},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -135,6 +141,15 @@ int main(int argc, char *argv[]) {
                 break;
             case 52:
                 print_values = true;
+                break;
+            case 150:
+                print_dataset = true;
+                break;
+            case 151:
+                print_pred = true;
+                break;
+            case 152:
+                print_traj = true;
                 break;
             default:
                 cerr << "Unrecognized option" << endl;
@@ -323,31 +338,48 @@ int main(int argc, char *argv[]) {
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
 
-            cout << "step = " << step << endl;
+            if(dataset_outdir != "") {
+                if(print_dataset) {
+                  string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
+                  ofstream fout(outfile);
 
-            string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
-            ofstream fout(outfile);
+                  if(!fout.is_open()) {
+                    cerr << "Cannot open file: " << outfile << endl;
+                    exit(1);
+                  }
 
-            if(!fout.is_open()) {
-              cerr << "Cannot open file: " << outfile << endl;
-              exit(1);
+                  isam2.extractFullTree(fout, print_values);
+                  if(print_values) {
+                    isam2.extractDelta(fout);
+                  }
+                }
+
+                if(print_pred) {
+                  string pred_outfile = dataset_outdir + "/step-" + to_string(step) + "-pred_cycles.out";
+                  ofstream pred_fout(pred_outfile);
+
+                  if(!pred_fout.is_open()) {
+                    cerr << "Cannot open file: " << pred_outfile << endl;
+                    exit(1);
+                  }
+
+                  int num_threads = 1;
+                  isam2.extractPredictedCycles(pred_fout, num_threads);
+                }
+
+                if(print_traj) {
+                  string traj_outfile = dataset_outdir + "/step-" + to_string(step) + "_traj.txt";
+
+                  ofstream traj_fout(traj_outfile);
+
+                  if(!traj_fout.is_open()) {
+                    cerr << "Cannot open file: " << traj_outfile << endl;
+                    exit(1);
+                  }
+
+                  estimate.print_kitti_pose2(traj_fout);
+                }
             }
-
-            isam2.extractFullTree(fout, print_values);
-            if(print_values) {
-                isam2.extractDelta(fout);
-            }
-
-            string pred_outfile = dataset_outdir + "/step-" + to_string(step) + "-pred_cycles.out";
-            ofstream pred_fout(pred_outfile);
-
-            if(!pred_fout.is_open()) {
-              cerr << "Cannot open file: " << pred_outfile << endl;
-              exit(1);
-            }
-
-            int num_threads = 1;
-            isam2.extractPredictedCycles(pred_fout, num_threads);
         }
         K_count++;
         update_times.push_back(d1);

@@ -7,6 +7,13 @@ dataset:
         start_step:     2
         end_step:       464     # Inclusive
         period:         1
+    CAB7000: 
+        is3D:           true
+        path:           "ra_datasets/CAB7000"
+        relin_thresh:   0.01
+        start_step:     2
+        end_step:       3000    # Inclusive
+        period:         30
     sphere: 
         is3D:           true
         path:           "sphere2500"
@@ -57,21 +64,39 @@ metadata:
 
 # Resource aware
 RA:
-    output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
+    # Runs that share the same output_format will use the same dataset run
+    output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}"
+    header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
-       - CAB1
-       # - sphere2500
-       # - w10000
-       # - M3500
-       # - M3500c
+    # - CAB1
+    - CAB7000
+    # - sphere2500
+    # - w10000
+    # - M3500
+    # - M3500c
     params:
-        num_threads:        1       
+        num_threads:        2
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
         print_dataset:      true            # Turn this off if not generating header
         print_values:       false
         print_pred:         true
         print_traj:         true
         
-
+# Incremental:
+Incremental:
+    output_format: "incremental_{dataset}"
+    header_format: "incremental_{dataset}_steps-{start_step}-{end_step}_period-{period}"
+    dataset:    # Comment out the datasets that will be skipped
+    # - CAB1
+      - CAB7000
+    # - sphere2500
+    # - w10000
+    # - M3500
+    # - M3500c
+    params:
+        print_dataset:      true            # Turn this off if not generating header
+        print_values:       false
+        print_pred:         true
+        print_traj:         true
 
     

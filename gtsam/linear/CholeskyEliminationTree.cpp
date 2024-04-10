@@ -345,7 +345,7 @@ void CholeskyEliminationTree::pickRelinKeys(
   newKeyDeltaVec.reserve(KeyDeltaVec.size());
 
   static double force_thresh = 3.5;
-  const double min_force_thresh = 2.0;
+  const double min_force_thresh = 2;
   const double max_force_thresh = 3.5;
 
   int num_relin_keys = 0;
