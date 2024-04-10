@@ -10,7 +10,7 @@ dataset:
     CAB7000: 
         is3D:           true
         path:           "ra_datasets/CAB7000"
-        relin_thresh:   0.01
+        relin_thresh:   0.02
         start_step:     2
         end_step:       3000    # Inclusive
         period:         30

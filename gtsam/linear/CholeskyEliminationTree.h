@@ -93,6 +93,8 @@ private:
     int lastNumKeys = 1;
     int lastNumFactors = 0;
 
+    bool costReorder = false;
+
 public:
   CholeskyEliminationTree();
 
@@ -171,6 +173,11 @@ public:
   void extraRelinRemappedKeys(const std::vector<RemappedKey> relinKeys);
 
   Key unmapKey(const RemappedKey remappedKey) const;
+
+  // This is used for cost estimation
+  void setCostReorder(bool reorder) {
+    costReorder = reorder;
+  }
 
 private:
   // Add new unmapped Key to transform map and return the mapped key, 

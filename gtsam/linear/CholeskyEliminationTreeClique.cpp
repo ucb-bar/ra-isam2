@@ -755,6 +755,7 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
   int64_t add_overhead = 1000;
 
   // This is used for single node profiling
+  symCost = this->nodes.size() * SYM_COST_REORDER;
   AtACost = AtA_overhead + pred_AtA;
   cholCost = chol_overhead + pred_chol;
   addCost = add_overhead + pred_add;
@@ -763,7 +764,7 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
     markedCost = AtACost + cholCost + addCost;
   }
   else {
-    markedCost = (pred_AtA + pred_chol) / num_threads + (pred_add + AtA_overhead + chol_overhead + add_overhead);
+    markedCost = (pred_AtA + pred_chol) / num_threads + (symCost + pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
   return markedCost * cost_mplier;
@@ -839,15 +840,16 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
   int64_t add_overhead = 1000;
 
   // This is used for single node profiling
+  symCost = this->nodes.size() * SYM_COST_REORDER;
   AtACost = AtA_overhead + pred_AtA;
   syrkCost = chol_overhead + pred_syrk;
   addCost = add_overhead + pred_add;
 
   if(!this->parallelizable) {
-    fixedCost = AtACost + syrkCost + addCost;
+    fixedCost = AtACost + syrkCost + addCost + symCost;
   }
   else {
-    fixedCost = (pred_AtA + pred_syrk) / num_threads + (pred_add + AtA_overhead + chol_overhead + add_overhead);
+    fixedCost = (pred_AtA + pred_syrk) / num_threads + (symCost + pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
   return fixedCost * cost_mplier;

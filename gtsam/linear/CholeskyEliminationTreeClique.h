@@ -227,11 +227,15 @@ public:
   /**************
    * Cost computation
    *************/
+  int64_t SYM_COST = 2000;
+  int64_t SYM_COST_REORDER = 4000;
+
   bool parallelizable = true;
   CostStatus costStatus = COST_UNMARKED;
   CostStatus nextCostStatus = COST_UNMARKED;
   int64_t markedCost = -1;
   int64_t fixedCost = -1;
+  int64_t symCost = -1;
   int64_t AtACost = -1;
   int64_t syrkCost = -1;
   int64_t addCost = -1;

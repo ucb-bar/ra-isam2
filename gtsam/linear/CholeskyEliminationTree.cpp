@@ -2374,6 +2374,7 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
 
     os << "node " << index << "\t";
 
+    os << "reorderSym: " << clique->symCost << "\t";
     os << "AtA: " << clique->AtACost << "\tcholCost: ";
     if(clique->costStatus == COST_MARKED) {
       os << clique->cholCost;
@@ -2401,6 +2402,8 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
       exit(1);
     }
   }
+
+  setCostReorder(false);
 }
 
 RemappedKey CholeskyEliminationTree::addRemapKey(const Key unmappedKey) {
