@@ -27,6 +27,7 @@ def run_system_cmd(cmd):
         p.wait()
 
         if p.returncode != 0:
+            print(p.stderr)
             raise CalledProcessError(p.returncode, p.args)
 
 if __name__ == "__main__":
@@ -69,7 +70,7 @@ if __name__ == "__main__":
             d.update(config["RA"]["params"])
 
             output_name = eval(f'f"{output_format}"', d)
-            header_name = eval(f'f"{output_format}"', d)
+            header_name = eval(f'f"{header_format}"', d)
 
             is3D = d["is3D"]
             dataset_path = d["path"]
@@ -106,6 +107,7 @@ if __name__ == "__main__":
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
                               {'--num_threads {}'.format(num_threads) if not num_threads_file else '--num_threads_infile {}'.format(num_threads_file)} \
+                              --print_frequency 1 \
                               2>&1 | tee {output_log} \
                               "
                 run_system_cmd(cmd)
@@ -122,9 +124,9 @@ if __name__ == "__main__":
             """
 
             # Generate header
-            run_system_cmd(f"mkdir -p {headerdir}")
+            run_system_cmd(f"mkdir -p {header_dir}")
             cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {headerdir} \
+                    --indir {output_dir} --outdir {header_dir} \
                     --start_step {start_step} \
                     --end_step {end_step - 1} \
                     --period {period} \
@@ -183,6 +185,7 @@ if __name__ == "__main__":
                               {'--print_values' if print_values else ''} \
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
+                              --print_frequency 1 \
                               2>&1 | tee {output_log} \
                               "
                 run_system_cmd(cmd)
@@ -199,9 +202,9 @@ if __name__ == "__main__":
             """
 
             # Generate header
-            run_system_cmd(f"mkdir -p {headerdir}")
+            run_system_cmd(f"mkdir -p {header_dir}")
             cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {headerdir} \
+                    --indir {output_dir} --outdir {header_dir} \
                     --start_step {start_step} \
                     --end_step {end_step - 1} \
                     --period {period} \

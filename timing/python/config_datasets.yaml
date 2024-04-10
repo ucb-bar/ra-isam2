@@ -48,7 +48,7 @@ metadata:
     scriptdir: "."
     builddir: "../../build"
     headerdir: "../baremetal_tests"
-    recompile: true     # True if C++ sources changed
+    recompile: false     # True if C++ sources changed
     make_flags: "-j"
     target_binary:
         - testGtsamIncremental
