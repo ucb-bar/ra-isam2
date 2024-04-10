@@ -231,8 +231,9 @@ if __name__ == "__main__":
             timestep.is_reconstruct = True
             if prev_timestep is None:
                 timestep.is_reconstruct = True
-            elif timestep.same_ordering(prev_timestep):
-                timestep.is_reconstruct = True
+            elif not timestep.same_ordering(prev_timestep):
+                timestep.is_reconstruct = True  
+                timestep.is_reorder = True
             else:
                 timestep.is_reconstruct = True
             

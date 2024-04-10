@@ -41,6 +41,7 @@ class Timestep:
 
         self.step = step
         self.is_reconstruct = True
+        self.is_reorder = False
         self.relin_cost = relin_cost
         self.num_threads = num_threads
 
@@ -509,16 +510,29 @@ class Timestep:
             for key in factor.keys:
                 if key == 0:
                     continue
+                if key in self.relin_keys:
+                    factor.relin = True
+                    break
+
+            for key in factor.keys:
+                if key == 0:
+                    continue
                 clique = self.key_to_clique[key]
                 if clique.marked:
                     active_factors.add(factor)
                     break
 
+
+        clique.num_relin_factors = 0
         factor_indices = []
         for factor in active_factors:
             lowest_key = factor.sorted_keys[0]
             clique = self.key_to_clique[lowest_key]
             clique.active_factor_indices.append(factor.index)
+
+            if factor.relin:
+                clique.num_relin_factors += 1
+
             factor_indices.append(factor.index)
 
             factor.print_factor(fout, 
@@ -530,7 +544,7 @@ class Timestep:
         for clique in self.cliques:
             if clique.marked or clique.fixed:
                 clique_indices.append(clique.index)
-                clique.print_clique(fout, step=self.step, num_threads=self.num_threads, is3D=self.is3D)
+                clique.print_clique(fout, step=self.step, num_threads=self.num_threads, is3D=self.is3D, is_reorder=self.is_reorder)
         
         for clique in self.cliques:
             clique.print_clique_ridx(fout, step=self.step, block_indices=self.block_indices)
@@ -678,6 +692,13 @@ class Timestep:
             if timestep is not None:
                 step = timestep.step
                 fout.write(f"step{step}_node_relin_cost, ")
+        fout.write("};\n")
+
+        fout.write(f"int* step_node_sym_cost[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_node_sym_cost, ")
         fout.write("};\n")
 
         fout.write(f"int** step_node_factor_height[] = {{")

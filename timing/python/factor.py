@@ -31,6 +31,18 @@ class Factor:
     no_values = False
 
     def __init__(self, fin, key_to_ordering, key_width):
+
+        ########################
+        # Init
+        ########################
+
+        self.relin = False
+
+        ########################
+        # End Init
+        ########################
+
+
         line = fin.readline()
         arr = line.split()
 
