@@ -11,5 +11,5 @@ cd $BUILD_DIR
 
 cmake .. > /dev/null
 
-make -j4 $src && ./timing/$src
+make -j $src && ./timing/$src
 

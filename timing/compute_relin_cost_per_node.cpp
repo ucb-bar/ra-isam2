@@ -2,7 +2,7 @@
 #include <iostream>
 
 // This needs to be set to the relative path of the target header file
-#include "baremetal_tests/incremental_sphere2500_steps-2500_period-25/incremental_dataset.h"
+#include "baremetal_tests/incremental_CAB7000_steps-2-3000_period-25/incremental_dataset.h"
 
 using namespace std;
 
@@ -18,6 +18,7 @@ int main() {
         bool* node_marked = step_node_marked[step];
         bool* node_fixed = step_node_fixed[step];
         int* node_num_factors = step_node_num_factors[step];
+        int* node_relin_cost = step_node_relin_cost[step];
 
         int nnodes = step_nnodes[step];
 
@@ -28,7 +29,7 @@ int main() {
                 continue;
             }
             int num_factors = node_num_factors[node];
-            int relin_cost = num_factors * relin_cost_per_factor;
+            int relin_cost = node_relin_cost[node];
             total_cost += relin_cost;
         }
         cout << total_cost << endl;
