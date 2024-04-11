@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "baremetal_tests/incremental_CAB1_steps-360_360_period-1/incremental_dataset.h"
+#include "baremetal_tests/incremental_CAB7000_steps-2-3000_period-25/incremental_dataset.h"
 
 #include "cholesky.h"
 #include "memory.h"

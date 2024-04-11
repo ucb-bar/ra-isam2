@@ -2,14 +2,14 @@
 #include <iostream>
 
 // This needs to be set to the relative path of the target header file
-#include "baremetal_tests/incremental_CAB7000_steps-2-3000_period-25/incremental_dataset.h"
+#include "baremetal_tests/incremental_sphere2500_steps-2000_period-25/incremental_dataset.h"
 
 using namespace std;
 
 int main() {
 
     const int RELIN_COST_7_3 = 15000;
-    const int RELIN_COST_13_6 = 30000;
+    const int RELIN_COST_13_6 = 20000;
 
     bool is3D = max_factor_width == 6;
     int relin_cost_per_factor = is3D? RELIN_COST_13_6 : RELIN_COST_7_3;

@@ -69,7 +69,7 @@ RA:
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    # - CAB7000
+    - CAB7000
     # - sphere2500
     # - w10000
     # - M3500
@@ -88,7 +88,7 @@ Incremental:
     header_format: "incremental_{dataset}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    # - CAB7000
+    - CAB7000
     # - sphere2500
     # - w10000
     # - M3500

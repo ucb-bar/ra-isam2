@@ -486,13 +486,6 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
   static int last_variable_count;
   static bool reorder_flag;
   const int reorder_period = 30;
-  // DEBUG
-  // if(/*theta_.size() == 260 || theta_.size() == 280 || */ theta_.size() == 287) {
-  //   reorder_flag = true;
-  // }
-  // if(theta_.size() > 2500 && theta_.size() < 2800) {
-  //   cout << "marked keys size =  " <<  markedKeys.size() << endl;
-  // }
 
   if(updateParams.constrainedKeys) {
     // If we have constrained keys, we need to reorder
@@ -536,6 +529,7 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
                                          const Values& newTheta,
                                          const ISAM2UpdateParams& updateParams,
+                                         const unordered_set<Key>& allFixedKeys,
                                          const int num_threads) {
   // 1. Add new factors to list of factors and mark the variables involved
   // 2. Mark the variables that need to be relinearized (linearize when doing Cholesky for locality)
@@ -580,7 +574,7 @@ ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
 
   const int64_t remainingCycles = 3.33 * 1e7;
   // const int64_t remainingCycles = 1 * 1e7;
-  eTree_.pickRelinKeys(keyDeltaVec, remainingCycles, num_threads,
+  eTree_.pickRelinKeys(keyDeltaVec, allFixedKeys, remainingCycles, num_threads,
       *boost::get<double>(&params_.relinearizeThreshold), &newRelinKeys);
   relinKeys = newRelinKeys;
 

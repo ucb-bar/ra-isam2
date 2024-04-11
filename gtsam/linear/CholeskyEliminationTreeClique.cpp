@@ -459,7 +459,7 @@ void CholeskyEliminationTree::Clique::extendBlockIndices(
 
 bool CholeskyEliminationTree::Clique::hasMarkedAncestor() {
   // only need to check highest key that is not 0 (last row)
-  assert(blockIndices.size() > cliqueSize() + 1);
+  assert(blockIndices.size() >= cliqueSize() + 1);
   assert(get<BLOCK_INDEX_KEY>(blockIndices.back()) == 0);
 
   RemappedKey highestKey = get<BLOCK_INDEX_KEY>(blockIndices[blockIndices.size() - 2]);
@@ -673,6 +673,15 @@ bool CholeskyEliminationTree::Clique::ownsColumns() const {
   }
   
   return gatherSources.front().ownsData();
+}
+
+void CholeskyEliminationTree::Clique::deleteClique() {
+  this->detachParent();
+
+  if(!children.empty()) {
+    cout << "Deleted clique should not have children!" << endl;
+    exit(1);
+  }
 }
 
 void CholeskyEliminationTree::Clique::checkInvariant() const {

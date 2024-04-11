@@ -35,6 +35,13 @@ bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
     return true; 
   }
 
+  // This is needed to update lambdaStructure
+  for(RemappedKey key : remappedKeys()) {
+    if(key == 0) { continue; }
+
+    etree->nodes_[key]->removeFactor(get_ptr());
+  }
+
   setStatusLinear();
 
   // Just remove the block indices corresponding to the keys that are marginalized
@@ -57,6 +64,13 @@ bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
   }
 
   updateLowestHighestKeys();
+
+  // This is needed to update lambdaStructure with the new factor keys
+  for(RemappedKey key : remappedKeys()) {
+    if(key == 0) { continue; }
+
+    etree->nodes_[key]->addFactor(get_ptr());
+  }
 
   return false;
 }

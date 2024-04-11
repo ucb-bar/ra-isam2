@@ -75,6 +75,13 @@ public:
     assert(status_ == UNMARKED);
     status_ = MARGINALIZED;
   }
+
+  int lastRelinStep = 0;
+
+  void deleteNode() {
+    etree->cliques_[key] = nullptr;
+  }
+
 };
 
 } // namespace gtsam

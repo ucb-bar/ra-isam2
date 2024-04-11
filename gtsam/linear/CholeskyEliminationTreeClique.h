@@ -224,6 +224,8 @@ public:
     return true;
   }
 
+  void deleteClique();
+
   /**************
    * Cost computation
    *************/
@@ -248,6 +250,11 @@ public:
   int64_t computeCostMarked(int num_threads);
   int64_t computeCostFixed(int num_threads);
   int64_t computeCostBacksolve(int num_threads);
+
+  int memSize = 0;
+  int subdiagSize = 0;
+  int factorSize = 0;
+  int lastRelinStep = 0;
 
 };
 

@@ -193,6 +193,7 @@ class GTSAM_EXPORT ISAM2 : public BayesTree<ISAM2Clique> {
                              const NonlinearFactorGraph& newFactors,
                              const Values& newTheta,
                              const ISAM2UpdateParams& updateParams,
+                             const std::unordered_set<Key>& allFixedKeys = std::unordered_set<Key>(),
                              const int num_threads = 1);
 
   /** Marginalize out variables listed in leafKeys.  These keys must be leaves

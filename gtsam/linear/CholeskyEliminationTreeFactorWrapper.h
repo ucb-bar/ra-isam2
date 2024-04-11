@@ -18,13 +18,20 @@ extern "C" {
 
 namespace gtsam {
 
-class CholeskyEliminationTree::FactorWrapper {
+class CholeskyEliminationTree::FactorWrapper :
+  public std::enable_shared_from_this<CholeskyEliminationTree::FactorWrapper> {
+
 public:
+
+  sharedFactorWrapper get_ptr() {
+    return shared_from_this();
+  }
 
   typedef Eigen::Block<const Matrix> constBlock;
 
   CholeskyEliminationTree* etree = nullptr;
   size_t factorIndex_;
+  size_t gtsamFactorIndex_;
 
   // blockIndices_ store the list of (key, col, width) of the block row
   // This DOES NOT change after reordering keys. Only needs updating after
@@ -65,11 +72,13 @@ public:
   // Construct a wrapper around a factor
   // If nonlinearFactor_in == nullptr, then we are constructing a linear factor
   FactorWrapper(size_t factorIndex_in,
+                FactorIndex gtsamFactorIndex_in,
                 sharedFactor nonlinearFactor_in,
                 sharedLinearFactor cachedLinearFactor_in,
                 CholeskyEliminationTree* etree_in) 
   : etree(etree_in),
     factorIndex_(factorIndex_in),
+    gtsamFactorIndex_(gtsamFactorIndex_in),
     nonlinearFactor_(nonlinearFactor_in) { //,
     // cachedLinearFactor(cachedLinearFactor_in) {
     if(nonlinearFactor_ == nullptr) {
@@ -327,6 +336,7 @@ public:
       double sign, 
       const INFO& info,
       const PREDICATE& pred) {
+    std::cout << "updateHessianHessian" << std::endl;
     const auto& AbtAb = cachedLinearMatrix_;
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
@@ -345,11 +355,18 @@ public:
 
         Eigen::Block<MATRIX> destBlock(m, destR2, destR1, srcW2, srcW1);
 
+        assert(destR2 >= destR1);
+
         if(srcCol2 >= srcCol1) {
           // Note: We need to access the upper triangular part of the Hessian matrix
           Eigen::Block<const GemminiMatrix> AbtAb_ij(AbtAb, srcCol1, srcCol2, srcW1, srcW2);
 
           destBlock.noalias() += sign * AbtAb_ij.transpose();
+
+          if(srcCol2 == srcCol1) {
+            std::cout << AbtAb_ij.transpose() << std::endl;
+            exit(0);
+          }
         }
         else {
           // Note: We need to access the upper triangular part of the Hessian matrix

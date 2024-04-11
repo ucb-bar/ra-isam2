@@ -67,17 +67,24 @@ void CholeskyEliminationTree::addVariables(const Values& newTheta) {
 
     size_t factorIndex = factors_.size();
     sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
-            factorIndex, nullptr, regularization_factor, this);
+            factorIndex, -1, nullptr, regularization_factor, this);
 
     factors_.push_back(factorWrapper);
 
     nodes_[key]->addFactor(factorWrapper);
 
   }
+
+  // Set this for staleness check in LRU
+  for(const auto& keyValPair : newTheta) {
+    const Key& unmappedKey = keyValPair.key;
+    RemappedKey remappedKey = getRemapKey(unmappedKey);
+    nodes_[remappedKey]->lastRelinStep = keyTransformMap_.size();
+  }
 } 
 
 #define FACTOR7_3_COST 15000
-#define FACTOR13_6_COST 30000
+#define FACTOR13_6_COST 20000
 
 int64_t CholeskyEliminationTree::computeCostRelin(
     const RemappedKey remappedKey,
@@ -251,12 +258,14 @@ void CholeskyEliminationTree::resetCliqueParallelizable() {
 
 void CholeskyEliminationTree::pickRelinKeys(
   const vector<pair<Key, double>>& KeyDeltaVec,
+  const std::unordered_set<Key>& allFixedKeys,
   int64_t remainingCycles,
   int num_threads,
   double relinThresh,
   KeySet* newRelinKeys) {
 
   for(sharedClique clique : cliques_) {
+    if(!clique) { continue; }
     if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {
       cout << "invalid cost status at clique " << *clique << " status: " << clique->costStatus << " " << clique->nextCostStatus << endl;
       exit(1);
@@ -292,7 +301,19 @@ void CholeskyEliminationTree::pickRelinKeys(
 
   };
 
+  struct IsFixedKey {
+    const unordered_set<Key>& allFixedKeys;
+    IsFixedKey(const unordered_set<Key>& allFixedKeys_in) 
+      : allFixedKeys(allFixedKeys_in) {}
+
+    bool operator()(const Key& key) const {
+      return allFixedKeys.find(key) != allFixedKeys.end();
+    }
+
+  };
+
   IsNewKey isNewKey(newRemappedKeys);
+  IsFixedKey isFixedKey(allFixedKeys);
 
   // 1. First compute the cost of new factors
   //    This is essentially the cost of the AtA of the new factors
@@ -323,7 +344,13 @@ void CholeskyEliminationTree::pickRelinKeys(
   // Compute cost of backsolve
   int64_t backsolve_cost = 0;
   for(sharedNode node : nodes_) {
+    if(!node) { continue; }
+
     if(isNewKey(node->key)) { continue; }
+
+    Key unmappedKey = unmapKey(node->key);
+    if(isNewKey(unmappedKey)) { continue; }
+
     sharedClique clique = node->clique();
     if(clique->frontKey() != node->key) { continue; }
     if(node->key == 0 || clique == root_) { continue; }
@@ -353,8 +380,12 @@ void CholeskyEliminationTree::pickRelinKeys(
   int min_force_keys_thresh = 10;
 
   for(auto& p : KeyDeltaVec) {
-    RemappedKey remappedKey = unmapKey(p.first);
+    Key key = p.first;
+    RemappedKey remappedKey = getRemapKey(key);
+
     if(isNewKey(remappedKey)) { continue; }
+    if(isFixedKey(key)) { continue; }
+
     if(p.second > relinThresh) {
       newKeyDeltaVec.push_back(p);
       num_relin_keys++;
@@ -424,6 +455,7 @@ void CholeskyEliminationTree::pickRelinKeys(
   int64_t totalCost = 0;
   for(RemappedKey key : orderingToKey_) {
     sharedClique clique = cliques_[key];
+    if(!clique) { continue; }
     if(clique->frontKey() != key) { continue; }
     if(clique->costStatus == COST_MARKED) {
       totalCost += clique->markedCost;
@@ -438,12 +470,12 @@ void CholeskyEliminationTree::pickRelinKeys(
   resetCliqueParallelizable();
 
   for(sharedClique clique : cliques_) {
+    if(!clique) { continue; }
     if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {
       cout << "invalid cost status at clique " << *clique << " status: " << clique->costStatus << " " << clique->nextCostStatus << endl;
       exit(1);
     }
   }
-
 
   cout << "Remaining cycles: " << remainingCycles 
        << " Total relin keys: " << newKeyDeltaVec.size() 
@@ -508,7 +540,7 @@ void CholeskyEliminationTree::markAffectedKeys(
     sharedFactor factor = nonlinearFactors[newFactorIndex];
     size_t factorIndex = factors_.size();
     sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
-                                          factorIndex, factor, nullptr, this);
+                                          factorIndex, newFactorIndex, factor, nullptr, this);
 
     // Remap old factorIndex to real factor index
     // Removing factors uses old factorIndex
@@ -522,6 +554,8 @@ void CholeskyEliminationTree::markAffectedKeys(
     // If factor involves variables that are marginalized, ignore factor
     if(factorWrapper->hasMarginalizedKeys()) {
       assert(0);
+      cout << "factor has marginalized keys" << endl;
+      exit(1);
     }
 
     factors_.push_back(factorWrapper);
@@ -574,6 +608,12 @@ void CholeskyEliminationTree::markAffectedKeys(
       factors_[factorIndex]->markAffectedKeys(affectedKeys);
       factors_[factorIndex]->markAffectedKeys(observedKeys);
     }
+  }
+
+  // Set this for staleness check in LRU
+  for(const Key unmappedRelinKey : relinKeys) {
+    RemappedKey remappedKey = getRemapKey(unmappedRelinKey);
+    nodes_[remappedKey]->lastRelinStep = keyTransformMap_.size();
   }
 
   // DEBUG
@@ -660,7 +700,7 @@ void CholeskyEliminationTree::symbolicElimination(const RemappedKeySet& markedKe
   //   cout << key << " ";
   // }
   // cout << endl;
-
+  
   // Sort marked keys based on variable ordering
   vector<RemappedKey> sortedMarkedKeys;
   sortedMarkedKeys.reserve(markedKeys.size());
@@ -681,13 +721,12 @@ void CholeskyEliminationTree::symbolicElimination(const RemappedKeySet& markedKe
 
   allocateStack();
 
-#ifdef DEBUG
+// #ifdef DEBUG
   checkInvariant_afterSymbolic();
-#endif
+// #endif
 }
 
 void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
-  // cout << "[CholeskyEliminationTree] symbolicEliminateKey: " << key << endl;
 
   sharedNode node = nodes_[key];
   sharedClique clique = node->clique();
@@ -764,7 +803,6 @@ void CholeskyEliminationTree::symbolicEliminateKey(const RemappedKey key) {
       }
       if(mergeFlag) {
         clique->mergeClique2(childClique);
-        assert(childClique.unique());
         childClique.reset();
       }
     }
@@ -991,6 +1029,10 @@ void CholeskyEliminationTree::updateOrdering(const RemappedKeySet& markedKeys,
   getPartialReordering(markedKeys, observedKeys, params, &partialOrdering);
   assert(partialOrdering.size() == markedKeys.size());
 
+  for(RemappedKey k : partialOrdering) {
+    assert(cliques_[k] != nullptr);
+  }
+
   // Adjust ordering_. Shift not reordered keys to the front
   auto minIt = min_element(partialOrdering.begin(), partialOrdering.end(), orderingLess_);
   RemappedKey minReorderedKey = *minIt;
@@ -999,13 +1041,18 @@ void CholeskyEliminationTree::updateOrdering(const RemappedKeySet& markedKeys,
   vector<RemappedKey> newOrderingToKey(orderingToKey_);
   for(size_t i = minReorderedIndex; i < orderingToKey_.size(); i++) {
     RemappedKey key = orderingToKey_[i];
-    if(!cliques_[key]->marked()) {
+    sharedClique clique = cliques_[key];
+
+    if(!clique || !cliques_[key]->marked()) {
       newOrderingToKey[fixedIndex] = key;
       fixedIndex++;
     }
   }
   
   // Add newly reordered keys to the back of the ordering
+  if(fixedIndex + partialOrdering.size() != orderingToKey_.size()) {
+    cout << fixedIndex << " " << partialOrdering.size() << " " << orderingToKey_.size() << endl;
+  }
   assert(fixedIndex + partialOrdering.size() == orderingToKey_.size());
   for(size_t i = 0; i < partialOrdering.size(); i++) {
     RemappedKey key = partialOrdering[i];
@@ -1067,12 +1114,23 @@ void CholeskyEliminationTree::updateOrdering(const RemappedKeySet& markedKeys,
     factor->updateLowestHighestKeys();
   }
 
+  assert(orderingToKey_.back() == 0);
+  assert(keyToOrdering_[0] == keyToOrdering_.size() - 1);
+
+  for(int i = 0; i < orderingToKey_.size(); i++) {
+    auto key = orderingToKey_[i];
+    if(keyToOrdering_[key] != i) {
+      cout << key << " " << keyToOrdering_[key] << " " << i << endl;
+    }
+    assert(keyToOrdering_[key] == i);
+  }
+
 }
 
 void CholeskyEliminationTree::postReordering(const vector<RemappedKey>& partialOrdering) {
   vector<RemappedKey> newOrderingToKey(orderingToKey_);
 
-  RemappedKey minReorderedKey = partialOrdering.front();
+  RemappedKey minReorderedKey = orderingToKey_[0]; // partialOrdering.front();
   int minReorderedIndex = keyToOrdering_[minReorderedKey];
 
   assert(keyToOrdering_[0] == keyToOrdering_.size() - 1);
@@ -1082,11 +1140,17 @@ void CholeskyEliminationTree::postReordering(const vector<RemappedKey>& partialO
   // If come across the last key of a clique, reorder all keys in the clique to be 
   // right in front of it. This is needed for branched relaxed supernodes
   int curIndex = orderingToKey_.size() - 1; 
+  int removedKeyIndex = 0;
   for(int i = curIndex; i >= minReorderedIndex; i--) {
     RemappedKey key = orderingToKey_[i];
     sharedClique clique = cliques_[key];
-
-    if(key == clique->backKey()) {
+    
+    if(!clique) {
+      newOrderingToKey[removedKeyIndex] = key;
+      removedKeyIndex++;
+      continue;
+    }
+    else if(key == clique->backKey()) {
       for(int k = clique->cliqueSize() - 1; k >= 0; k--) {
         RemappedKey cliqueKey = get<BLOCK_INDEX_KEY>(clique->blockIndices[k]);
         assert(curIndex < newOrderingToKey.size());
@@ -1096,12 +1160,21 @@ void CholeskyEliminationTree::postReordering(const vector<RemappedKey>& partialO
     }
   }
 
-  assert(curIndex == keyToOrdering_.size());
+  assert(removedKeyIndex == curIndex + 1);
+
   orderingToKey_ = newOrderingToKey;
 
   for(size_t i = minReorderedIndex; i < orderingToKey_.size(); i++) {
     RemappedKey key = orderingToKey_[i];
     keyToOrdering_[key] = i;
+  }
+
+  for(int i = 0; i < orderingToKey_.size(); i++) {
+    auto key = orderingToKey_[i];
+    if(keyToOrdering_[key] != i) {
+      cout << key << " " << keyToOrdering_[key] << " " << i << endl;
+    }
+    assert(keyToOrdering_[key] == i);
   }
 
 }
@@ -1819,9 +1892,9 @@ void CholeskyEliminationTree::backsolve(VectorValues* delta_ptr, double tol) {
 
   deallocateStack();
 
-#ifdef DEBUG
+// #ifdef DEBUG
   checkInvariant_afterBackSolve();
-#endif
+// #endif
 }
 
 void CholeskyEliminationTree::backsolveClique(
@@ -1951,6 +2024,138 @@ void CholeskyEliminationTree::getAffectedDescendantKeys(
   }
 }
 
+void CholeskyEliminationTree::selectStaleSubtree(
+        int targetTreeSize, 
+        vector<Key>* marginalizedKeys,
+        vector<Key>* fixedKeys) {
+
+  marginalizedKeys->clear();
+  fixedKeys->clear();
+
+  vector<pair<sharedClique, bool>> stack(1, {root_, false});
+
+  // First compute the subtree sizes of each clique
+  while(!stack.empty()) {
+    auto& curPair = stack.back();
+    sharedClique curClique = curPair.first;
+    bool& expanded = curPair.second;
+
+    if(!expanded) {
+      expanded = true;    
+
+      for(sharedClique childClique : curClique->children) {
+        stack.push_back({childClique, false});
+      }
+    }
+    else {
+      stack.pop_back();
+
+      curClique->memSize = curClique->width() * curClique->width();
+      curClique->subdiagSize = curClique->subdiagonalHeight() * curClique->width();
+
+      for(sharedClique childClique : curClique->children) {
+        curClique->memSize += childClique->memSize; + childClique->subdiagSize;
+      }
+
+      curClique->lastRelinStep = 0;
+      for(sharedNode node : curClique->nodes) {
+        if(node->lastRelinStep > curClique->lastRelinStep) {
+          curClique->lastRelinStep = node->lastRelinStep;
+        }
+      }
+
+      for(sharedClique childClique : curClique->children) {
+        if(childClique->lastRelinStep > curClique->lastRelinStep) {
+          curClique->lastRelinStep = childClique->lastRelinStep;
+        }
+      }
+    }
+  }
+
+  int totalMemSize = root_->memSize;
+
+  cout << "totalMemSize = " << totalMemSize << " targetTreeSize = " << targetTreeSize << endl;
+
+  if(totalMemSize <= targetTreeSize) {
+    return;
+  }
+
+  int discardSize = totalMemSize - targetTreeSize;
+  
+  cout << "discardSize = " << discardSize << endl;
+
+  stack.push_back({root_, false});
+
+  vector<sharedClique> candidates;
+
+  // First compute the subtree sizes of each clique
+  while(!stack.empty()) {
+    auto& curPair = stack.back();
+    stack.pop_back();
+    sharedClique curClique = curPair.first;
+    bool& expanded = curPair.second;
+
+    // curClique is assumed to have memSize larger than discardSize
+    // If child has memSize larger than discardSize, expand on that child
+    // If no child or no child is large than discardSize, add curClique to candidates
+
+    if(curClique->children.empty()) {
+        candidates.push_back(curClique);
+    }
+    else {
+      bool flag = false;
+      for(sharedClique childClique : curClique->children) {
+        if(childClique->memSize >= discardSize) {
+          flag = true;
+          stack.push_back({childClique, false});
+        }
+      }
+      if(!flag) {
+        if(curClique == root_) {
+          cout << "Discarding root!" << endl;
+          cout << "First child clique" << *(*curClique->children.begin()) << (*curClique->children.begin())->memSize << endl;
+          exit(1);
+        }
+        candidates.push_back(curClique);
+      }
+    }
+  }
+
+  struct CandidateLess {
+    bool operator()(const sharedClique& lhs, const sharedClique& rhs) const {
+      return lhs->lastRelinStep == rhs->lastRelinStep? lhs->memSize < rhs->memSize :
+              lhs->lastRelinStep < rhs->lastRelinStep;
+    }
+  };
+
+  sort(candidates.begin(), candidates.end(), CandidateLess());
+
+  sharedClique selClique = candidates.front();
+
+  stack.push_back({selClique, false});
+
+  while(!stack.empty()) {
+    auto& curPair = stack.back();
+    stack.pop_back();
+    sharedClique curClique = curPair.first;
+    bool& expanded = curPair.second;
+
+    for(int i = 0; i < curClique->cliqueSize(); i++) {
+      RemappedKey remappedKey = get<BLOCK_INDEX_KEY>(curClique->blockIndices[i]);
+      marginalizedKeys->push_back(unmapKey(remappedKey));
+    }
+
+    for(sharedClique childClique : curClique->children) {
+      stack.push_back({childClique, false});
+    }
+  }
+
+  for(int i = selClique->cliqueSize(); i < selClique->blockIndices.size() - 1; i++) {
+    RemappedKey remappedKey = get<BLOCK_INDEX_KEY>(selClique->blockIndices[i]);
+    fixedKeys->push_back(unmapKey(remappedKey));
+  }
+}
+
 void CholeskyEliminationTree::marginalizeLeaves(
     const FastList<Key>& leafKeys,
     boost::optional<FactorIndices&> marginalFactorsIndices,
@@ -2075,7 +2280,7 @@ void CholeskyEliminationTree::marginalizeClique(
 
   size_t factorIndex = factors_.size();
   sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
-                                        factorIndex, nullptr, marginalFactor, this);
+                                        factorIndex, -1, nullptr, marginalFactor, this);
 
   factors_.push_back(factorWrapper);
 
@@ -2101,6 +2306,165 @@ void CholeskyEliminationTree::marginalizeClique(
     }
     assert(node->status() == MARGINALIZED);
   }
+}
+
+// Reimplement marginalization. We should just remove all traces of the marginalized keys
+// Including factors
+void CholeskyEliminationTree::marginalizeLeaves2(
+    const std::vector<Key>& leafKeys,
+    boost::optional<FactorIndices&> marginalFactorsIndices,
+    boost::optional<FactorIndices&> deletedFactorsIndices) {
+
+  // First unmap the leaf keys and reorder
+  vector<RemappedKey> remappedLeafKeys;
+  for(Key unmappedKey : leafKeys) {
+    RemappedKey key = getRemapKey(unmappedKey);
+    remappedLeafKeys.push_back(key);
+  }
+
+  sort(remappedLeafKeys.begin(), remappedLeafKeys.end(), orderingLess_);
+
+  // Mark all the cliques and nodes that will be marginalized
+  vector<sharedClique> marginalizedCliques;
+  for(RemappedKey key : remappedLeafKeys) {
+    assert(nodes_[key]->status() == UNMARKED);
+    nodes_[key]->setStatusMarginalized();
+    sharedClique clique = cliques_[key];
+    if(key == clique->frontKey()) {
+      // No need to worry about duplicates if we only mark clique 
+      // for the first key of the clique. If a later key in the clique is marginalized
+      // the first key must also be marginalized
+      clique->setStatusMarginalized();
+      marginalizedCliques.push_back(clique);
+    }
+  }
+
+  vector<sharedFactorWrapper> deletedFactors;
+  vector<sharedFactorWrapper> marginalFactors;
+
+  for(sharedClique clique : marginalizedCliques) {
+    marginalizeClique2(clique, &deletedFactors, &marginalFactors);
+  }
+
+  // Remove all traces of marginalized keys. Delete cliques, nodes, keys, and factors
+  for(RemappedKey key : remappedLeafKeys) {
+    nodes_[key]->deleteNode();
+    nodes_[key] = nullptr;
+    unmappedKeys_[key] = -1;
+    // keyToOrdering_[key] = -1;
+  }
+
+  for(sharedClique clique : marginalizedCliques) {
+    clique->deleteClique();
+  }
+
+  for(sharedFactorWrapper factor : deletedFactors) {
+    // TODO: Add to deletedFactorsIndices
+    factors_[factor->factorIndex()] = nullptr;
+  }
+
+  // Don't do anything to orderingToKey_ and keyToOrdering_. Too complicated
+
+#ifdef DEBUG
+  checkInvariant_afterMarginalize();
+#endif
+}
+
+void CholeskyEliminationTree::marginalizeClique2(
+      sharedClique clique,
+      vector<sharedFactorWrapper>* deletedFactors,
+      vector<sharedFactorWrapper>* marginalFactors) {
+
+  // If a clique has not connections to an unmarginalized node
+  // we can just skip it
+  RemappedKey secondToLastKey 
+    = get<BLOCK_INDEX_KEY>(clique->blockIndices[clique->blockIndices.size() - 2]);
+  if(nodes_[secondToLastKey]->status() == MARGINALIZED) {
+    return;
+  } 
+
+  // For now, for LRU, assume that we cannot split cliques
+  if(nodes_[clique->backKey()]->status() != MARGINALIZED) {
+    cout << "Marginalization within cliques not implemented!" << endl;
+    exit(1);
+  }
+
+  // All of this clique's children should be marginalized
+  // this is required of the input of leafKeys
+  for(sharedClique childClique : clique->children) {
+    if(childClique->status() != MARGINALIZED) {
+      cout << "Marginalizing clique that has unmarginalized children" << endl;
+      exit(1);
+    }
+  }
+  
+  // Set all factors in each node to be LINEAR
+  // and remove all keys and data that are marginalized out
+  // If all the keys in a factor is marginalized out, remove that factor
+  for(sharedNode node : clique->nodes) {
+    if(node->status() != MARGINALIZED) { continue; }
+    for(sharedFactorWrapper factor : node->factors) {
+      if(factor->lowestKey() == node->key) {
+        bool deleteFactor = factor->marginalizeKeys();
+        if(deleteFactor) {
+          deletedFactors->push_back(factor);
+        }
+        else {
+          assert(factor->status() == LINEAR);
+        }
+      }
+    }
+  }
+
+  assert(clique->gatherSources.size() == 1 && clique->ownsColumns());
+  LocalCliqueColumns cliqueColumns = clique->gatherSources.front();
+
+  const BlockIndexVector& blockIndices = clique->blockIndices;
+  size_t lowestIndex = 0, lowestRow = 0;
+  for(size_t i = 0; i < blockIndices.size() - 1; i++) {
+    const auto&[key, row, height] = blockIndices[i];
+    if(nodes_[key]->status() != MARGINALIZED) {
+      lowestIndex = i;
+      lowestRow = row;
+      break;
+    }
+  }
+  assert(lowestIndex != 0);
+
+  
+  bool splitClique = lowestIndex < clique->cliqueSize();
+  size_t splitIndex = lowestIndex;
+  size_t totalWidth = clique->width();
+  size_t lowestCol = splitClique? lowestRow : totalWidth;
+  size_t newHeight = clique->height() - lowestRow;
+
+  auto origCol = cliqueColumns.matrix();
+  auto B = block(origCol, lowestRow, 0, newHeight, lowestCol);
+
+  // Construct SymmetricBlockMatrix for HessianFactor
+  vector<size_t> dimensions;
+  vector<Key> unmappedKeys;
+  dimensions.reserve(blockIndices.size());
+  for(size_t i = lowestIndex; i < blockIndices.size() - 1; i++) {
+    // No need to add -1 key
+    const auto&[key, row, height] = blockIndices[i];
+    dimensions.push_back(height);
+    unmappedKeys.push_back(unmapKey(key));
+  }
+  SymmetricBlockMatrix factorMatrix(dimensions, true);
+  factorMatrix.matrix().setZero();
+  assert(B.rows() == factorMatrix.selfadjointView().rows());
+  factorMatrix.selfadjointView().rankUpdate(B.cast<double>(), -1);
+
+  // Make HessianFactor
+  HessianFactor::shared_ptr marginalFactor = boost::make_shared<HessianFactor>(unmappedKeys, factorMatrix);
+
+  size_t factorIndex = factors_.size();
+  sharedFactorWrapper factorWrapper = std::make_shared<FactorWrapper>(
+                                        factorIndex, -1, nullptr, marginalFactor, this);
+
+  factors_.push_back(factorWrapper);
+  
 }
 
 void CholeskyEliminationTree::printOrderingUnmapped(std::ostream& os) const {
@@ -2251,7 +2615,10 @@ void CholeskyEliminationTree::extractFullTree(std::ostream& os, bool print_value
 
   int clique_count = 0;
   for(RemappedKey remappedKey : orderingToKey_) {
-    sharedClique clique = nodes_[remappedKey]->clique();
+    sharedNode node = nodes_[remappedKey];
+    if(!node) { continue; }
+
+    sharedClique clique = node->clique();
     if(clique->frontKey() != remappedKey) { continue; }
     clique_count++;
   }
@@ -2260,6 +2627,9 @@ void CholeskyEliminationTree::extractFullTree(std::ostream& os, bool print_value
   os << clique_count << endl;
 
   for(RemappedKey remappedKey : orderingToKey_) {
+    sharedNode node = nodes_[remappedKey];
+    if(!node) { continue; }
+
     sharedClique clique = nodes_[remappedKey]->clique();
     if(clique->frontKey() != remappedKey) { continue; }
 
@@ -2318,6 +2688,7 @@ void CholeskyEliminationTree::extractDelta(std::ostream& os, VectorValues& delta
 
 void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_threads) {
   for(auto clique : cliques_) {
+    if(!clique) { continue; }
     if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {
       cout << "cost status not reset for clique: " << *clique << endl;
       exit(1);
@@ -2343,6 +2714,7 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
   for(RemappedKey k : datasetgen_relinKeys) {
     sharedNode node = nodes_[k];
     relin_cost += computeCostRelin(k, num_threads, curRelinCostStatus);
+    curRelinCostStatus[k] = COST_RELIN;
     for(sharedFactorWrapper factor : node->factors) {
       RemappedKey lowestKey = factor->lowestKey();
       total_predicted_cost += computeCost(lowestKey, num_threads, &updatedCliques);
@@ -2352,7 +2724,10 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
 
   int clique_count = 0;
   for(RemappedKey remappedKey : orderingToKey_) {
-    sharedClique clique = nodes_[remappedKey]->clique();
+    sharedNode node = nodes_[remappedKey];
+    if(!node) { continue; }
+
+    sharedClique clique = node->clique();
     if(clique->frontKey() != remappedKey) { continue; }
     clique_count++;
 
@@ -2369,7 +2744,10 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
   int index = 0;
 
   for(RemappedKey remappedKey : orderingToKey_) {
-    sharedClique clique = nodes_[remappedKey]->clique();
+    sharedNode node = nodes_[remappedKey];
+    if(!node) { continue; }
+
+    sharedClique clique = node->clique();
     if(clique->frontKey() != remappedKey) { continue; }
 
     os << "node " << index << "\t";
@@ -2397,6 +2775,7 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
   resetCliqueParallelizable();
 
   for(auto clique : cliques_) {
+    if(!clique) { continue; }
     if(clique->costStatus != COST_UNMARKED || clique->nextCostStatus != COST_UNMARKED) {
       cout << "cost status not reset for clique: " << *clique << endl;
       exit(1);
@@ -2467,6 +2846,7 @@ size_t CholeskyEliminationTree::colWidth(const RemappedKey key) const {
 
 void CholeskyEliminationTree::checkInvariant_afterSymbolic() const {
   for(sharedClique clique : cliques_) {
+    if(!clique) { continue; }
     clique->checkInvariant();
   }
 
@@ -2475,6 +2855,9 @@ void CholeskyEliminationTree::checkInvariant_afterSymbolic() const {
 
   for(int i = 0; i < orderingToKey_.size(); i++) {
     auto key = orderingToKey_[i];
+    if(keyToOrdering_[key] != i) {
+      cout << key << " " << keyToOrdering_[key] << " " << i << endl;
+    }
     assert(keyToOrdering_[key] == i);
   }
 
@@ -2482,6 +2865,7 @@ void CholeskyEliminationTree::checkInvariant_afterSymbolic() const {
 
 void CholeskyEliminationTree::checkInvariant_afterBackSolve() const {
   for(const sharedClique& clique : cliques_) {
+    if(!clique) { continue; }
     if(clique->isLastRow()) {
       assert(clique->parent() == nullptr);
       assert(clique == root_);
@@ -2495,6 +2879,7 @@ void CholeskyEliminationTree::checkInvariant_afterBackSolve() const {
     clique->checkInvariant();
   }
   for(const sharedNode& node : nodes_) {
+    if(!node) { continue; }
     // One in nodes_ and one in clique->nodes
     assert(node.use_count() == 2);
   }
@@ -2504,6 +2889,7 @@ void CholeskyEliminationTree::checkInvariant_afterMarginalize() const {
   cout << "check invariant after marginalized" << endl;
   {
     for(sharedNode node : nodes_) {
+      if(!node) { continue; }
       sharedClique clique = node->clique();
       bool flag = false;
       for(sharedNode cliqueNode : clique->nodes) {
@@ -2532,6 +2918,7 @@ void CholeskyEliminationTree::checkInvariant_afterMarginalize() const {
   }
   {
     for(sharedNode node : nodes_) {
+      if(!node) { continue; }
       RemappedKey key = node->key;
       assert(node->status() == UNMARKED || node->status() == MARGINALIZED);
       if(node->status() == UNMARKED) {

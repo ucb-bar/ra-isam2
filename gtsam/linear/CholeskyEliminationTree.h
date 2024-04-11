@@ -13,6 +13,7 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/ISAM2UpdateParams.h>
 #include <vector>
+#include <unordered_set>
 #include <unordered_map>
 #include <utility>
 #include <iostream>
@@ -102,6 +103,7 @@ public:
 
   void pickRelinKeys(
       const std::vector<std::pair<Key, double>>& KeyDeltaVec,
+      const std::unordered_set<Key>& allFixedKeys,
       int64_t remainingCycles,
       int num_threads,
       double relinThresh,
@@ -140,11 +142,20 @@ public:
   // Add all descendants of unmappedKey to additionalKeys. This is used in marginalization
   void getAffectedDescendantKeys(Key unmappedKey, std::set<Key>& additionalKeys) const;
 
+  void selectStaleSubtree(
+      int targetTreeSize, 
+      std::vector<Key>* marginalizedKeys,
+      std::vector<Key>* fixedKeys);
+
   void marginalizeLeaves(
       const FastList<Key>& leafKeys,
       boost::optional<FactorIndices&> marginalFactorsIndices = boost::none,
       boost::optional<FactorIndices&> deletedFactorsIndices = boost::none);
-  
+
+  void marginalizeLeaves2(
+      const std::vector<Key>& leafKeys,
+      boost::optional<FactorIndices&> marginalFactorsIndices = boost::none,
+      boost::optional<FactorIndices&> deletedFactorsIndices = boost::none);
 
   void printOrderingUnmapped(std::ostream& os) const;
   void printOrderingRemapped(std::ostream& os) const;
@@ -178,6 +189,7 @@ public:
   void setCostReorder(bool reorder) {
     costReorder = reorder;
   }
+
 
 private:
   // Add new unmapped Key to transform map and return the mapped key, 
@@ -263,6 +275,12 @@ private:
       sharedClique clique,
       FactorIndices* deletedFactors,
       FactorIndices* marginalFactors);
+
+  void marginalizeClique2(
+      sharedClique clique,
+      std::vector<sharedFactorWrapper>* deletedFactors,
+      std::vector<sharedFactorWrapper>* marginalFactors);
+
 
   bool checkSortedNoDuplicates(const std::vector<Key>& v) const;
 

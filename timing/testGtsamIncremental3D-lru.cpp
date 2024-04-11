@@ -21,11 +21,12 @@ using namespace std;
 using namespace gtsam;
 using namespace gtsam::symbol_shorthand;
 
-typedef Pose2 Pose;
+typedef Pose3 Pose;
+typedef Point3 Point;
 
 typedef NoiseModelFactor1<Pose> NM1;
 typedef NoiseModelFactor2<Pose,Pose> NM2;
-typedef BearingRangeFactor<Pose,Point2> BR;
+typedef BearingRangeFactor<Pose,Point3> BR;
 
 double chi2_red(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& config) {
     // Compute degrees of freedom (observations - variables)
@@ -40,33 +41,6 @@ double chi2_red(const gtsam::NonlinearFactorGraph& graph, const gtsam::Values& c
     return 2. * graph.error(config) / dof; // kaess: added factor 2, graph.error returns half of actual error
 }
 
-map<int, FastList<RemappedKey>> read_relin_keys_file(string& fname) {
-  if(fname == "") {
-    return map<int, FastList<RemappedKey>>();
-  }
-  
-  ifstream fin(fname);
-  if(!fin.is_open()) {
-    cout << "Error opening file: " << fname << endl;
-    exit(1);
-  }
-
-  map<int, FastList<RemappedKey>> res;
-  int n;
-  fin >> n;
-  for(int i = 0; i < n; i++) {
-    int step, num_keys;
-    fin >> step >> num_keys;
-    res.insert({step, FastList<Key>()});
-    for(int j = 0; j < num_keys; j++) {
-      RemappedKey k;
-      fin >> k;
-      res[step].push_back(k); 
-    }
-  }
-  return res;
-}
-
 int main(int argc, char *argv[]) {
 
     string dataset_name;
@@ -78,7 +52,9 @@ int main(int argc, char *argv[]) {
     int max_iter = 10;
     int num_steps = 1000000;
     double relin_thresh = 0.1;
-    string relin_keys_file = "";
+    string num_threads_infile = "";
+    int num_threads = 1;
+    uint64_t lru_mem_size = INT_MAX;
     string dataset_outdir = "";
     bool print_dataset = false;
     bool print_pred = false;
@@ -96,9 +72,11 @@ int main(int argc, char *argv[]) {
         {"relinearize_skip", required_argument, 0, 's'},
         {"print_frequency", required_argument, 0, 'p'},
         {"num_steps", required_argument, 0, 't'},
-        {"relin_keys_file", required_argument, 0, 50},
+        {"num_threads", required_argument, 0, 50},
         {"dataset_outdir", required_argument, 0, 51},
         {"print_values", no_argument, 0, 52},
+        {"num_threads_infile", required_argument, 0, 53},
+        {"lru_mem_size", required_argument, 0, 54},
         {"print_dataset", no_argument, 0, 150},
         {"print_pred", no_argument, 0, 151},
         {"print_traj", no_argument, 0, 152},
@@ -135,13 +113,19 @@ int main(int argc, char *argv[]) {
                 num_steps = atoi(optarg);
                 break;
             case 50:
-                relin_keys_file = string(optarg);
+                num_threads = atoi(optarg);
                 break;
             case 51:
                 dataset_outdir = string(optarg);
                 break;
             case 52:
                 print_values = true;
+                break;
+            case 53:
+                num_threads_infile = string(optarg);
+                break;
+            case 54:
+                lru_mem_size = atol(optarg) / sizeof(elem_t);
                 break;
             case 150:
                 print_dataset = true;
@@ -158,7 +142,18 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    auto relin_keys_map = read_relin_keys_file(relin_keys_file);
+    vector<int> step_num_threads;
+    ifstream num_threads_fin;
+    if(num_threads_infile != "") {
+        num_threads_fin.open(num_threads_infile);
+        if(!num_threads_fin.is_open()) {
+            cout << "Error opening file: " << num_threads_infile << endl;
+        }
+        int t;
+        while(num_threads_fin >> t) {
+            step_num_threads.push_back(t);
+        }
+    }
 
     cout << "Incremental optimization" << endl
          << "Loading " << dataset_name << endl
@@ -167,12 +162,13 @@ int main(int argc, char *argv[]) {
          << ", opt_stop_cond = " << d_error 
          << ", relinearize_skip = " << relinearize_skip 
          << ", print_frequency = " << print_frequency 
+         << ", lru_mem_size = " << lru_mem_size << " (x " << sizeof(elem_t) << "B)"
          << endl;
 
     string datasetFile = findExampleDataFile(dataset_name);
     // string datasetFile = findExampleDataFile("victoria_park");
     std::pair<NonlinearFactorGraph::shared_ptr, Values::shared_ptr> data =
-        load2D(datasetFile);
+        readG2o(datasetFile, true);
 
     NonlinearFactorGraph measurements = *data.first;
     Values initial = *data.second;
@@ -196,13 +192,17 @@ int main(int argc, char *argv[]) {
     Pose prevPose;
     Values newVariables;
     NonlinearFactorGraph newFactors;
+
+    unordered_set<Key> allMarginalizedKeys;
+    unordered_set<Key> allFixedKeys;
+
     for(size_t step=1; nextMeasurement < measurements.size(); ++step) {
 
         // Collect measurements and new variables for the current step
         if(step == 1) {
             newVariables.insert(0, Pose());
             // Add prior
-            newFactors.addPrior(0, Pose(), noiseModel::Unit::Create(3));
+            newFactors.addPrior(0, Pose(), noiseModel::Unit::Create(6));
         }
         while(nextMeasurement < measurements.size()) {
 
@@ -224,35 +224,44 @@ int main(int argc, char *argv[]) {
                 }
 
                 // Add a new factor
-                newFactors.push_back(measurement);
+                Key k1 = measurement->key1();
+                Key k2 = measurement->key2();
 
-                // Initialize the new variable
-                if(measurement->key1() == step && measurement->key2() == step-1) {
+                if(allMarginalizedKeys.find(k1) != allMarginalizedKeys.end() 
+                    || allMarginalizedKeys.find(k2) != allMarginalizedKeys.end()) {
+                  cout << "Dropping factor " << k1 << " " << k2 << endl;
+                }
+                else {
+                  newFactors.push_back(measurement);
+
+                  // Initialize the new variable
+                  if(measurement->key1() == step && measurement->key2() == step-1) {
                     Pose newPose;
                     if(step == 1) {
-                        newPose = measurement->measured().inverse();
+                      newPose = measurement->measured().inverse();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
-                        }
-                        newPose = prevPose * measurement->measured().inverse();
+                      if(isam2.valueExists(step - 1)) {
+                        prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                      }
+                      newPose = prevPose * measurement->measured().inverse();
                     }
                     newVariables.insert(step, newPose);
                     prevPose = newPose;
-                } else if(measurement->key2() == step && measurement->key1() == step-1) {
+                  } else if(measurement->key2() == step && measurement->key1() == step-1) {
                     Pose newPose;
                     if(step == 1) {
-                        newPose = measurement->measured();
+                      newPose = measurement->measured();
                     }
                     else {
-                        if(isam2.valueExists(step - 1)) {
-                            prevPose = isam2.calculateEstimate<Pose>(step - 1);
-                        }
-                        newPose = prevPose * measurement->measured();
+                      if(isam2.valueExists(step - 1)) {
+                        prevPose = isam2.calculateEstimate<Pose>(step - 1);
+                      }
+                      newPose = prevPose * measurement->measured();
                     }
                     newVariables.insert(step, newPose);
                     prevPose = newPose;
+                  }
                 }
             }
             else {
@@ -260,6 +269,7 @@ int main(int argc, char *argv[]) {
             }
             ++ nextMeasurement;
         }
+
 
         // Update iSAM2
         int d1 = 0, d2 = 0;
@@ -273,10 +283,15 @@ int main(int argc, char *argv[]) {
             K_count = 0;
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
-            FastList<Key> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
-            isam2.update(newFactors, newVariables, params, extraRelinKeys);
+
+            if(step < step_num_threads.size()) {
+                num_threads = step_num_threads[step];
+            }
+
+            cout << "num_threads = " << num_threads << endl;
+            isam2.update_resource_aware(newFactors, newVariables, params, allFixedKeys, num_threads);
             auto update_end = chrono::high_resolution_clock::now();
-            // estimate = isam2.calculateEstimate();
+            estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();
             d1 += chrono::duration_cast<chrono::microseconds>(update_end - start).count();
             d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
@@ -289,53 +304,33 @@ int main(int argc, char *argv[]) {
             if(step >= num_steps) {
                 break;
             }
+            
+            last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+            cout << "chi2 = " << last_chi2 << endl;
 
-            // last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-            // print_count++;
-            // if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //     cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //          << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            // }
+            vector<Key> marginalizedKeys, fixedKeys;
+            isam2.getCholeskyEliminationTree().selectStaleSubtree(
+                lru_mem_size, &marginalizedKeys, &fixedKeys);
 
-            // if(K > 1) {
-            //     NonlinearFactorGraph dummy_nfg;
-            //     Values dummy_vals;
-            //     int iter = 0;
+            if(!marginalizedKeys.empty()) {
+              cout << "marginalized keys: ";
+              for(Key k : marginalizedKeys) {
+                cout << k << " ";
+              }
+              cout << endl;
+              cout << "fixed keys: ";
+              for(Key k : fixedKeys) {
+                cout << k << " ";
+              }
+              cout << endl;
+            }
 
-            //     while(1) {
-            //         if(last_chi2 <= epsilon) {
-            //             break;
-            //         }
-            //         auto start = chrono::high_resolution_clock::now();
-            //         isam2.update(dummy_nfg, dummy_vals);
-            //         auto update_end = chrono::high_resolution_clock::now();
-            //         estimate = isam2.calculateEstimate();
-            //         auto calc_end = chrono::high_resolution_clock::now();
-            //         d1 += chrono::duration_cast<chrono::microseconds>
-            //                     (update_end - start).count();
-            //         d2 += chrono::duration_cast<chrono::microseconds>
-            //                     (calc_end - update_end).count();
+            allMarginalizedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
+            allFixedKeys.insert(fixedKeys.begin(), fixedKeys.end());
+            allFixedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
 
-            //         double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+            isam2.getCholeskyEliminationTree().marginalizeLeaves2(marginalizedKeys);
 
-            //         if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //             cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //                 << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            //         }
-
-            //         if(abs(last_chi2 - chi2) < d_error) {
-            //             break;
-            //         }
-
-            //         last_chi2 = chi2;
-            //         iter++;
-            //         if(iter >= max_iter) {
-            //             cout << "Nonlinear optimization exceed max iterations: " 
-            //                  << iter << " >= " << max_iter << ", chi2 = " << chi2 << endl;
-            //             break;
-            //         }
-            //     }
-            // }
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
 
@@ -378,7 +373,7 @@ int main(int argc, char *argv[]) {
                     exit(1);
                   }
 
-                  estimate.print_kitti_pose2(traj_fout);
+                  estimate.print_kitti_pose3(traj_fout);
                 }
             }
         }
@@ -386,9 +381,7 @@ int main(int argc, char *argv[]) {
         update_times.push_back(d1);
         calc_times.push_back(d2);
 
-
     }
-
 
     Values estimate(isam2.calculateEstimate());
     double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);

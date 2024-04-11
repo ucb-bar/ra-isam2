@@ -30,7 +30,7 @@ namespace gtsam {
   typedef std::vector<RemappedKey> RemappedKeyVector;
   typedef std::set<RemappedKey> RemappedKeySet;
 
-  enum MarkedStatus {UNMARKED=0, EDIT=1, RECONSTRUCT=2, NEW=3, MARGINALIZED=4};
+  enum MarkedStatus {UNMARKED=0, EDIT=1, RECONSTRUCT=2, NEW=3, MARGINALIZED=4, FIXED=5};
   enum FactorStatus {UNLINEARIZED=0, LINEARIZED=1, RELINEARIZE=2, LINEAR=3, 
                      REMOVING=4, REMOVED=5, UNUSED=6};
   enum CostStatus {COST_UNMARKED = 0, COST_FIXED = 1, COST_MARKED = 2, COST_RELIN = 3};
