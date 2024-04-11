@@ -92,6 +92,7 @@ private:
 
     int lastNumKeys = 1;
     int lastNumFactors = 0;
+    bool costReorder = false;
 
   CholeskyEliminationTree& operator=(const CholeskyEliminationTree& other);
 
@@ -173,6 +174,11 @@ public:
   void extraRelinRemappedKeys(const std::vector<RemappedKey> relinKeys);
 
   Key unmapKey(const RemappedKey remappedKey) const;
+
+  // This is used for cost estimation
+  void setCostReorder(bool reorder) {
+    costReorder = reorder;
+  }
 
 private:
   // Add new unmapped Key to transform map and return the mapped key, 
@@ -272,6 +278,11 @@ private:
       const RemappedKey remappedKey, 
       const int num_threads,
       std::vector<sharedClique>* updatedCliques);
+
+  int64_t computeCostRelin(
+      const RemappedKey remappedKey,
+      int num_threads,
+      const std::vector<CostStatus>& curRelinCostStatus);
 
   void commitCost(std::vector<sharedClique>& updatedCliques, 
                   std::vector<sharedClique>* allUpdatedCliques);

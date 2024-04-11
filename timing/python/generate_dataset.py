@@ -18,6 +18,16 @@ import glob
 import os
 from timestep import Timestep
 
+def read_until(fin, s):
+    while True:
+        line = fin.readline()
+        if not line:
+            print(f"Pattern {s} not found!")
+            exit(0)
+
+        if s in line:
+            break
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("--indir", dest="indir", 
@@ -30,6 +40,8 @@ if __name__ == "__main__":
                       default=2, help="Starting step, inclusive")
     parser.add_option("--end_step", dest="end_step", type="int",
                       default=30, help="Ending step, inclusive")
+    parser.add_option("--period", dest="period", type="int",
+                      default=1, help="Step size of incrementing timesteps")
     parser.add_option("--no_values", dest="no_values", 
                       action="store_true", help="If the generated dataset has no matrix values")
     parser.add_option("--vio", dest="vio", action="store_true",
@@ -49,6 +61,7 @@ if __name__ == "__main__":
     num_threads_file = options.num_threads_file
     start_step = options.start_step
     end_step = options.end_step
+    period = options.period
     no_values = options.no_values
     vio = options.vio
     vio_lag = options.vio_lag
@@ -80,19 +93,39 @@ if __name__ == "__main__":
     timesteps = [None for _ in range(0, end_step+1)]
     
     for step in range(start_step, end_step+1):
+        if step % period != 0:
+            continue
+
         infile_pattern = f"step-{step}.out"
         infile = None
+        pred_infile_pattern = f"step-{step}-pred_cycles.out"
+        pred_infile = None
 
         for filename in files:
             if infile_pattern in filename:
                 infile = filename
+                break
+
+        for filename in files:
+            if pred_infile_pattern in filename:
+                pred_infile = filename
+                break
+
+        num_threads = -1
+        relin_cost = -1
+        if pred_infile is not None:
+            with open(pred_infile, "r") as fin:
+                read_until(fin, "num threads")
+                num_threads = int(fin.readline())
+                read_until(fin, "relin cost")
+                relin_cost = int(fin.readline())
 
         if infile is None:
-            print(f"Step {step} file not found!")
-            exit(0)
-
+            print(infile_pattern)
+            assert(0)
+    
         with open(infile, "r") as fin:
-            timesteps[step] = Timestep(fin, step)
+            timesteps[step] = Timestep(fin, step, num_threads=num_threads, relin_cost=relin_cost)
 
     # If vio, remove all factors that span over vio_lag steps
     # Also remove all factors that do no connect to a key that is more recent than current-vio_lag
@@ -179,6 +212,12 @@ if __name__ == "__main__":
         # 3. Print out the timestep
         #    a. If reconstructing, print out all the [A B] matrix of each fixed and marked clique
 
+        # This is for full dataset eval
+        for step in range(start_step, end_step + 1):
+            if step % period != 0:
+                print(f"step {step} is set to None")
+                timesteps[step] = None
+
         for step, timestep in enumerate(timesteps):
             if timestep is None:
                 continue
@@ -192,8 +231,9 @@ if __name__ == "__main__":
             timestep.is_reconstruct = True
             if prev_timestep is None:
                 timestep.is_reconstruct = True
-            elif timestep.same_ordering(prev_timestep):
-                timestep.is_reconstruct = True
+            elif not timestep.same_ordering(prev_timestep):
+                timestep.is_reconstruct = True  
+                timestep.is_reorder = True
             else:
                 timestep.is_reconstruct = True
             

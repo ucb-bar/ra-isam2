@@ -14,35 +14,13 @@ def read_until(fin, s):
         if s in line:
             break
 
-def group_block_indices(A_ridx, B_ridx):
-    in_blk = False
-    Ai = 0
-    A_blk_start = []
-    B_blk_start = []
-    blk_width = []
-    for Bi in range(len(B_ridx) - 1):   # Don't do last row
-        if A_ridx[Ai] == B_ridx[Bi]:
-            if not in_blk:
-                in_blk = True
-                A_blk_start.append(Ai)
-                B_blk_start.append(Bi)
-                blk_width.append(1)
-            else:
-                blk_width[-1] += 1
-            Ai += 1
-        else:
-            if in_blk:
-                in_blk = False
-
-    return A_blk_start, B_blk_start, blk_width
-
-
 class Timestep:
     vio_scale = 1.0
     no_values = False
     step_num_threads = None
     max_num_threads = 0
     min_num_threads = 0
+    MAX_DENSE_BLOCK_SIZE = 48
 
     def map_keys_to_cliques(self):
         self.key_to_clique = [None for _ in range(self.num_keys)]
@@ -56,13 +34,16 @@ class Timestep:
                 parent_key = clique.block_indices[clique.clique_size][0]
                 clique.parent = self.key_to_clique[parent_key]
 
-    def __init__(self, fin, step, vio=False):
+    def __init__(self, fin, step, vio=False, num_threads=-1, relin_cost=-1):
         # ======================================== #
         # Variable initialization
         # ======================================== #
 
         self.step = step
         self.is_reconstruct = True
+        self.is_reorder = False
+        self.relin_cost = relin_cost
+        self.num_threads = num_threads
 
         # ======================================== #
         # END Variable initialization
@@ -70,6 +51,9 @@ class Timestep:
 
         Clique.no_values = Timestep.no_values
         Factor.no_values = Timestep.no_values
+
+        Clique.MAX_DENSE_BLOCK_SIZE = Timestep.MAX_DENSE_BLOCK_SIZE
+        Factor.MAX_DENSE_BLOCK_SIZE = Timestep.MAX_DENSE_BLOCK_SIZE
 
         read_until(fin, "ordering and width")
 
@@ -108,6 +92,8 @@ class Timestep:
                 self.factor_max_height = factor.height
             if self.factor_max_width < factor.width:
                 self.factor_max_width = factor.width
+
+        self.is3D = False if self.factor_max_height <= 3 else True
 
 
         read_until(fin, "cliques")
@@ -504,10 +490,11 @@ class Timestep:
             num_threads = Timestep.step_num_threads[-1] if self.step >= len(Timestep.step_num_threads) else Timestep.step_num_threads[self.step]
             run_model = "false" if num_threads == Timestep.max_num_threads else "true"
         else:
-            num_threads = -1
+            num_threads = 1
             run_model = "false"
 
-        fout.write(f"const int step{self.step}_num_threads = {num_threads};\n\n")
+        fout.write(f"const int step{self.step}_num_threads = {self.num_threads};\n\n")
+        fout.write(f"const uint64_t step{self.step}_scaled_relin_cost = {self.relin_cost};\n\n");
         fout.write(f"const bool step{self.step}_run_model = {run_model};\n\n")
 
         for clique in self.cliques:
@@ -521,6 +508,15 @@ class Timestep:
                 continue
 
             for key in factor.keys:
+                if factor.height + 1 == factor.width:
+                    continue
+                if key == 0:
+                    continue
+                if key in self.relin_keys:
+                    factor.relin = True
+                    break
+
+            for key in factor.keys:
                 if key == 0:
                     continue
                 clique = self.key_to_clique[key]
@@ -528,11 +524,17 @@ class Timestep:
                     active_factors.add(factor)
                     break
 
+
+        clique.num_relin_factors = 0
         factor_indices = []
         for factor in active_factors:
             lowest_key = factor.sorted_keys[0]
             clique = self.key_to_clique[lowest_key]
             clique.active_factor_indices.append(factor.index)
+
+            if factor.relin and factor.height + 1 != factor.width:
+                clique.num_relin_factors += 1
+
             factor_indices.append(factor.index)
 
             factor.print_factor(fout, 
@@ -544,7 +546,7 @@ class Timestep:
         for clique in self.cliques:
             if clique.marked or clique.fixed:
                 clique_indices.append(clique.index)
-                clique.print_clique(fout, step=self.step)
+                clique.print_clique(fout, step=self.step, num_threads=self.num_threads, is3D=self.is3D, is_reorder=self.is_reorder)
         
         for clique in self.cliques:
             clique.print_clique_ridx(fout, step=self.step, block_indices=self.block_indices)
@@ -575,6 +577,9 @@ class Timestep:
 
     @staticmethod
     def print_metadata_incremental(fout, timesteps, stepfile_format):
+        fout.write("#include <stdint.h>\n")
+        fout.write("#include <stdbool.h>\n")
+        fout.write("\n")
         start_step = None
         for timestep in timesteps:
             if timestep is not None:
@@ -642,6 +647,13 @@ class Timestep:
                 fout.write(f"step{step}_num_threads, ")
         fout.write("};\n")
 
+        fout.write(f"uint64_t step_scaled_relin_cost[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_scaled_relin_cost, ")
+        fout.write("};\n")
+
         fout.write(f"bool step_run_model[] = {{")
         for timestep in timesteps:
             if timestep is not None:
@@ -675,6 +687,20 @@ class Timestep:
             if timestep is not None:
                 step = timestep.step
                 fout.write(f"step{step}_node_num_factors, ")
+        fout.write("};\n")
+
+        fout.write(f"int* step_node_relin_cost[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_node_relin_cost, ")
+        fout.write("};\n")
+
+        fout.write(f"int* step_node_sym_cost[] = {{")
+        for timestep in timesteps:
+            if timestep is not None:
+                step = timestep.step
+                fout.write(f"step{step}_node_sym_cost, ")
         fout.write("};\n")
 
         fout.write(f"int** step_node_factor_height[] = {{")

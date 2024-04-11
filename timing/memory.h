@@ -7,6 +7,7 @@
 #define MAX_WORKSPACE_NEEDED 1638400
 #endif
 
+// #define MEMORY_SIZE MAX_WORKSPACE_NEEDED // bytes
 #define MEMORY_SIZE MAX_WORKSPACE_NEEDED // bytes
 
 

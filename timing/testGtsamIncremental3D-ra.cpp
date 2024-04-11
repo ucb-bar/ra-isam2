@@ -370,7 +370,6 @@ int main(int argc, char *argv[]) {
                 if(print_traj) {
                   string traj_outfile = dataset_outdir + "/step-" + to_string(step) + "_traj.txt";
 
-                  cout << traj_outfile << endl;
                   ofstream traj_fout(traj_outfile);
 
                   if(!traj_fout.is_open()) {
@@ -378,7 +377,7 @@ int main(int argc, char *argv[]) {
                     exit(1);
                   }
 
-                  estimate.print_kitti_pose2(traj_fout);
+                  estimate.print_kitti_pose3(traj_fout);
                 }
             }
         }
