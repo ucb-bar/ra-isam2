@@ -127,6 +127,7 @@ public:
     for(auto it = remappedKeys_.begin(); it != remappedKeys_.end() - 1; it++) {
       // No need to check key 0
       RemappedKey key = *it;
+
       if(etree->orderingLess_(key, lowestKey_)) {
         lowestKey_ = key;
       }

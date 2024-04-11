@@ -93,8 +93,9 @@ private:
 
     int lastNumKeys = 1;
     int lastNumFactors = 0;
-
     bool costReorder = false;
+
+  CholeskyEliminationTree& operator=(const CholeskyEliminationTree& other);
 
 public:
   CholeskyEliminationTree();
