@@ -93,6 +93,8 @@ private:
     int lastNumKeys = 1;
     int lastNumFactors = 0;
 
+  CholeskyEliminationTree& operator=(const CholeskyEliminationTree& other);
+
 public:
   CholeskyEliminationTree();
 
