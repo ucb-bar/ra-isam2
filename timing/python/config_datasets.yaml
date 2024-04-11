@@ -5,7 +5,7 @@ dataset:
         path:           "ra_datasets/CAB_query_val_phone"
         relin_thresh:   0.01
         start_step:     2
-        end_step:       464     # Inclusive
+        end_step:       463     # Inclusive
         period:         1
     CAB7000: 
         is3D:           true
@@ -13,14 +13,14 @@ dataset:
         relin_thresh:   0.02
         start_step:     2
         end_step:       3000    # Inclusive
-        period:         30
-    sphere: 
+        period:         25
+    sphere2500: 
         is3D:           true
         path:           "sphere2500"
         relin_thresh:   0.05
         start_step:     2
-        end_step:       2499    # Inclusive
-        period:         1
+        end_step:       2000    # Inclusive
+        period:         25
     w10000: 
         is3D:           false
         path:           "w10000"
@@ -69,7 +69,7 @@ RA:
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    - CAB7000
+    # - CAB7000
     # - sphere2500
     # - w10000
     # - M3500
@@ -88,7 +88,7 @@ Incremental:
     header_format: "incremental_{dataset}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-      - CAB7000
+    # - CAB7000
     # - sphere2500
     # - w10000
     # - M3500
@@ -99,4 +99,13 @@ Incremental:
         print_pred:         true
         print_traj:         true
 
+# Legacy output directors
+Legacy:
+    seah_sphere:
+        start_step:     2
+        end_step:       2000    # Inclusive
+        period:         25
+        print_values:   false
+        output_dir: "incremental_sphere2500_steps-2000_period-25"
+        header_dir: "incremental_sphere2500_steps-2000_period-25"
     

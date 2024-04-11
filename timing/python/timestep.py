@@ -508,6 +508,8 @@ class Timestep:
                 continue
 
             for key in factor.keys:
+                if factor.height + 1 == factor.width:
+                    continue
                 if key == 0:
                     continue
                 if key in self.relin_keys:
@@ -530,7 +532,7 @@ class Timestep:
             clique = self.key_to_clique[lowest_key]
             clique.active_factor_indices.append(factor.index)
 
-            if factor.relin:
+            if factor.relin and factor.height + 1 != factor.width:
                 clique.num_relin_factors += 1
 
             factor_indices.append(factor.index)

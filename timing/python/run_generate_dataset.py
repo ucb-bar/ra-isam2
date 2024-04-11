@@ -213,6 +213,39 @@ if __name__ == "__main__":
             print(cmd)
             run_system_cmd(cmd)
 
+    #######################################
+    # Run Legacy
+    #######################################
+
+    if config["Legacy"] is not None:
+
+        for dataset in config["Legacy"]:
+
+            output_name = config["Legacy"][dataset]["output_dir"]
+            header_name = config["Legacy"][dataset]["header_dir"]
+            output_dir = f"{builddir}/{output_name}"
+            header_dir = f"{headerdir}/{header_name}"
+            start_step = config["Legacy"][dataset]["start_step"]
+            end_step = config["Legacy"][dataset]["end_step"]
+            period = config["Legacy"][dataset]["period"]
+            print_values = config["Legacy"][dataset]["print_values"]
+
+            # Generate header
+            run_system_cmd(f"mkdir -p {header_dir}")
+            cmd = f"python3 {scriptdir}/generate_dataset.py \
+                    --indir {output_dir} --outdir {header_dir} \
+                    --start_step {start_step} \
+                    --end_step {end_step - 1} \
+                    --period {period} \
+                    {'--no_values' if not print_values else ''} \
+                    "
+            print(cmd)
+            run_system_cmd(cmd)
+
+
+            
+
+            
 
             
 

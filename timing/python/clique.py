@@ -30,7 +30,7 @@ class Clique:
     no_values = False
 
     RELIN_COST_7_3 = 15000
-    RELIN_COST_13_6 = 30000
+    RELIN_COST_13_6 = 20000
     SYM_COST = 2000
     SYM_COST_REORDER = 4000
 
