@@ -133,7 +133,7 @@ class Clique:
 
         # Print all the factors related to this clique
         fout.write(f"const int step{step}_node{self.index}_num_factors = {len(self.active_factor_indices)};\n")
-        relin_cost = self.num_relin_factors * (Clique.RELIN_COST_13_6 if is3D else Clique.RELIN_COST_7_3) // num_threads
+        relin_cost = self.num_relin_factors * (Clique.RELIN_COST_13_6 if is3D else Clique.RELIN_COST_7_3)
         fout.write(f"const int step{step}_node{self.index}_relin_cost = {relin_cost};\n")
 
         sym_cost = self.clique_size * (Clique.SYM_COST_REORDER if is_reorder else Clique.SYM_COST)
