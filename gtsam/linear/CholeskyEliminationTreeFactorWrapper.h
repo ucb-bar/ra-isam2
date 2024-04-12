@@ -337,7 +337,6 @@ public:
       double sign, 
       const INFO& info,
       const PREDICATE& pred) {
-    std::cout << "updateHessianHessian" << std::endl;
     const auto& AbtAb = cachedLinearMatrix_;
     for(size_t i = 0; i < blockIndices_.size() - 1; i++) {
       // Higher key represents the column. Don't need last column
@@ -351,6 +350,7 @@ public:
         const auto&[higherKey, srcCol2, srcW2] = blockIndices_.at(j);
         const auto&[destR2, ordering2, status2] = info(j);
         if(ordering2 < ordering1) {
+          assert(destR2 < destR1);
           continue;
         }
 
@@ -363,11 +363,6 @@ public:
           Eigen::Block<const GemminiMatrix> AbtAb_ij(AbtAb, srcCol1, srcCol2, srcW1, srcW2);
 
           destBlock.noalias() += sign * AbtAb_ij.transpose();
-
-          if(srcCol2 == srcCol1) {
-            std::cout << AbtAb_ij.transpose() << std::endl;
-            exit(0);
-          }
         }
         else {
           // Note: We need to access the upper triangular part of the Hessian matrix

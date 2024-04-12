@@ -129,7 +129,7 @@ class Clique:
     def print_clique(self, fout, step, num_threads, is3D, is_reorder):
         self.active_factor_indices = sorted(self.active_factor_indices)
 
-        print(f"step = {step}, clique = {self.index}, block_indices = {self.block_indices}")
+        # print(f"step = {step}, clique = {self.index}, block_indices = {self.block_indices}")
 
         # Print all the factors related to this clique
         fout.write(f"const int step{step}_node{self.index}_num_factors = {len(self.active_factor_indices)};\n")

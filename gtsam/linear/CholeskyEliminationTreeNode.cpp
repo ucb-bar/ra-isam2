@@ -16,6 +16,11 @@ using namespace std;
 namespace gtsam {
 
 void CholeskyEliminationTree::Node::addFactor(sharedFactorWrapper factor) {
+  for(sharedFactorWrapper oldFactor : factors) {
+    assert(oldFactor->factorIndex() != factor->factorIndex());
+  }
+
+
   factors.push_back(factor);
   for(RemappedKey k : factor->remappedKeys()) {
     lambdaStructure[k]++;
@@ -30,6 +35,14 @@ void CholeskyEliminationTree::Node::removeFactor(sharedFactorWrapper factor) {
       lambdaStructure.erase(k);
     }
   }
+
+  for(int i = 0; i < factors.size(); i++) {
+    if(factors[i] == factor) {
+      factors[i] = factors.back();
+      factors.pop_back();
+    }
+  }
+
 }
 
 } // namespace gtsam

@@ -1,4 +1,3 @@
-#include "gtsam/linear/NoiseModel.h"
 #include <gtsam/slam/dataset.h>
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/sam/BearingRangeFactor.h>

@@ -51,16 +51,17 @@ metadata:
     recompile: true     # True if C++ sources changed
     make_flags: "-j"
     target_binary:
-        - testGtsamIncremental
-        - testGtsamIncremental3D
-        - testGtsamIncremental-ra
-        - testGtsamIncremental3D-ra
-          # - testGtsamIncremental-vio
-          # - testGtsamIncremental3D-vio
-        - testGtsamIncremental-treegen
-        - testGtsamIncremental3D-treegen
-        - testGtsamIncremental-datasetgen
-        - testGtsamIncremental3D-datasetgen
+        # - testGtsamIncremental
+        # - testGtsamIncremental3D
+        # - testGtsamIncremental-ra
+        # - testGtsamIncremental3D-ra
+        #   # - testGtsamIncremental-vio
+        #   # - testGtsamIncremental3D-vio
+        # - testGtsamIncremental-treegen
+        # - testGtsamIncremental3D-treegen
+        # - testGtsamIncremental-datasetgen
+        # - testGtsamIncremental3D-datasetgen
+        - testGtsamIncremental3D-lru
 
 # Resource aware
 RA:
@@ -69,7 +70,7 @@ RA:
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    - CAB7000
+    # - CAB7000
     # - sphere2500
     # - w10000
     # - M3500
@@ -88,7 +89,7 @@ Incremental:
     header_format: "incremental_{dataset}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    - CAB7000
+    # - CAB7000
     # - sphere2500
     # - w10000
     # - M3500
@@ -98,9 +99,32 @@ Incremental:
         print_values:       false
         print_pred:         true
         print_traj:         true
+        
+# LRU:
+LRU:
+    # Runs that share the same output_format will use the same dataset run
+    output_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}"
+    header_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}_steps-{start_step}-{end_step}_period-{period}"
+    dataset:    # Comment out the datasets that will be skipped
+    # - CAB1
+    # - CAB7000
+    - sphere2500
+    # - w10000
+    # - M3500
+    # - M3500c
+    params:
+        num_threads:        1
+        num_threads_file:   ""              # Specify the path to a num threads file or leave empty
+        memsize:            1M              # In bytes.
+        print_dataset:      true            # Turn this off if not generating header
+        print_values:       false
+        print_pred:         true
+        print_traj:         true
 
 # Legacy output directors
 Legacy:
+    dataset:
+    # - seah_sphere
     seah_sphere:
         start_step:     2
         end_step:       2000    # Inclusive

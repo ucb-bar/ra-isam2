@@ -529,8 +529,9 @@ ISAM2Result ISAM2::update(const NonlinearFactorGraph& newFactors,
 ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
                                          const Values& newTheta,
                                          const ISAM2UpdateParams& updateParams,
+                                         const int num_threads,
                                          const unordered_set<Key>& allFixedKeys,
-                                         const int num_threads) {
+                                         const unordered_set<Key>& allMarginalizedKeys) {
   // 1. Add new factors to list of factors and mark the variables involved
   // 2. Mark the variables that need to be relinearized (linearize when doing Cholesky for locality)
   // 3. Find all affected variables in the etree by traversing back up the tree from 
@@ -538,7 +539,7 @@ ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
   // 4. Determine a new ordering
   // 5. Do symbolic factorization and construct new etree
   // 6. Re-eliminate
-  //
+  
   gttic(ISAM2_update);
   this->update_count_ += 1;
   UpdateImpl::LogStartingUpdate(newFactors, *this);
@@ -574,7 +575,7 @@ ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
 
   const int64_t remainingCycles = 3.33 * 1e7;
   // const int64_t remainingCycles = 1 * 1e7;
-  eTree_.pickRelinKeys(keyDeltaVec, allFixedKeys, remainingCycles, num_threads,
+  eTree_.pickRelinKeys(keyDeltaVec, allFixedKeys, allMarginalizedKeys, remainingCycles, num_threads,
       *boost::get<double>(&params_.relinearizeThreshold), &newRelinKeys);
   relinKeys = newRelinKeys;
 
@@ -592,8 +593,24 @@ ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
                           &affectedKeys,
                           &observedKeys);
 
+  for(RemappedKey k : affectedKeys) {
+    Key unmappedKey = eTree_.unmapKey(k);
+    if(allMarginalizedKeys.find(unmappedKey) != allMarginalizedKeys.end()) {
+        cout << "Marginalized unmappedKey affected: " << unmappedKey << endl;
+        exit(1);
+    }
+  }
+
   // This step is technically not needed, we can just do this in symbolic update
   eTree_.markAncestors(affectedKeys, &markedKeys);
+
+  for(RemappedKey k : markedKeys) {
+    Key unmappedKey = eTree_.unmapKey(k);
+    if(allMarginalizedKeys.find(unmappedKey) != allMarginalizedKeys.end()) {
+        cout << "Marginalized unmappedKey marked: " << k << endl;
+        exit(1);
+    }
+  }
 
   static int last_variable_count;
   static bool reorder_flag;

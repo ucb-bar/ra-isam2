@@ -776,6 +776,8 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
     markedCost = (pred_AtA + pred_chol) / num_threads + (symCost + pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
+  // cout << "Clique " << *this << " ata cost = " << markedCost << " markedCost = " << fixedCost << endl;
+
   return markedCost * cost_mplier;
 
 }
@@ -860,6 +862,8 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
   else {
     fixedCost = (pred_AtA + pred_syrk) / num_threads + (symCost + pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
+
+  // cout << "Clique " << *this << " ata cost = " << AtACost << " fixedCost = " << fixedCost << endl;
 
   return fixedCost * cost_mplier;
 

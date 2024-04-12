@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
 
             isam2.update(newFactors, newVariables, params, extraRelinKeys);
             auto update_end = chrono::high_resolution_clock::now();
-            // estimate = isam2.calculateEstimate();
+            estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();
             d1 += chrono::duration_cast<chrono::microseconds>(update_end - start).count();
             d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
@@ -297,56 +297,20 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            // last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-            // print_count++;
-            // if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //     cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //          << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            // }
+            for(int iter = 0; iter < max_iter; iter++) {
+              NonlinearFactorGraph dummy_nfg;
+              Values dummy_vals;
+              isam2.update(dummy_nfg, dummy_vals);
+              estimate = isam2.calculateEstimate();
+              double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+              cout << "step = " << step << ", Chi2 = " << chi2 << endl;
+            }
 
-            // if(K > 1) {
-            //     NonlinearFactorGraph dummy_nfg;
-            //     Values dummy_vals;
-            //     int iter = 0;
-
-            //     while(1) {
-            //         if(last_chi2 <= epsilon) {
-            //             break;
-            //         }
-            //         auto start = chrono::high_resolution_clock::now();
-            //         isam2.update(dummy_nfg, dummy_vals);
-            //         auto update_end = chrono::high_resolution_clock::now();
-            //         estimate = isam2.calculateEstimate();
-            //         auto calc_end = chrono::high_resolution_clock::now();
-            //         d1 += chrono::duration_cast<chrono::microseconds>
-            //                     (update_end - start).count();
-            //         d2 += chrono::duration_cast<chrono::microseconds>
-            //                     (calc_end - update_end).count();
-
-            //         double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-
-            //         if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //             cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //                 << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            //         }
-
-            //         if(abs(last_chi2 - chi2) < d_error) {
-            //             break;
-            //         }
-
-            //         last_chi2 = chi2;
-            //         iter++;
-            //         if(iter >= max_iter) {
-            //             cout << "Nonlinear optimization exceed max iterations: " 
-            //                  << iter << " >= " << max_iter << ", chi2 = " << chi2 << endl;
-            //             break;
-            //         }
-            //     }
-            // }
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
 
-            if(dataset_outdir != "") {
+            if(step % print_frequency == 0) {
+              if(dataset_outdir != "") {
                 if(print_dataset) {
                   string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
                   ofstream fout(outfile);
@@ -387,8 +351,8 @@ int main(int argc, char *argv[]) {
 
                   estimate.print_kitti_pose3(traj_fout);
                 }
+              }
             }
-
         }
         K_count++;
         update_times.push_back(d1);

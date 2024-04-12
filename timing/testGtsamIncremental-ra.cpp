@@ -329,46 +329,48 @@ int main(int argc, char *argv[]) {
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
 
-            if(dataset_outdir != "") {
-                if(print_dataset) {
-                  string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
-                  ofstream fout(outfile);
+            if(step % print_frequency == 0) {
+                if(dataset_outdir != "") {
+                    if(print_dataset) {
+                        string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
+                        ofstream fout(outfile);
 
-                  if(!fout.is_open()) {
-                    cerr << "Cannot open file: " << outfile << endl;
-                    exit(1);
-                  }
+                        if(!fout.is_open()) {
+                            cerr << "Cannot open file: " << outfile << endl;
+                            exit(1);
+                        }
 
-                  isam2.extractFullTree(fout, print_values);
-                  if(print_values) {
-                    isam2.extractDelta(fout);
-                  }
-                }
+                        isam2.extractFullTree(fout, print_values);
+                        if(print_values) {
+                            isam2.extractDelta(fout);
+                        }
+                    }
 
-                if(print_pred) {
-                  string pred_outfile = dataset_outdir + "/step-" + to_string(step) + "-pred_cycles.out";
-                  ofstream pred_fout(pred_outfile);
+                    if(print_pred) {
+                        string pred_outfile = dataset_outdir + "/step-" + to_string(step) + "-pred_cycles.out";
+                        ofstream pred_fout(pred_outfile);
 
-                  if(!pred_fout.is_open()) {
-                    cerr << "Cannot open file: " << pred_outfile << endl;
-                    exit(1);
-                  }
+                        if(!pred_fout.is_open()) {
+                            cerr << "Cannot open file: " << pred_outfile << endl;
+                            exit(1);
+                        }
 
-                  int num_threads = 1;
-                  isam2.extractPredictedCycles(pred_fout, num_threads);
-                }
+                        int num_threads = 1;
+                        isam2.extractPredictedCycles(pred_fout, num_threads);
+                    }
 
-                if(print_traj) {
-                  string traj_outfile = dataset_outdir + "/step-" + to_string(step) + "_traj.txt";
+                    if(print_traj) {
+                        string traj_outfile = dataset_outdir + "/step-" + to_string(step) + "_traj.txt";
 
-                  ofstream traj_fout(traj_outfile);
+                        ofstream traj_fout(traj_outfile);
 
-                  if(!traj_fout.is_open()) {
-                    cerr << "Cannot open file: " << traj_outfile << endl;
-                    exit(1);
-                  }
+                        if(!traj_fout.is_open()) {
+                            cerr << "Cannot open file: " << traj_outfile << endl;
+                            exit(1);
+                        }
 
-                  estimate.print_kitti_pose2(traj_fout);
+                        estimate.print_kitti_pose2(traj_fout);
+                    }
                 }
             }
         }

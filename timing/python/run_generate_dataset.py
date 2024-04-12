@@ -30,6 +30,16 @@ def run_system_cmd(cmd):
             print(p.stderr)
             raise CalledProcessError(p.returncode, p.args)
 
+def convert_to_numeric(variable):
+    if isinstance(variable, (int, float)):
+        return variable
+    elif variable[-1] == 'M':
+        return int(variable[:-1]) * (2 ** 20)
+    elif variable[-1] == 'K':
+        return int(variable[:-1]) * (2 ** 10)
+    else:
+        raise ValueError("Variable format not recognized")
+
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("--config", dest="config", 
@@ -135,7 +145,6 @@ if __name__ == "__main__":
             print(cmd)
             run_system_cmd(cmd)
 
-
     #######################################
     # Run Incremental
     #######################################
@@ -214,12 +223,95 @@ if __name__ == "__main__":
             run_system_cmd(cmd)
 
     #######################################
+    # Run LRU
+    #######################################
+
+    if config["LRU"]["dataset"] is not None:
+
+        output_format = config["LRU"]["output_format"]
+        header_format = config["LRU"]["header_format"]
+
+        for dataset in config["LRU"]["dataset"]:
+            d = config["dataset"][dataset]
+            d["dataset"] = dataset
+            d.update(config["LRU"]["params"])
+
+            output_name = eval(f'f"{output_format}"', d)
+            header_name = eval(f'f"{header_format}"', d)
+
+            is3D = d["is3D"]
+            dataset_path = d["path"]
+            relin_thresh = d["relin_thresh"]
+            start_step = d["start_step"]
+            end_step = d["end_step"] + 1
+            period = d["period"]
+            num_threads = d["num_threads"]
+            num_threads_file = d["num_threads_file"]
+            memsize = d["memsize"]
+            memsize_num = convert_to_numeric(memsize)
+            output_dir = f"{builddir}/{output_name}"
+            header_dir = f"{headerdir}/{header_name}"
+            output_log = f"{output_dir}.log"
+
+            print_dataset = d["print_dataset"]
+            print_values = d["print_values"]
+            print_pred = d["print_pred"]
+            print_traj = d["print_traj"]
+
+            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-lru" if is3D else "testGtsamIncremental-lru"
+
+            run_dset = True
+            if os.path.isdir(output_dir):
+                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+
+            if run_dset:
+                print(f"Running dataset {dataset} and write output to {output_dir}")
+                run_system_cmd(f"mkdir -p {output_dir}")
+                cmd = f"{exe} -f {dataset_path} \
+                              --num_steps {end_step} \
+                              --relin_thresh {relin_thresh} \
+                              --lru_mem_size {memsize_num} \
+                              --dataset_outdir {output_dir} \
+                              {'--print_dataset' if print_dataset else ''} \
+                              {'--print_values' if print_values else ''} \
+                              {'--print_pred' if print_pred else ''} \
+                              {'--print_traj' if print_traj else ''} \
+                              {'--num_threads {}'.format(num_threads) if not num_threads_file else '--num_threads_infile {}'.format(num_threads_file)} \
+                              --print_frequency 1 \
+                              2>&1 | tee {output_log} \
+                              "
+                run_system_cmd(cmd)
+
+            """
+            # Generate relin keys file
+            cmd = f"python3 {scriptdir}/generate_relin_keys_file.py \
+                    --indir {output_dir} --outfile {output_dir}/relin_keys \
+                    --start_step {start_step} \
+                    --end_step {end_step - 1} \
+                    {'--no_values' if not print_values else ''} \
+                    "
+            run_system_cmd(cmd)
+            """
+
+            # Generate header
+            run_system_cmd(f"mkdir -p {header_dir}")
+            cmd = f"python3 {scriptdir}/generate_dataset.py \
+                    --indir {output_dir} --outdir {header_dir} \
+                    --start_step {start_step} \
+                    --end_step {end_step - 1} \
+                    --period {period} \
+                    {'--no_values' if not print_values else ''} \
+                    "
+            print(cmd)
+            run_system_cmd(cmd)
+
+    #######################################
     # Run Legacy
     #######################################
 
-    if config["Legacy"] is not None:
+    if config["Legacy"]["dataset"] is not None:
 
-        for dataset in config["Legacy"]:
+        for dataset in config["Legacy"]["dataset"]:
 
             output_name = config["Legacy"][dataset]["output_dir"]
             header_name = config["Legacy"][dataset]["header_dir"]

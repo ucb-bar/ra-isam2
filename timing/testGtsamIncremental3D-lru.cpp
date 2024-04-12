@@ -289,7 +289,8 @@ int main(int argc, char *argv[]) {
             }
 
             cout << "num_threads = " << num_threads << endl;
-            isam2.update_resource_aware(newFactors, newVariables, params, allFixedKeys, num_threads);
+            isam2.update_resource_aware(newFactors, newVariables, params, num_threads, 
+                allFixedKeys, allMarginalizedKeys);
             auto update_end = chrono::high_resolution_clock::now();
             estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();
@@ -310,6 +311,7 @@ int main(int argc, char *argv[]) {
 
             vector<Key> marginalizedKeys, fixedKeys;
             isam2.getCholeskyEliminationTree().selectStaleSubtree(
+                allFixedKeys, allMarginalizedKeys,
                 lru_mem_size, &marginalizedKeys, &fixedKeys);
 
             if(!marginalizedKeys.empty()) {
@@ -329,12 +331,14 @@ int main(int argc, char *argv[]) {
             allFixedKeys.insert(fixedKeys.begin(), fixedKeys.end());
             allFixedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
 
-            isam2.getCholeskyEliminationTree().marginalizeLeaves2(marginalizedKeys);
+            bool datasetgen_mode = (dataset_outdir != "");
 
-            newVariables.clear();
-            newFactors = NonlinearFactorGraph();
+            if(!datasetgen_mode) {
+              isam2.getCholeskyEliminationTree().marginalizeLeaves2(marginalizedKeys);
+            }
 
-            if(dataset_outdir != "") {
+            if(step % print_frequency == 0) {
+              if(dataset_outdir != "") {
                 if(print_dataset) {
                   string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
                   ofstream fout(outfile);
@@ -375,7 +379,11 @@ int main(int argc, char *argv[]) {
 
                   estimate.print_kitti_pose3(traj_fout);
                 }
+              }
             }
+
+            newVariables.clear();
+            newFactors = NonlinearFactorGraph();
         }
         K_count++;
         update_times.push_back(d1);

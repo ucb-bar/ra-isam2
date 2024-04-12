@@ -41,7 +41,10 @@ do
     evo_ape kitti $traj_file $tmp_ref >> $vio_file
 
     rm $tmp_ref
+  fi
 
+  if [ -f ${lc_traj_file} ]
+  then
     linecount=$(wc -l < $lc_traj_file)
     tmp_ref=$1_$linecount
     head -n $linecount $ref_file > $tmp_ref

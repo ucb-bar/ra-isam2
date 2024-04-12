@@ -29,7 +29,7 @@ void CholeskyEliminationTree::FactorWrapper::markAffectedKeys(RemappedKeySet* af
 
 bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
   // assert(cachedLinearFactor != nullptr);
-
+  
   if(etree->nodes_[highestKey_]->status() == MARGINALIZED) { 
     status_ = REMOVED;
     return true; 
@@ -40,6 +40,10 @@ bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
     if(key == 0) { continue; }
 
     etree->nodes_[key]->removeFactor(get_ptr());
+  }
+
+  if(status_ == LINEAR) {
+    cout << "Setting a LINEAR factor " << *this << " LINEAR!" << endl;
   }
 
   setStatusLinear();

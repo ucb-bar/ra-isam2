@@ -105,6 +105,7 @@ public:
   void pickRelinKeys(
       const std::vector<std::pair<Key, double>>& KeyDeltaVec,
       const std::unordered_set<Key>& allFixedKeys,
+      const std::unordered_set<Key>& allMarginalizedKeys,
       int64_t remainingCycles,
       int num_threads,
       double relinThresh,
@@ -144,6 +145,8 @@ public:
   void getAffectedDescendantKeys(Key unmappedKey, std::set<Key>& additionalKeys) const;
 
   void selectStaleSubtree(
+      const std::unordered_set<Key>& allFixedKeys,
+      const std::unordered_set<Key>& allMarginalizedKeys,
       int targetTreeSize, 
       std::vector<Key>* marginalizedKeys,
       std::vector<Key>* fixedKeys);

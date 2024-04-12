@@ -72,8 +72,15 @@ public:
   }
   
   void setStatusMarginalized() {
+    assert(key != 0);
     assert(status_ == UNMARKED);
     status_ = MARGINALIZED;
+  }
+
+  void setStatusFixed() {
+    assert(key != 0);
+    assert(status_ == UNMARKED);
+    status_ = FIXED;
   }
 
   int lastRelinStep = 0;

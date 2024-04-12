@@ -338,7 +338,8 @@ int main(int argc, char *argv[]) {
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
 
-            if(dataset_outdir != "") {
+            if(step % print_frequency == 0) {
+              if(dataset_outdir != "") {
                 if(print_dataset) {
                   string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
                   ofstream fout(outfile);
@@ -379,6 +380,7 @@ int main(int argc, char *argv[]) {
 
                   estimate.print_kitti_pose3(traj_fout);
                 }
+              }
             }
         }
         K_count++;
