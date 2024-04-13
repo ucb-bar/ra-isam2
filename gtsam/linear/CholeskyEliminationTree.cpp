@@ -395,7 +395,8 @@ void CholeskyEliminationTree::pickRelinKeys(
   vector<pair<Key, double>> newKeyDeltaVec;
   newKeyDeltaVec.reserve(KeyDeltaVec.size());
 
-  static double force_thresh = 3.5;
+  // static double force_thresh = 3.5;
+  static double force_thresh = 100000000;
   const double min_force_thresh = 2;
   const double max_force_thresh = 3.5;
 
@@ -1260,8 +1261,8 @@ void CholeskyEliminationTree::allocateStackRegular() {
           // For any marked clique, if any of its decendants is unmarked, set to EDIT
           const auto&[key, row, height] = clique->blockIndices[i];
           assert(nodes_[key]->clique()->marked());
-          nodes_[key]->clique()->setStatusEdit();
-          // nodes_[key]->clique()->setStatusReconstruct();
+          // nodes_[key]->clique()->setStatusEdit();
+          nodes_[key]->clique()->setStatusReconstruct();
         }
       }
     }
@@ -2105,9 +2106,6 @@ void CholeskyEliminationTree::selectStaleSubtree(
       }
 
       for(sharedClique childClique : curClique->children) {
-        if(allMarginalizedKeys.find(childClique->backKey()) != allMarginalizedKeys.end()) {
-          continue;
-        }
         if(childClique->lastRelinStep > curClique->lastRelinStep) {
           curClique->lastRelinStep = childClique->lastRelinStep;
         }

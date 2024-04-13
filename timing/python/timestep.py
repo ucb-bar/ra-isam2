@@ -861,6 +861,20 @@ class Timestep:
 
         fout.write("\n\n")
 
+    def write_delta_diff_cliques(self, fout, changed_keys):
+        diff_cliques = set()
+        print(changed_keys)
+        for key in changed_keys:
+            clique = self.key_to_clique[key]
+            if not clique.marked and not clique.fixed:
+                diff_cliques.add(clique)
+                print(f"Clique not backsolved {clique}")
+            else:
+                print(f"Clique backsolved {clique}")
+
+        fout.write(f"{len(diff_cliques)}\n")
+        for clique in diff_cliques:
+            fout.write(f"{clique.height} {clique.width}\n")
 
             
 

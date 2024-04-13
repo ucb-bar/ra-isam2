@@ -59,6 +59,7 @@ map<int, FastList<RemappedKey>> read_relin_keys_file(string& fname) {
   for(int i = 0; i < n; i++) {
     int step, num_keys;
     fin >> step >> num_keys;
+    cout << "step = " << step << " num_keys = " << num_keys << endl;
     res.insert({step, FastList<Key>()});
     for(int j = 0; j < num_keys; j++) {
       RemappedKey k;
@@ -77,7 +78,7 @@ int main(int argc, char *argv[]) {
     int print_frequency = 100;
     double epsilon = 0.01;
     double d_error = 0.001;
-    int max_iter = 10;
+    int max_iter = 0;
     int num_steps = 1000000;
     double relin_thresh = 0.1;
     string relin_keys_file = "";
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
     bool print_pred = false;
     bool print_traj = false;
     bool print_values = false;
+    bool print_delta = false;
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -104,6 +106,7 @@ int main(int argc, char *argv[]) {
         {"print_dataset", no_argument, 0, 150},
         {"print_pred", no_argument, 0, 151},
         {"print_traj", no_argument, 0, 152},
+        {"print_delta", no_argument, 0, 153},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -153,6 +156,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 152:
                 print_traj = true;
+                break;
+            case 153:
+                print_delta = true;
                 break;
             default:
                 cerr << "Unrecognized option" << endl;
@@ -275,11 +281,12 @@ int main(int argc, char *argv[]) {
             K_count = 0;
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
-            FastList<Key> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
-            // for(Key k : extraRelinKeys) {
-            //     cout << k << " ";
-            // }
-            // cout << endl;
+            FastList<RemappedKey> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
+            cout << "extra relin: " << endl;
+            for(Key k : extraRelinKeys) {
+                cout << k << " ";
+            }
+            cout << endl;
 
             isam2.update(newFactors, newVariables, params, extraRelinKeys);
             auto update_end = chrono::high_resolution_clock::now();
@@ -296,6 +303,9 @@ int main(int argc, char *argv[]) {
             if(step >= num_steps) {
                 break;
             }
+
+            last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+            cout << "chi2 = " << last_chi2 << endl;
 
             for(int iter = 0; iter < max_iter; iter++) {
               NonlinearFactorGraph dummy_nfg;
@@ -350,6 +360,19 @@ int main(int argc, char *argv[]) {
                   }
 
                   estimate.print_kitti_pose3(traj_fout);
+                }
+
+                if(print_delta) {
+                  string delta_outfile = dataset_outdir + "/step-" + to_string(step) + "_delta.out";
+
+                  ofstream delta_fout(delta_outfile);
+
+                  if(!delta_fout.is_open()) {
+                    cerr << "Cannot open file: " << delta_outfile << endl;
+                    exit(1);
+                  }
+
+                  isam2.extractDelta(delta_fout);
                 }
               }
             }

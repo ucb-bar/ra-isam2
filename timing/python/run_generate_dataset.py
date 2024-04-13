@@ -309,31 +309,94 @@ if __name__ == "__main__":
     # Run Legacy
     #######################################
 
-    if config["Legacy"]["dataset"] is not None:
+    if config["Legacy"]["runs"] is not None:
 
-        for dataset in config["Legacy"]["dataset"]:
+        for run in config["Legacy"]["runs"]:
+            dataset = config["Legacy"][run]["dataset"]
+            d = config["dataset"][dataset]
+            d["dataset"] = dataset
+            d.update(config["Legacy"][run])
 
-            output_name = config["Legacy"][dataset]["output_dir"]
-            header_name = config["Legacy"][dataset]["header_dir"]
+            output_name = d["output_dir"]
+            header_name = d["header_dir"]
             output_dir = f"{builddir}/{output_name}"
             header_dir = f"{headerdir}/{header_name}"
-            start_step = config["Legacy"][dataset]["start_step"]
-            end_step = config["Legacy"][dataset]["end_step"]
-            period = config["Legacy"][dataset]["period"]
-            print_values = config["Legacy"][dataset]["print_values"]
+            output_log = f"{output_dir}.log"
+            relin_keys_file = f"{output_dir}/relin_keys.txt"
+            is3D = d["is3D"]
+            dataset_path = d["path"]
+            start_step = d["start_step"]
+            end_step = d["end_step"]
+            period = d["period"]
+            print_dataset = d["print_dataset"]
+            print_values = d["print_values"]
+            print_pred = d["print_pred"]
+            print_traj = d["print_traj"]
+            print_delta = d["print_delta"]
+
+            # First rerun dataset if needed
+            run_dset = False
+            if os.path.isdir(output_dir):
+                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+
+            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen"
+
+            if run_dset:
+                cmd = f"python3 {scriptdir}/read_relin_keys.py \
+                                --indir {output_dir} \
+                                --outfile {relin_keys_file} \
+                                --start_step {start_step} \
+                                --end_step {end_step - 1} \
+                                "
+                run_system_cmd(cmd)
+
+                print(f"Running dataset {dataset} and write output to {output_dir}")
+                cmd = f"{exe} -f {dataset_path} \
+                              --num_steps {end_step} \
+                              --relin_thresh 100000 \
+                              --relin_keys_file {relin_keys_file} \
+                              --dataset_outdir {output_dir} \
+                              {'--print_dataset' if print_dataset else ''} \
+                              {'--print_values' if print_values else ''} \
+                              {'--print_pred' if print_pred else ''} \
+                              {'--print_traj' if print_traj else ''} \
+                              {'--print_delta' if print_delta else ''} \
+                              --print_frequency 1 \
+                              2>&1 | tee {output_log} \
+                              "
+                run_system_cmd(cmd)
+
+            run_header = True
+            if os.path.isdir(header_dir):
+                run_header = get_yes_no_input(f"Header is already generated at {header_dir}. Do you want to regenerate header? [Y/n] ")
 
             # Generate header
-            run_system_cmd(f"mkdir -p {header_dir}")
-            cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {header_dir} \
-                    --start_step {start_step} \
-                    --end_step {end_step - 1} \
-                    --period {period} \
-                    {'--no_values' if not print_values else ''} \
-                    "
-            print(cmd)
-            run_system_cmd(cmd)
+            if run_header:
+                run_system_cmd(f"mkdir -p {header_dir}")
+                cmd = f"python3 {scriptdir}/generate_dataset.py \
+                        --indir {output_dir} --outdir {header_dir} \
+                        --start_step {start_step} \
+                        --end_step {end_step - 1} \
+                        --period {period} \
+                        {'--no_values' if not print_values else ''} \
+                        "
+                print(cmd)
+                run_system_cmd(cmd)
 
+            run_backsolve_diff = False
+            run_backsolve_diff = get_yes_no_input(f"Compute backsolve diff? [Y/n] ")
+
+            if run_backsolve_diff:
+                cmd = f"python3 generate_backsolve_diff.py \
+                                --indir {output_dir} \
+                                --outdir {header_dir} \
+                                --start_step {start_step} \
+                                --end_step {end_step - 1} \
+                                --period {period} \
+                                {'--no_values' if not print_values else ''} \
+                                "
+                print(cmd)
+                run_system_cmd(cmd)
 
             
 
