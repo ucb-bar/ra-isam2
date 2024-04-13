@@ -1,0 +1,25 @@
+num threads 
+1
+relin cost 
+0
+cliques
+18
+node 0	reorderSym: 24000	AtA: 13984	cholCost: 0	addCost: 1048	backsolveCost: 15459
+node 1	reorderSym: 16000	AtA: 7866	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 2	reorderSym: 16000	AtA: 7866	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 3	reorderSym: 20000	AtA: 11362	cholCost: 0	addCost: 1192	backsolveCost: 12355
+node 4	reorderSym: 24000	AtA: 16606	cholCost: 0	addCost: 1048	backsolveCost: 15459
+node 5	reorderSym: 16000	AtA: 9614	cholCost: 0	addCost: 1768	backsolveCost: 8480
+node 6	reorderSym: 20000	AtA: 13110	cholCost: 0	addCost: 1048	backsolveCost: 12254
+node 7	reorderSym: 24000	AtA: 13984	cholCost: 0	addCost: 1048	backsolveCost: 15459
+node 8	reorderSym: 16000	AtA: 8740	cholCost: 0	addCost: 1192	backsolveCost: 8249
+node 9	reorderSym: 16000	AtA: 8740	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 10	reorderSym: 16000	AtA: 6992	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 11	reorderSym: 16000	AtA: 8740	cholCost: 0	addCost: 1192	backsolveCost: 8249
+node 12	reorderSym: 16000	AtA: 7866	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 13	reorderSym: 16000	AtA: 7866	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 14	reorderSym: 20000	AtA: 11362	cholCost: 2304	addCost: 1048	backsolveCost: 12254
+node 15	reorderSym: 20000	AtA: 34838	cholCost: 57981	addCost: 4888	backsolveCost: 13466
+node 16	reorderSym: 40000	AtA: 38334	cholCost: 81788	addCost: 1000	backsolveCost: 36575
+node 17	reorderSym: -1	AtA: -1	cholCost: 0	addCost: -1	backsolveCost: 1037
+
