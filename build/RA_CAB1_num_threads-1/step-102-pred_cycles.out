@@ -1,7 +1,7 @@
 num threads 
 1
 relin cost 
-140000
+380000
 cliques
 21
 node 0	reorderSym: 16000	AtA: 8740	cholCost: 0	addCost: 1048	backsolveCost: 8172

@@ -327,7 +327,7 @@ void CholeskyEliminationTree::pickRelinKeys(
   struct IsMarginalizedKey {
     const unordered_set<Key>& allMarginalizedKeys;
     IsMarginalizedKey(const unordered_set<Key>& allMarginalizedKeys_in) 
-      : allMarginalizedKeys(allMarginalizedKeys) {}
+      : allMarginalizedKeys(allMarginalizedKeys_in) {}
 
     bool operator()(const Key& key) const {
       return allMarginalizedKeys.find(key) != allMarginalizedKeys.end();
@@ -1261,8 +1261,8 @@ void CholeskyEliminationTree::allocateStackRegular() {
           // For any marked clique, if any of its decendants is unmarked, set to EDIT
           const auto&[key, row, height] = clique->blockIndices[i];
           assert(nodes_[key]->clique()->marked());
-          // nodes_[key]->clique()->setStatusEdit();
-          nodes_[key]->clique()->setStatusReconstruct();
+          nodes_[key]->clique()->setStatusEdit();
+          // nodes_[key]->clique()->setStatusReconstruct();
         }
       }
     }
