@@ -1,0 +1,10 @@
+num threads 
+1
+relin cost 
+180000
+cliques
+3
+node 0	reorderSym: 16000	AtA: 8740	cholCost: 2240	addCost: 1048	backsolveCost: 8172
+node 1	reorderSym: 24000	AtA: 20854	cholCost: 37265	addCost: 1000	backsolveCost: 15233
+node 2	reorderSym: -1	AtA: -1	cholCost: 0	addCost: -1	backsolveCost: 1037
+

@@ -1,0 +1,82 @@
+num threads 
+1
+relin cost 
+3040000
+cliques
+75
+node 0	reorderSym: 24000	AtA: 28842	cholCost: 0	addCost: 1432	backsolveCost: 15798
+node 1	reorderSym: 16000	AtA: 8740	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 2	reorderSym: 20000	AtA: 12236	cholCost: 2960	addCost: 1192	backsolveCost: 12355
+node 3	reorderSym: 16000	AtA: 14858	cholCost: 0	addCost: 2200	backsolveCost: 8634
+node 4	reorderSym: 20000	AtA: 16606	cholCost: 6028	addCost: 3352	backsolveCost: 13163
+node 5	reorderSym: 16000	AtA: 27968	cholCost: 6708	addCost: 4072	backsolveCost: 8942
+node 6	reorderSym: 16000	AtA: 20976	cholCost: 11220	addCost: 6808	backsolveCost: 9327
+node 7	reorderSym: 28000	AtA: 63680	cholCost: 0	addCost: 2728	backsolveCost: 21844
+node 8	reorderSym: 20000	AtA: 18354	cholCost: 17100	addCost: 7912	backsolveCost: 13870
+node 9	reorderSym: 20000	AtA: 28842	cholCost: 6179	addCost: 3352	backsolveCost: 13163
+node 10	reorderSym: 16000	AtA: 20102	cholCost: 2688	addCost: 2200	backsolveCost: 8634
+node 11	reorderSym: 16000	AtA: 15732	cholCost: 6708	addCost: 4072	backsolveCost: 8942
+node 12	reorderSym: 16000	AtA: 13984	cholCost: 10165	addCost: 5800	backsolveCost: 9173
+node 13	reorderSym: 16000	AtA: 13110	cholCost: 2100	addCost: 1768	backsolveCost: 8480
+node 14	reorderSym: 24000	AtA: 27094	cholCost: 3648	addCost: 2200	backsolveCost: 16137
+node 15	reorderSym: 16000	AtA: 20976	cholCost: 13908	addCost: 7912	backsolveCost: 9404
+node 16	reorderSym: 24000	AtA: 17480	cholCost: 2856	addCost: 1768	backsolveCost: 15911
+node 17	reorderSym: 24000	AtA: 20102	cholCost: 2856	addCost: 1768	backsolveCost: 15911
+node 18	reorderSym: 24000	AtA: 16606	cholCost: 5665	addCost: 2728	backsolveCost: 16250
+node 19	reorderSym: 16000	AtA: 13110	cholCost: 5029	addCost: 3352	backsolveCost: 8865
+node 20	reorderSym: 16000	AtA: 21728	cholCost: 0	addCost: 3352	backsolveCost: 8865
+node 21	reorderSym: 20000	AtA: 24350	cholCost: 0	addCost: 1432	backsolveCost: 12557
+node 22	reorderSym: 24000	AtA: 13110	cholCost: 2487	addCost: 1048	backsolveCost: 15459
+node 23	reorderSym: 24000	AtA: 16606	cholCost: 3648	addCost: 2200	backsolveCost: 16137
+node 24	reorderSym: 20000	AtA: 15732	cholCost: 12288	addCost: 5800	backsolveCost: 13567
+node 25	reorderSym: 16000	AtA: 10488	cholCost: 23845	addCost: 13288	backsolveCost: 9866
+node 26	reorderSym: 24000	AtA: 12236	cholCost: 39799	addCost: 16552	backsolveCost: 18284
+node 27	reorderSym: 16000	AtA: 26220	cholCost: 7728	addCost: 4888	backsolveCost: 9096
+node 28	reorderSym: 16000	AtA: 28842	cholCost: 14053	addCost: 7912	backsolveCost: 9404
+node 29	reorderSym: 16000	AtA: 14858	cholCost: 4231	addCost: 2728	backsolveCost: 8711
+node 30	reorderSym: 16000	AtA: 10488	cholCost: 2263	addCost: 1768	backsolveCost: 8480
+node 31	reorderSym: 16000	AtA: 14858	cholCost: 4080	addCost: 2728	backsolveCost: 8711
+node 32	reorderSym: 16000	AtA: 26220	cholCost: 15541	addCost: 9112	backsolveCost: 9558
+node 33	reorderSym: 24000	AtA: 41078	cholCost: 42649	addCost: 18328	backsolveCost: 18510
+node 34	reorderSym: 20000	AtA: 24472	cholCost: 9665	addCost: 4888	backsolveCost: 13466
+node 35	reorderSym: 16000	AtA: 29716	cholCost: 36277	addCost: 20200	backsolveCost: 10328
+node 36	reorderSym: 16000	AtA: 28842	cholCost: 18643	addCost: 10408	backsolveCost: 9635
+node 37	reorderSym: 16000	AtA: 16606	cholCost: 11383	addCost: 6808	backsolveCost: 9327
+node 38	reorderSym: 20000	AtA: 35834	cholCost: 53233	addCost: 24232	backsolveCost: 15385
+node 39	reorderSym: 20000	AtA: 31464	cholCost: 76787	addCost: 35992	backsolveCost: 16193
+node 40	reorderSym: 16000	AtA: 12236	cholCost: 4243	addCost: 2728	backsolveCost: 8711
+node 41	reorderSym: 20000	AtA: 14858	cholCost: 5040	addCost: 2728	backsolveCost: 12961
+node 42	reorderSym: 20000	AtA: 61180	cholCost: 29263	addCost: 13288	backsolveCost: 14476
+node 43	reorderSym: 16000	AtA: 12114	cholCost: 26264	addCost: 1432	backsolveCost: 8403
+node 44	reorderSym: 16000	AtA: 13862	cholCost: 30507	addCost: 1768	backsolveCost: 8480
+node 45	reorderSym: 20000	AtA: 13862	cholCost: 53322	addCost: 4072	backsolveCost: 13264
+node 46	reorderSym: 16000	AtA: 25224	cholCost: 40241	addCost: 4072	backsolveCost: 8942
+node 47	reorderSym: 32000	AtA: 36586	cholCost: 100949	addCost: 4888	backsolveCost: 26838
+node 48	reorderSym: 20000	AtA: 12114	cholCost: 109232	addCost: 20200	backsolveCost: 15082
+node 49	reorderSym: 24000	AtA: 33964	cholCost: 106028	addCost: 10408	backsolveCost: 17606
+node 50	reorderSym: 20000	AtA: 30468	cholCost: 81776	addCost: 10408	backsolveCost: 14173
+node 51	reorderSym: 16000	AtA: 17358	cholCost: 45732	addCost: 6808	backsolveCost: 9327
+node 52	reorderSym: 32000	AtA: 110876	cholCost: 138888	addCost: 10408	backsolveCost: 27881
+node 53	reorderSym: 16000	AtA: 38334	cholCost: 52596	addCost: 9112	backsolveCost: 9558
+node 54	reorderSym: 32000	AtA: 41830	cholCost: 179573	addCost: 18328	backsolveCost: 29073
+node 55	reorderSym: 16000	AtA: 25224	cholCost: 78180	addCost: 18328	backsolveCost: 10251
+node 56	reorderSym: 28000	AtA: 32216	cholCost: 158184	addCost: 16552	backsolveCost: 24310
+node 57	reorderSym: 28000	AtA: 37460	cholCost: 156936	addCost: 14872	backsolveCost: 24173
+node 58	reorderSym: 48000	AtA: 27846	cholCost: 210828	addCost: 6808	backsolveCost: 54459
+node 59	reorderSym: 28000	AtA: 14736	cholCost: 84303	addCost: 3352	backsolveCost: 22118
+node 60	reorderSym: 20000	AtA: 30468	cholCost: 141847	addCost: 31000	backsolveCost: 15890
+node 61	reorderSym: 20000	AtA: 31342	cholCost: 95920	addCost: 14872	backsolveCost: 14678
+node 62	reorderSym: 16000	AtA: 29594	cholCost: 111003	addCost: 33448	backsolveCost: 11021
+node 63	reorderSym: 32000	AtA: 52318	cholCost: 229494	addCost: 28648	backsolveCost: 30116
+node 64	reorderSym: 16000	AtA: 33964	cholCost: 65700	addCost: 13288	backsolveCost: 9866
+node 65	reorderSym: 16000	AtA: 22602	cholCost: 45732	addCost: 6808	backsolveCost: 9327
+node 66	reorderSym: 16000	AtA: 22602	cholCost: 93905	addCost: 26392	backsolveCost: 10713
+node 67	reorderSym: 16000	AtA: 48822	cholCost: 85044	addCost: 22168	backsolveCost: 10482
+node 68	reorderSym: 44000	AtA: 103010	cholCost: 381048	addCost: 31000	backsolveCost: 52583
+node 69	reorderSym: 36000	AtA: 35712	cholCost: 245320	addCost: 24232	backsolveCost: 37183
+node 70	reorderSym: 36000	AtA: 47948	cholCost: 263666	addCost: 28648	backsolveCost: 37702
+node 71	reorderSym: 48000	AtA: 55814	cholCost: 348484	addCost: 24232	backsolveCost: 57995
+node 72	reorderSym: 84000	AtA: 70672	cholCost: 444916	addCost: 4072	backsolveCost: 149704
+node 73	reorderSym: 36000	AtA: 41830	cholCost: 66483	addCost: 1000	backsolveCost: 31474
+node 74	reorderSym: -1	AtA: -1	cholCost: 0	addCost: -1	backsolveCost: 1037
+

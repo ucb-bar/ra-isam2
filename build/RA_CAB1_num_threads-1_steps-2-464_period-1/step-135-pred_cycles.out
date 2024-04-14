@@ -1,0 +1,33 @@
+num threads 
+1
+relin cost 
+7020000
+cliques
+26
+node 0	AtA: 13110	cholCost: 2100	addCost: 1768	backsolveCost: 8480
+node 1	AtA: 12236	cholCost: 2960	addCost: 1192	backsolveCost: 12355
+node 2	AtA: 8740	cholCost: 2768	addCost: 1192	backsolveCost: 8249
+node 3	AtA: 11240	cholCost: 0	addCost: 1048	backsolveCost: 8172
+node 4	AtA: 24350	cholCost: 0	addCost: 1432	backsolveCost: 12557
+node 5	AtA: 15610	cholCost: 0	addCost: 1048	backsolveCost: 15459
+node 6	AtA: 7866	cholCost: 2100	addCost: 1768	backsolveCost: 8480
+node 7	AtA: 31342	cholCost: 0	addCost: 1432	backsolveCost: 15798
+node 8	AtA: 16606	cholCost: 4288	addCost: 2200	backsolveCost: 21707
+node 9	AtA: 34960	cholCost: 4116	addCost: 1768	backsolveCost: 32512
+node 10	AtA: 12988	cholCost: 30507	addCost: 1768	backsolveCost: 8480
+node 11	AtA: 38334	cholCost: 92924	addCost: 7912	backsolveCost: 17267
+node 12	AtA: 22602	cholCost: 45108	addCost: 5800	backsolveCost: 9173
+node 13	AtA: 15610	cholCost: 32379	addCost: 2728	backsolveCost: 8711
+node 14	AtA: 12988	cholCost: 30507	addCost: 1768	backsolveCost: 8480
+node 15	AtA: 14736	cholCost: 39345	addCost: 1768	backsolveCost: 12658
+node 16	AtA: 11240	cholCost: 32379	addCost: 2728	backsolveCost: 8711
+node 17	AtA: 8618	cholCost: 35998	addCost: 3352	backsolveCost: 8865
+node 18	AtA: 18232	cholCost: 61808	addCost: 5800	backsolveCost: 13567
+node 19	AtA: 74168	cholCost: 81776	addCost: 10408	backsolveCost: 14173
+node 20	AtA: 61932	cholCost: 81776	addCost: 10408	backsolveCost: 14173
+node 21	AtA: 36586	cholCost: 125164	addCost: 14872	backsolveCost: 18171
+node 22	AtA: 28720	cholCost: 117000	addCost: 7912	backsolveCost: 23077
+node 23	AtA: 57562	cholCost: 218766	addCost: 1048	backsolveCost: 98600
+node 24	AtA: 5122	cholCost: 9964	addCost: 1000	backsolveCost: 3107
+node 25	AtA: -1	cholCost: 0	addCost: -1	backsolveCost: 1037
+
