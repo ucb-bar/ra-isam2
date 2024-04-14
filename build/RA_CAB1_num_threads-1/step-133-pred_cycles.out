@@ -1,32 +1,33 @@
 num threads 
 1
 relin cost 
-3020000
+3280000
 cliques
-25
+26
 node 0	reorderSym: 16000	AtA: 8740	cholCost: 0	addCost: 1048	backsolveCost: 8172
 node 1	reorderSym: 24000	AtA: 28842	cholCost: 3560	addCost: 1432	backsolveCost: 15798
-node 2	reorderSym: 16000	AtA: 13110	cholCost: 2100	addCost: 1768	backsolveCost: 8480
-node 3	reorderSym: 16000	AtA: 10488	cholCost: 2100	addCost: 1768	backsolveCost: 8480
+node 2	reorderSym: 16000	AtA: 13984	cholCost: 4884	addCost: 3352	backsolveCost: 8865
+node 3	reorderSym: 16000	AtA: 13110	cholCost: 2100	addCost: 1768	backsolveCost: 8480
 node 4	reorderSym: 20000	AtA: 24350	cholCost: 0	addCost: 1432	backsolveCost: 12557
 node 5	reorderSym: 24000	AtA: 13110	cholCost: 0	addCost: 1048	backsolveCost: 15459
 node 6	reorderSym: 16000	AtA: 26098	cholCost: 45108	addCost: 5800	backsolveCost: 9173
-node 7	reorderSym: 16000	AtA: 20102	cholCost: 9984	addCost: 5800	backsolveCost: 9173
-node 8	reorderSym: 20000	AtA: 28842	cholCost: 22837	addCost: 10408	backsolveCost: 14173
-node 9	reorderSym: 16000	AtA: 17358	cholCost: 72564	addCost: 16552	backsolveCost: 10097
-node 10	reorderSym: 28000	AtA: 85530	cholCost: 125736	addCost: 10408	backsolveCost: 23488
-node 11	reorderSym: 20000	AtA: 14736	cholCost: 33854	addCost: 1192	backsolveCost: 12355
-node 12	reorderSym: 16000	AtA: 15610	cholCost: 32379	addCost: 2728	backsolveCost: 8711
-node 13	reorderSym: 16000	AtA: 11240	cholCost: 22645	addCost: 1192	backsolveCost: 8249
-node 14	reorderSym: 32000	AtA: 21728	cholCost: 84975	addCost: 2728	backsolveCost: 26093
-node 15	reorderSym: 16000	AtA: 10488	cholCost: 2100	addCost: 1768	backsolveCost: 8480
-node 16	reorderSym: 16000	AtA: 10366	cholCost: 30507	addCost: 1768	backsolveCost: 8480
-node 17	reorderSym: 16000	AtA: 12114	cholCost: 32379	addCost: 2728	backsolveCost: 8711
-node 18	reorderSym: 32000	AtA: 33964	cholCost: 78236	addCost: 1768	backsolveCost: 25646
-node 19	reorderSym: 16000	AtA: 12988	cholCost: 31131	addCost: 2200	backsolveCost: 8634
-node 20	reorderSym: 28000	AtA: 16484	cholCost: 110760	addCost: 6808	backsolveCost: 22940
-node 21	reorderSym: 32000	AtA: 74168	cholCost: 157608	addCost: 13288	backsolveCost: 28328
-node 22	reorderSym: 44000	AtA: 38334	cholCost: 179369	addCost: 4888	backsolveCost: 47567
-node 23	reorderSym: 40000	AtA: 31342	cholCost: 81788	addCost: 1000	backsolveCost: 36575
-node 24	reorderSym: -1	AtA: -1	cholCost: 0	addCost: -1	backsolveCost: 1037
+node 7	reorderSym: 16000	AtA: 12988	cholCost: 30507	addCost: 1768	backsolveCost: 8480
+node 8	reorderSym: 16000	AtA: 20102	cholCost: 9984	addCost: 5800	backsolveCost: 9173
+node 9	reorderSym: 20000	AtA: 31342	cholCost: 81776	addCost: 10408	backsolveCost: 14173
+node 10	reorderSym: 16000	AtA: 17358	cholCost: 72564	addCost: 16552	backsolveCost: 10097
+node 11	reorderSym: 28000	AtA: 85530	cholCost: 125736	addCost: 10408	backsolveCost: 23488
+node 12	reorderSym: 20000	AtA: 14736	cholCost: 33854	addCost: 1192	backsolveCost: 12355
+node 13	reorderSym: 16000	AtA: 15610	cholCost: 32379	addCost: 2728	backsolveCost: 8711
+node 14	reorderSym: 16000	AtA: 11240	cholCost: 22645	addCost: 1192	backsolveCost: 8249
+node 15	reorderSym: 32000	AtA: 21728	cholCost: 84975	addCost: 2728	backsolveCost: 26093
+node 16	reorderSym: 16000	AtA: 10488	cholCost: 2100	addCost: 1768	backsolveCost: 8480
+node 17	reorderSym: 16000	AtA: 10366	cholCost: 30507	addCost: 1768	backsolveCost: 8480
+node 18	reorderSym: 16000	AtA: 12114	cholCost: 32379	addCost: 2728	backsolveCost: 8711
+node 19	reorderSym: 16000	AtA: 19980	cholCost: 30507	addCost: 1768	backsolveCost: 8480
+node 20	reorderSym: 16000	AtA: 12988	cholCost: 31131	addCost: 2200	backsolveCost: 8634
+node 21	reorderSym: 28000	AtA: 16484	cholCost: 110760	addCost: 6808	backsolveCost: 22940
+node 22	reorderSym: 32000	AtA: 74168	cholCost: 157608	addCost: 13288	backsolveCost: 28328
+node 23	reorderSym: 44000	AtA: 38334	cholCost: 179369	addCost: 4888	backsolveCost: 47567
+node 24	reorderSym: 40000	AtA: 31342	cholCost: 81788	addCost: 1000	backsolveCost: 36575
+node 25	reorderSym: -1	AtA: -1	cholCost: 0	addCost: -1	backsolveCost: 1037
 
