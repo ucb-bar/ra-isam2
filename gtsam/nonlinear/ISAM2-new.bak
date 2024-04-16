@@ -579,6 +579,8 @@ ISAM2Result ISAM2::update_resource_aware(const NonlinearFactorGraph& newFactors,
       *boost::get<double>(&params_.relinearizeThreshold), &newRelinKeys);
   relinKeys = newRelinKeys;
 
+  cout << "relinKeys size = " << relinKeys.size() << endl;
+
   if (!relinKeys.empty()) {
     // 6. Update linearization point for marked variables:
     // \Theta_{J}:=\Theta_{J}+\Delta_{J}.

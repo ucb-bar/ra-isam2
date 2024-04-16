@@ -19,7 +19,7 @@ dataset:
         path:           "sphere2500"
         relin_thresh:   0.05
         start_step:     2
-        end_step:       2000    # Inclusive
+        end_step:       2499    # Inclusive
         period:         25
     w10000: 
         is3D:           false
@@ -49,14 +49,14 @@ metadata:
     builddir: "../../build"
     headerdir: "../baremetal_tests"
     recompile: true     # True if C++ sources changed
-    make_flags: "-j"
+    make_flags: "-j4"
     target_binary:
         - testGtsamIncremental
         - testGtsamIncremental3D
         - testGtsamIncremental-ra
         - testGtsamIncremental3D-ra
           # - testGtsamIncremental-vio
-          # - testGtsamIncremental3D-vio
+        - testGtsamIncremental3D-vio
         - testGtsamIncremental-treegen
         - testGtsamIncremental3D-treegen
         - testGtsamIncremental-datasetgen
@@ -69,7 +69,7 @@ RA:
     output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}"
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
-    - CAB1
+    # - CAB1
     # - CAB7000
     # - sphere2500
     # - w10000
@@ -78,9 +78,9 @@ RA:
     params:
         num_threads:        1
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
-        print_dataset:      true            # Turn this off if not generating header
+        print_dataset:      false            # Turn this off if not generating header
         print_values:       false
-        print_pred:         true
+        print_pred:         false
         print_traj:         true
         
 # Incremental:
@@ -95,9 +95,9 @@ Incremental:
     # - M3500
     # - M3500c
     params:
-        print_dataset:      true            # Turn this off if not generating header
+        print_dataset:      false            # Turn this off if not generating header
         print_values:       false
-        print_pred:         true
+        print_pred:         false
         print_traj:         true
         
 # LRU:
@@ -120,7 +120,45 @@ LRU:
         print_values:       false
         print_pred:         true
         print_traj:         true
-
+        gen_header:         false
+        
+# LC:
+LC:
+    output_format: "LC_{dataset}"
+    header_format: "LC_{dataset}_steps-{start_step}-{end_step}_period-{period}"
+    dataset:    # Comment out the datasets that will be skipped
+    # - CAB1
+    - CAB7000
+    # - sphere2500
+    # - w10000
+    # - M3500
+    # - M3500c
+    params:
+        max_iter:           5
+        print_dataset:      false            # Turn this off if not generating header
+        print_values:       false
+        print_pred:         false
+        print_traj:         true
+        gen_header:         false
+      
+# VIO:
+VIO:
+    output_format: "VIO{'LC' if run_lc else ''}_{dataset}_vio_lag-{vio_lag}{'_lc_period-{}'.format(lc_period) if run_lc else ''}"
+    header_format: "VIO{'LC' if run_lc else ''}_{dataset}_vio_lag-{vio_lag}_steps-{start_step}-{end_step}_period-{period}"
+    dataset:    # Comment out the datasets that will be skipped
+    # - CAB1
+    # - CAB7000
+    # - sphere2500
+    # - w10000
+    # - M3500
+    # - M3500c
+    params:
+        max_iter:           10
+        gen_header:         false
+        vio_lag:            20
+        run_lc:             false
+        lc_period:          65
+        
 # Legacy output directors
 Legacy:
     runs:

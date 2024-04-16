@@ -174,6 +174,7 @@ int main(int argc, char *argv[]) {
          << ", max_optimization_iter = " << max_iter 
          << ", opt_stop_cond = " << d_error 
          << ", relinearize_skip = " << relinearize_skip 
+         << ", relin_thresh = " << relin_thresh 
          << ", print_frequency = " << print_frequency 
          << endl;
 
@@ -304,16 +305,28 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-            cout << "chi2 = " << last_chi2 << endl;
+            static double last_chi2 = 0;
+            double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+            cout << "chi2 = " << chi2 << endl;
 
             for(int iter = 0; iter < max_iter; iter++) {
+                if(abs(chi2) < epsilon) {
+                  break;
+                }
+
+                if(abs(last_chi2 - chi2) < d_error) {
+                  break;
+                }
+
+                last_chi2 = chi2;
+
               NonlinearFactorGraph dummy_nfg;
               Values dummy_vals;
               isam2.update(dummy_nfg, dummy_vals);
               estimate = isam2.calculateEstimate();
               double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
               cout << "step = " << step << ", Chi2 = " << chi2 << endl;
+
             }
 
             newVariables.clear();

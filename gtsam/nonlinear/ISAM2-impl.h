@@ -352,6 +352,7 @@ struct GTSAM_EXPORT UpdateImpl {
         double maxDelta = key_delta.second.lpNorm<Eigen::Infinity>();
         if (maxDelta >= *threshold) relinKeys.insert(key_delta.first);
       }
+      std::cout << std::endl;
     } else if (const FastMap<char, Vector>* thresholds =
                    boost::get<FastMap<char, Vector> >(&relinearizeThreshold)) {
       for (const VectorValues::KeyValuePair& key_delta : delta) {

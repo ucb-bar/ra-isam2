@@ -16,13 +16,13 @@ traj_files=$(ls $TRAJ_DIR/step-*_traj.txt)
 
 num_traj=$(ls -1 $TRAJ_DIR/step-*_traj.txt | wc -l)
 
-files_found=0
 step=0
+endstep=3000
 
 echo "Writing result to $out_file"
 echo "" > $out_file
 
-while [ $files_found -lt $num_traj ]
+while [ $step -lt $endstep ]
 do
   traj_file=$TRAJ_DIR/step-${step}_traj.txt
   ref_file=$REF_DIR/step-${step}_traj.txt

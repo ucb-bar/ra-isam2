@@ -412,7 +412,7 @@ void CholeskyEliminationTree::pickRelinKeys(
     if(isFixedKey(key)) { continue; }
     if(isMarginalizedKey(key)) { continue; }
 
-    if(p.second > relinThresh) {
+    if(p.second >= relinThresh) {
       newKeyDeltaVec.push_back(p);
       num_relin_keys++;
     }
@@ -517,11 +517,11 @@ void CholeskyEliminationTree::pickRelinKeys(
        << " num_min_force_thresh_keys: " << num_min_force_thresh_keys 
        << " total_cost: " << totalCost << endl;
 
-  cout << "Relin keys: ";
-  for(auto k : *newRelinKeys) {
-    cout << k << " ";
-  }
-  cout << endl;
+  // cout << "Relin keys: ";
+  // for(auto k : *newRelinKeys) {
+  //   cout << k << " ";
+  // }
+  // cout << endl;
 
 }
 
