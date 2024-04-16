@@ -69,7 +69,7 @@ RA:
     output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}"
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
-    - CAB1
+    # - CAB1
     # - CAB7000
     # - sphere2500
     # - w10000
@@ -127,6 +127,9 @@ Legacy:
     # - seah_sphere
     # - seah_incremental_CAB7000
     # - seah_incremental_CAB464
+    # - seah_incremental_CAB1_num_threads-1
+    # - seah_incremental_CAB1_num_threads-2
+    - seah_incremental_CAB1_num_threads-4
     # - seah_RA_CAB7000_num_threads-1
     # - seah_RA_CAB7000_num_threads-1
     # - seah_RA_CAB7000_num_threads-2
@@ -146,6 +149,42 @@ Legacy:
         print_delta:    true
         output_dir: "incremental_sphere2500_steps-2000_period-25"
         header_dir: "incremental_sphere2500_steps-2000_period-25"
+    seah_incremental_CAB1_num_threads-1:
+        dataset:        CAB1
+        start_step:     2
+        end_step:       463    # Inclusive
+        period:         1
+        print_dataset:  false            # Turn this off if not generating header
+        print_values:   false
+        print_pred:     false
+        print_traj:     false
+        print_delta:    true
+        output_dir: "RA_CAB1_num_threads-1"
+        header_dir: "RA_CAB1_num_threads-1"
+    seah_incremental_CAB1_num_threads-2:
+        dataset:        CAB1
+        start_step:     2
+        end_step:       463    # Inclusive
+        period:         1
+        print_dataset:  false            # Turn this off if not generating header
+        print_values:   false
+        print_pred:     false
+        print_traj:     false
+        print_delta:    true
+        output_dir: "RA_CAB1_num_threads-2"
+        header_dir: "RA_CAB1_num_threads-2"
+    seah_incremental_CAB1_num_threads-4:
+        dataset:        CAB1
+        start_step:     2
+        end_step:       463    # Inclusive
+        period:         1
+        print_dataset:  false            # Turn this off if not generating header
+        print_values:   false
+        print_pred:     false
+        print_traj:     false
+        print_delta:    true
+        output_dir: "RA_CAB1_num_threads-4"
+        header_dir: "RA_CAB1_num_threads-4"
     seah_incremental_CAB7000:
         dataset:        CAB7000
         start_step:     2
