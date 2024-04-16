@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     int vio_lag = 5;
     double relin_thresh = 0.1;
     NoiseFormat noiseFormat = gtsam::NoiseFormatAUTO;
-    string outdirname = "";
+    string dataset_outdir = "";
     bool run_lc = false;
     int lc_period = 30;
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
         {"num_steps", required_argument, 0, 't'},
         {"vio_lag", required_argument, 0, 52},
         {"noise_format", required_argument, 0, 53},
-        {"outdirname", required_argument, 0, 54},
+        {"dataset_outdir", required_argument, 0, 54},
         {"run_lc", no_argument, 0, 55},
         {"lc_period", required_argument, 0, 56},
         {0, 0, 0, 0}
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
                 break;
             }
             case 54:
-                outdirname = string(optarg);
+                dataset_outdir = string(optarg);
                 break;
             case 55:
                 run_lc = true;
@@ -317,31 +317,34 @@ int main(int argc, char *argv[]) {
 
             NonlinearFactorGraph dummy_nfg;
             Values dummy_vals;
-            int iter = 0;
-            while(1) {
-              isam2.update(dummy_nfg, dummy_vals);
-              Values estimate = isam2.calculateEstimate();
 
-              double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+            if(run_lc) {
+              int iter = 0;
+              while(1) {
+                isam2.update(dummy_nfg, dummy_vals);
+                Values estimate = isam2.calculateEstimate();
 
-              cout << "iter = " << iter << ", chi2 = " << chi2
-                << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
+                double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
 
-              if(abs(chi2) < epsilon) {
-                break;
+                cout << "iter = " << iter << ", chi2 = " << chi2
+                  << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
+
+                if(abs(chi2) < epsilon) {
+                  break;
+                }
+
+                if(abs(last_chi2 - chi2) < d_error) {
+                  break;
+                }
+
+                last_chi2 = chi2;
+
+                iter++;
+
+                if(iter >= max_iter) {
+                  break;
+                } 
               }
-
-              if(abs(last_chi2 - chi2) < d_error) {
-                break;
-              }
-
-              last_chi2 = chi2;
-
-              iter++;
-
-              if(iter >= max_iter) {
-                break;
-              } 
             }
 
 
@@ -378,7 +381,7 @@ int main(int argc, char *argv[]) {
             vioNewVariables.clear();
             vioNewFactors = NonlinearFactorGraph();
 
-            string outfile = outdirname + "/step-" + to_string(step) + "_traj.txt";
+            string outfile = dataset_outdir + "/step-" + to_string(step) + "_traj.txt";
             ofstream fout(outfile);
 
             if(!fout.is_open()) {
@@ -388,7 +391,7 @@ int main(int argc, char *argv[]) {
 
             vio_estimate.print_kitti_pose2(fout);
 
-            string lc_outfile = outdirname + "/step-" + to_string(step) + "_lc-traj.txt";
+            string lc_outfile = dataset_outdir + "/step-" + to_string(step) + "_lc-traj.txt";
             ofstream lc_fout(lc_outfile);
 
             if(!lc_fout.is_open()) {

@@ -14,10 +14,25 @@ dataset:
         start_step:     2
         end_step:       3000    # Inclusive
         period:         25
+    CSAIL: 
+        is3D:           false
+        path:           "ra_datasets/CSAIL"
+        relin_thresh:   0.01
+        start_step:     2
+        end_step:       1045    # Inclusive
+        period:         25
+        noise_format:   "graph"
     sphere2500: 
         is3D:           true
         path:           "sphere2500"
         relin_thresh:   0.05
+        start_step:     2
+        end_step:       2499    # Inclusive
+        period:         25
+    sphere2: 
+        is3D:           true
+        path:           "ra_datasets/sphere_smallnoise_pruned"
+        relin_thresh:   0.01
         start_step:     2
         end_step:       2499    # Inclusive
         period:         25
@@ -55,7 +70,7 @@ metadata:
         - testGtsamIncremental3D
         - testGtsamIncremental-ra
         - testGtsamIncremental3D-ra
-          # - testGtsamIncremental-vio
+        - testGtsamIncremental-vio
         - testGtsamIncremental3D-vio
         - testGtsamIncremental-treegen
         - testGtsamIncremental3D-treegen
@@ -71,12 +86,14 @@ RA:
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
     # - CAB7000
+    # - CSAIL
     # - sphere2500
+    - sphere2
     # - w10000
     # - M3500
     # - M3500c
     params:
-        num_threads:        1
+        num_threads:        4
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
         print_dataset:      false            # Turn this off if not generating header
         print_values:       false
@@ -113,7 +130,7 @@ LRU:
     # - M3500
     # - M3500c
     params:
-        num_threads:        1
+        num_threads:        2
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
         memsize:            1M              # In bytes.
         print_dataset:      true            # Turn this off if not generating header
@@ -128,7 +145,8 @@ LC:
     header_format: "LC_{dataset}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    - CAB7000
+    # - CAB7000
+    # - CSAIL
     # - sphere2500
     # - w10000
     # - M3500
@@ -148,6 +166,7 @@ VIO:
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
     # - CAB7000
+    - CSAIL
     # - sphere2500
     # - w10000
     # - M3500

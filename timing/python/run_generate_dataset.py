@@ -99,7 +99,11 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
-            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-ra" if is3D else "testGtsamIncremental-ra"
+            noise_format = "auto"
+            if not is3D:
+                noise_format = d["noise_format"]
+
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-ra" if is3D else "testGtsamIncremental-ra")
 
             run_dset = True
             if os.path.isdir(output_dir):
@@ -117,6 +121,7 @@ if __name__ == "__main__":
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
                               {'--num_threads {}'.format(num_threads) if not num_threads_file else '--num_threads_infile {}'.format(num_threads_file)} \
+                              {'--noise_format {}'.format(noise_format) if not is3D else ''} \
                               --print_frequency 1 \
                               2>&1 | tee {output_log} \
                               "
@@ -256,7 +261,11 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
-            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen"
+            noise_format = "auto"
+            if not is3D:
+                noise_format = d["noise_format"]
+
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
 
             run_dset = True
             if os.path.isdir(output_dir):
@@ -276,6 +285,7 @@ if __name__ == "__main__":
                               {'--print_values' if print_values else ''} \
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
+                              {'--noise_format {}'.format(noise_format) if not is3D else ''} \
                               --print_frequency 1 \
                               2>&1 | tee {output_log} \
                               "
@@ -337,7 +347,11 @@ if __name__ == "__main__":
             run_lc = d["run_lc"]
             lc_period = d["lc_period"]
 
-            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-vio" if is3D else "testGtsamIncremental-vio"
+            noise_format = "auto"
+            if not is3D:
+                noise_format = d["noise_format"]
+
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-vio" if is3D else "testGtsamIncremental-vio")
 
             run_dset = True
             if os.path.isdir(output_dir):
@@ -355,6 +369,7 @@ if __name__ == "__main__":
                               --dataset_outdir {output_dir} \
                               {'--run_lc' if run_lc else ''} \
                               {'--lc_period {}'.format(lc_period) if run_lc else ''} \
+                              {'--noise_format {}'.format(noise_format) if not is3D else ''} \
                               --print_frequency 1 \
                               2>&1 | tee {output_log} \
                               "

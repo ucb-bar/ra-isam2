@@ -84,6 +84,8 @@ int main(int argc, char *argv[]) {
     bool print_pred = false;
     bool print_traj = false;
     bool print_values = false;
+    bool print_delta = false;
+    NoiseFormat noiseFormat = gtsam::NoiseFormatAUTO;
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -99,9 +101,11 @@ int main(int argc, char *argv[]) {
         {"relin_keys_file", required_argument, 0, 50},
         {"dataset_outdir", required_argument, 0, 51},
         {"print_values", no_argument, 0, 52},
+        {"noise_format", required_argument, 0, 54},
         {"print_dataset", no_argument, 0, 150},
         {"print_pred", no_argument, 0, 151},
         {"print_traj", no_argument, 0, 152},
+        {"print_delta", no_argument, 0, 153},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -143,6 +147,28 @@ int main(int argc, char *argv[]) {
             case 52:
                 print_values = true;
                 break;
+            case 54: {
+                string noiseFormatString = string(optarg);
+                if(noiseFormatString == "g2o") {
+                  noiseFormat = NoiseFormatG2O;
+                }
+                else if(noiseFormatString == "toro") {
+                  noiseFormat = NoiseFormatTORO;
+                }
+                else if(noiseFormatString == "graph") {
+                  noiseFormat = NoiseFormatGRAPH;
+                }
+                else if(noiseFormatString == "cov") {
+                  noiseFormat = NoiseFormatCOV;
+                }
+                else if(noiseFormatString == "auto") {
+                  noiseFormat = NoiseFormatAUTO;
+                }
+                else {
+                  noiseFormat = NoiseFormatAUTO;
+                }
+                break;
+            }
             case 150:
                 print_dataset = true;
                 break;
@@ -151,6 +177,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 152:
                 print_traj = true;
+                break;
+            case 153:
+                print_delta = true;
                 break;
             default:
                 cerr << "Unrecognized option" << endl;
@@ -172,7 +201,7 @@ int main(int argc, char *argv[]) {
     string datasetFile = findExampleDataFile(dataset_name);
     // string datasetFile = findExampleDataFile("victoria_park");
     std::pair<NonlinearFactorGraph::shared_ptr, Values::shared_ptr> data =
-        load2D(datasetFile);
+        load2D(datasetFile, SharedNoiseModel(), 0, false, true, noiseFormat);
 
     NonlinearFactorGraph measurements = *data.first;
     Values initial = *data.second;
@@ -260,7 +289,7 @@ int main(int argc, char *argv[]) {
             }
             ++ nextMeasurement;
         }
-
+        
         // Update iSAM2
         int d1 = 0, d2 = 0;
         if(K_count == K || nextMeasurement == measurements.size()) {
@@ -273,10 +302,16 @@ int main(int argc, char *argv[]) {
             K_count = 0;
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
-            FastList<Key> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
+            FastList<RemappedKey> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
+            cout << "extra relin: " << endl;
+            for(Key k : extraRelinKeys) {
+                cout << k << " ";
+            }
+            cout << endl;
+
             isam2.update(newFactors, newVariables, params, extraRelinKeys);
             auto update_end = chrono::high_resolution_clock::now();
-            // estimate = isam2.calculateEstimate();
+            estimate = isam2.calculateEstimate();
             auto calc_end = chrono::high_resolution_clock::now();
             d1 += chrono::duration_cast<chrono::microseconds>(update_end - start).count();
             d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
@@ -290,56 +325,35 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            // last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-            // print_count++;
-            // if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //     cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //          << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            // }
+            static double last_chi2 = 0;
+            double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+            cout << "chi2 = " << chi2 << endl;
 
-            // if(K > 1) {
-            //     NonlinearFactorGraph dummy_nfg;
-            //     Values dummy_vals;
-            //     int iter = 0;
+            for(int iter = 0; iter < max_iter; iter++) {
+                if(abs(chi2) < epsilon) {
+                  break;
+                }
 
-            //     while(1) {
-            //         if(last_chi2 <= epsilon) {
-            //             break;
-            //         }
-            //         auto start = chrono::high_resolution_clock::now();
-            //         isam2.update(dummy_nfg, dummy_vals);
-            //         auto update_end = chrono::high_resolution_clock::now();
-            //         estimate = isam2.calculateEstimate();
-            //         auto calc_end = chrono::high_resolution_clock::now();
-            //         d1 += chrono::duration_cast<chrono::microseconds>
-            //                     (update_end - start).count();
-            //         d2 += chrono::duration_cast<chrono::microseconds>
-            //                     (calc_end - update_end).count();
+                if(abs(last_chi2 - chi2) < d_error) {
+                  break;
+                }
 
-            //         double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+                last_chi2 = chi2;
 
-            //         if(print_frequency != 0 && print_count % print_frequency == 0) {
-            //             cout << "step = " << step << ", Chi2 = " << last_chi2 
-            //                 << ", graph_error = " << isam2.getFactorsUnsafe().error(estimate) << endl;
-            //         }
+              NonlinearFactorGraph dummy_nfg;
+              Values dummy_vals;
+              isam2.update(dummy_nfg, dummy_vals);
+              estimate = isam2.calculateEstimate();
+              double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
+              cout << "step = " << step << ", Chi2 = " << chi2 << endl;
 
-            //         if(abs(last_chi2 - chi2) < d_error) {
-            //             break;
-            //         }
+            }
 
-            //         last_chi2 = chi2;
-            //         iter++;
-            //         if(iter >= max_iter) {
-            //             cout << "Nonlinear optimization exceed max iterations: " 
-            //                  << iter << " >= " << max_iter << ", chi2 = " << chi2 << endl;
-            //             break;
-            //         }
-            //     }
-            // }
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
 
-            if(dataset_outdir != "") {
+            if(step % print_frequency == 0) {
+              if(dataset_outdir != "") {
                 if(print_dataset) {
                   string outfile = dataset_outdir + "/step-" + to_string(step) + ".out";
                   ofstream fout(outfile);
@@ -380,8 +394,23 @@ int main(int argc, char *argv[]) {
 
                   estimate.print_kitti_pose2(traj_fout);
                 }
+
+                if(print_delta) {
+                  string delta_outfile = dataset_outdir + "/step-" + to_string(step) + "_delta.out";
+
+                  ofstream delta_fout(delta_outfile);
+
+                  if(!delta_fout.is_open()) {
+                    cerr << "Cannot open file: " << delta_outfile << endl;
+                    exit(1);
+                  }
+
+                  isam2.extractDelta(delta_fout);
+                }
+              }
             }
         }
+
         K_count++;
         update_times.push_back(d1);
         calc_times.push_back(d2);
