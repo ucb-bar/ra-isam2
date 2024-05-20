@@ -47,6 +47,9 @@ class Clique:
         self.index = index
         self.num_relin_factors = 0
 
+        self.workspace_needed = 0
+        self.children = []
+
         # ======================================== #
         # END Variable initialization
         # ======================================== #

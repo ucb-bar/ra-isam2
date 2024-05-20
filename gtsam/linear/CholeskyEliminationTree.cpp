@@ -1261,8 +1261,8 @@ void CholeskyEliminationTree::allocateStackRegular() {
           // For any marked clique, if any of its decendants is unmarked, set to EDIT
           const auto&[key, row, height] = clique->blockIndices[i];
           assert(nodes_[key]->clique()->marked());
-          nodes_[key]->clique()->setStatusEdit();
-          // nodes_[key]->clique()->setStatusReconstruct();
+          // nodes_[key]->clique()->setStatusEdit();
+          nodes_[key]->clique()->setStatusReconstruct();
         }
       }
     }
@@ -2069,6 +2069,8 @@ void CholeskyEliminationTree::selectStaleSubtree(
 
   vector<pair<sharedClique, bool>> stack(1, {root_, false});
 
+  size_t total_size = 0;
+
   // First compute the subtree sizes of each clique
   while(!stack.empty()) {
     auto& curPair = stack.back();
@@ -2091,11 +2093,23 @@ void CholeskyEliminationTree::selectStaleSubtree(
       curClique->memSize = curClique->width() * curClique->width();
       curClique->subdiagSize = curClique->subdiagonalHeight() * curClique->width();
 
+      // for(sharedNode node : curClique->nodes) {
+      //   for(auto factor : node->factors) {
+      //     if(node->key != factor->lowestKey()) { continue; }
+      //     int total_width = 0;
+      //     for(const auto&[key, col, width] : factor->blockIndices()) {
+      //       total_width += width;
+      //     }
+      //     const auto& cachedMatrix = factor->getCachedMatrix();
+      //     curClique->memSize += cachedMatrix.rows() * total_width;
+      //   }
+      // }
+
       for(sharedClique childClique : curClique->children) {
         if(allMarginalizedKeys.find(childClique->backKey()) != allMarginalizedKeys.end()) {
           continue;
         }
-        curClique->memSize += childClique->memSize; + childClique->subdiagSize;
+        curClique->memSize += childClique->memSize + childClique->subdiagSize;
       }
 
       curClique->lastRelinStep = 0;
@@ -2396,6 +2410,7 @@ void CholeskyEliminationTree::marginalizeLeaves2(
   }
 
   for(sharedClique clique : marginalizedCliques) {
+    cout << "deleting clique: " << *clique << endl;
     clique->deleteClique();
   }
 
@@ -2426,6 +2441,33 @@ void CholeskyEliminationTree::marginalizeLeaves2(
   }
 
   // Don't do anything to orderingToKey_ and keyToOrdering_. Too complicated
+
+  int64_t total_size = 0;
+  vector<sharedClique> stack(1, root_);
+  while(!stack.empty()) {
+    sharedClique curClique = stack.back();
+    stack.pop_back();
+
+    total_size += curClique->width() * curClique->height();
+
+    // for(sharedNode node : curClique->nodes) {
+    //   for(auto factor : node->factors) {
+    //     if(node->key != factor->lowestKey()) { continue; }
+    //     int total_width = 0;
+    //     for(const auto&[key, col, width] : factor->blockIndices()) {
+    //       total_width += width;
+    //     }
+    //     const auto& cachedMatrix = factor->getCachedMatrix();
+    //     total_size += cachedMatrix.rows() * total_width;
+    //   }
+    // }
+
+    for(sharedClique childClique : curClique->children) {
+      stack.push_back(childClique);
+    }
+  }
+
+  cout << "totalMemSize after marginalization: " << total_size << endl;
 
 #ifdef DEBUG
   checkInvariant_afterMarginalize();

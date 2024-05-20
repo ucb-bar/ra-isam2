@@ -99,7 +99,11 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
-            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-ra" if is3D else "testGtsamIncremental-ra"
+            noise_format = "auto"
+            if not is3D:
+                noise_format = d["noise_format"]
+
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-ra" if is3D else "testGtsamIncremental-ra")
 
             run_dset = True
             if os.path.isdir(output_dir):
@@ -117,6 +121,7 @@ if __name__ == "__main__":
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
                               {'--num_threads {}'.format(num_threads) if not num_threads_file else '--num_threads_infile {}'.format(num_threads_file)} \
+                              {'--noise_format {}'.format(noise_format) if not is3D else ''} \
                               --print_frequency 1 \
                               2>&1 | tee {output_log} \
                               "
@@ -190,6 +195,7 @@ if __name__ == "__main__":
                               --num_steps {end_step} \
                               --relin_thresh {relin_thresh} \
                               --dataset_outdir {output_dir} \
+                              -m 0 \
                               {'--print_dataset' if print_dataset else ''} \
                               {'--print_values' if print_values else ''} \
                               {'--print_pred' if print_pred else ''} \
@@ -221,6 +227,181 @@ if __name__ == "__main__":
                     "
             print(cmd)
             run_system_cmd(cmd)
+
+    #######################################
+    # Run LC
+    #######################################
+
+    if config["LC"]["dataset"] is not None:
+
+        output_format = config["LC"]["output_format"]
+        header_format = config["LC"]["header_format"]
+
+        for dataset in config["LC"]["dataset"]:
+            d = config["dataset"][dataset]
+            d["dataset"] = dataset
+            d.update(config["LC"]["params"])
+
+            output_name = eval(f'f"{output_format}"', d)
+            header_name = eval(f'f"{header_format}"', d)
+
+            is3D = d["is3D"]
+            dataset_path = d["path"]
+            relin_thresh = d["relin_thresh"]
+            start_step = d["start_step"]
+            end_step = d["end_step"] + 1
+            period = d["period"]
+            output_dir = f"{builddir}/{output_name}"
+            header_dir = f"{headerdir}/{header_name}"
+            output_log = f"{output_dir}.log"
+
+            max_iter = d["max_iter"]
+            print_dataset = d["print_dataset"]
+            print_values = d["print_values"]
+            print_pred = d["print_pred"]
+            print_traj = d["print_traj"]
+
+            noise_format = "auto"
+            if not is3D:
+                noise_format = d["noise_format"]
+
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
+
+            run_dset = True
+            if os.path.isdir(output_dir):
+                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+
+            if run_dset:
+                print(f"Running dataset {dataset} and write output to {output_dir}")
+                run_system_cmd(f"mkdir -p {output_dir}")
+                cmd = f"{exe} -f {dataset_path} \
+                              --num_steps {end_step} \
+                              --relin_thresh {relin_thresh} \
+                              -m {max_iter} \
+                              -e 0.001 \
+                              -d 0.0001 \
+                              --dataset_outdir {output_dir} \
+                              {'--print_dataset' if print_dataset else ''} \
+                              {'--print_values' if print_values else ''} \
+                              {'--print_pred' if print_pred else ''} \
+                              {'--print_traj' if print_traj else ''} \
+                              {'--noise_format {}'.format(noise_format) if not is3D else ''} \
+                              --print_frequency 1 \
+                              2>&1 | tee {output_log} \
+                              "
+                run_system_cmd(cmd)
+
+            """
+            # Generate relin keys file
+            cmd = f"python3 {scriptdir}/generate_relin_keys_file.py \
+                    --indir {output_dir} --outfile {output_dir}/relin_keys \
+                    --start_step {start_step} \
+                    --end_step {end_step - 1} \
+                    {'--no_values' if not print_values else ''} \
+                    "
+            run_system_cmd(cmd)
+            """
+
+            # Generate header
+            run_system_cmd(f"mkdir -p {header_dir}")
+            cmd = f"python3 {scriptdir}/generate_dataset.py \
+                    --indir {output_dir} --outdir {header_dir} \
+                    --start_step {start_step} \
+                    --end_step {end_step - 1} \
+                    --period {period} \
+                    {'--no_values' if not print_values else ''} \
+                    "
+            print(cmd)
+            run_system_cmd(cmd)
+
+    #######################################
+    # Run VIO
+    #######################################
+
+    if config["VIO"]["dataset"] is not None:
+
+        output_format = config["VIO"]["output_format"]
+        header_format = config["VIO"]["header_format"]
+
+        for dataset in config["VIO"]["dataset"]:
+            d = config["dataset"][dataset]
+            d["dataset"] = dataset
+            d.update(config["VIO"]["params"])
+
+            output_name = eval(f'f"{output_format}"', d)
+            header_name = eval(f'f"{header_format}"', d)
+
+            is3D = d["is3D"]
+            dataset_path = d["path"]
+            relin_thresh = d["relin_thresh"]
+            start_step = d["start_step"]
+            end_step = d["end_step"] + 1
+            period = d["period"]
+            output_dir = f"{builddir}/{output_name}"
+            header_dir = f"{headerdir}/{header_name}"
+            output_log = f"{output_dir}.log"
+
+            max_iter = d["max_iter"]
+            gen_header = d["gen_header"]
+            vio_lag = d["vio_lag"]
+            run_lc = d["run_lc"]
+            lc_period = d["lc_period"]
+
+            noise_format = "auto"
+            if not is3D:
+                noise_format = d["noise_format"]
+
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-vio" if is3D else "testGtsamIncremental-vio")
+
+            run_dset = True
+            if os.path.isdir(output_dir):
+                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+
+            if run_dset:
+                print(f"Running dataset {dataset} and write output to {output_dir}")
+                run_system_cmd(f"mkdir -p {output_dir}")
+                cmd = f"{exe} -f {dataset_path} \
+                              --num_steps {end_step} \
+                              --relin_thresh {relin_thresh} \
+                              -m {max_iter} \
+                              -e 0 \
+                              -d 0 \
+                              --vio_lag {vio_lag} \
+                              --dataset_outdir {output_dir} \
+                              {'--run_lc' if run_lc else ''} \
+                              {'--lc_period {}'.format(lc_period) if run_lc else ''} \
+                              {'--noise_format {}'.format(noise_format) if not is3D else ''} \
+                              --print_frequency 1 \
+                              2>&1 | tee {output_log} \
+                              "
+                run_system_cmd(cmd)
+
+                print(f"Finished running dataset {dataset} and write output to {output_dir}")
+
+            """
+            # Generate relin keys file
+            cmd = f"python3 {scriptdir}/generate_relin_keys_file.py \
+                    --indir {output_dir} --outfile {output_dir}/relin_keys \
+                    --start_step {start_step} \
+                    --end_step {end_step - 1} \
+                    {'--no_values' if not print_values else ''} \
+                    "
+            run_system_cmd(cmd)
+            """
+
+            """
+            # Generate header
+            run_system_cmd(f"mkdir -p {header_dir}")
+            cmd = f"python3 {scriptdir}/generate_dataset.py \
+                    --indir {output_dir} --outdir {header_dir} \
+                    --start_step {start_step} \
+                    --end_step {end_step - 1} \
+                    --period {period} \
+                    {'--no_values' if not print_values else ''} \
+                    "
+            print(cmd)
+            run_system_cmd(cmd)
+            """
 
     #######################################
     # Run LRU

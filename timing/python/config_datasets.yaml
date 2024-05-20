@@ -7,6 +7,13 @@ dataset:
         start_step:     2
         end_step:       463     # Inclusive
         period:         1
+    CAB1-smallnoise: 
+        is3D:           true
+        path:           "ra_datasets/CAB_query_val_phone-2"
+        relin_thresh:   0.001
+        start_step:     2
+        end_step:       463     # Inclusive
+        period:         1
     CAB7000: 
         is3D:           true
         path:           "ra_datasets/CAB7000"
@@ -14,10 +21,32 @@ dataset:
         start_step:     2
         end_step:       3000    # Inclusive
         period:         25
+    CAB7000-smallnoise: 
+        is3D:           true
+        path:           "ra_datasets/CAB7000-2"
+        relin_thresh:   0.001
+        start_step:     2
+        end_step:       3000    # Inclusive
+        period:         25
+    CSAIL: 
+        is3D:           false
+        path:           "ra_datasets/CSAIL"
+        relin_thresh:   0.01
+        start_step:     2
+        end_step:       1045    # Inclusive
+        period:         25
+        noise_format:   "graph"
     sphere2500: 
         is3D:           true
         path:           "sphere2500"
         relin_thresh:   0.05
+        start_step:     2
+        end_step:       2499    # Inclusive
+        period:         25
+    sphere2: 
+        is3D:           true
+        path:           "ra_datasets/sphere_smallnoise_pruned"
+        relin_thresh:   0.01
         start_step:     2
         end_step:       2000    # Inclusive
         period:         25
@@ -49,14 +78,14 @@ metadata:
     builddir: "../../build"
     headerdir: "../baremetal_tests"
     recompile: true     # True if C++ sources changed
-    make_flags: "-j"
+    make_flags: "-j4"
     target_binary:
         - testGtsamIncremental
         - testGtsamIncremental3D
         - testGtsamIncremental-ra
         - testGtsamIncremental3D-ra
-          # - testGtsamIncremental-vio
-          # - testGtsamIncremental3D-vio
+        - testGtsamIncremental-vio
+        - testGtsamIncremental3D-vio
         - testGtsamIncremental-treegen
         - testGtsamIncremental3D-treegen
         - testGtsamIncremental-datasetgen
@@ -70,17 +99,21 @@ RA:
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
+    # - CAB1-smallnoise
     # - CAB7000
+    # - CAB7000-smallnoise
+    # - CSAIL
     # - sphere2500
+    # - sphere2
     # - w10000
     # - M3500
     # - M3500c
     params:
-        num_threads:        1
+        num_threads:        4
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
-        print_dataset:      true            # Turn this off if not generating header
+        print_dataset:      false            # Turn this off if not generating header
         print_values:       false
-        print_pred:         true
+        print_pred:         false
         print_traj:         true
         
 # Incremental:
@@ -89,15 +122,18 @@ Incremental:
     header_format: "incremental_{dataset}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
+    # - CAB1-smallnoise
     # - CAB7000
+    # - CAB7000-smallnoise
     # - sphere2500
+    # - sphere2
     # - w10000
     # - M3500
     # - M3500c
     params:
-        print_dataset:      true            # Turn this off if not generating header
+        print_dataset:      false            # Turn this off if not generating header
         print_values:       false
-        print_pred:         true
+        print_pred:         false
         print_traj:         true
         
 # LRU:
@@ -107,20 +143,68 @@ LRU:
     header_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
+    # - CAB1-smallnoise
     # - CAB7000
+    # - CAB7000-smallnoise
     # - sphere2500
     # - w10000
     # - M3500
     # - M3500c
     params:
-        num_threads:        1
+        num_threads:        2
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
-        memsize:            1M              # In bytes.
-        print_dataset:      true            # Turn this off if not generating header
+        memsize:            2M              # In bytes.
+        print_dataset:      false            # Turn this off if not generating header
         print_values:       false
-        print_pred:         true
+        print_pred:         false
         print_traj:         true
-
+        gen_header:         false
+        
+# LC:
+LC:
+    output_format: "LC_{dataset}"
+    header_format: "LC_{dataset}_steps-{start_step}-{end_step}_period-{period}"
+    dataset:    # Comment out the datasets that will be skipped
+    # - CAB1
+    # - CAB1-smallnoise
+    # - CAB7000
+    # - CAB7000-smallnoise
+    # - CSAIL
+    # - sphere2500
+    # - sphere2
+    # - w10000
+    # - M3500
+    # - M3500c
+    params:
+        max_iter:           5
+        print_dataset:      false            # Turn this off if not generating header
+        print_values:       false
+        print_pred:         false
+        print_traj:         true
+        gen_header:         false
+      
+# VIO:
+VIO:
+    output_format: "VIO{'LC' if run_lc else ''}_{dataset}_vio_lag-{vio_lag}{'_lc_period-{}'.format(lc_period) if run_lc else ''}"
+    header_format: "VIO{'LC' if run_lc else ''}_{dataset}_vio_lag-{vio_lag}_steps-{start_step}-{end_step}_period-{period}"
+    dataset:    # Comment out the datasets that will be skipped
+    # - CAB1
+    # - CAB1-smallnoise
+    # - CAB7000
+    - CAB7000-smallnoise
+    # - CSAIL
+    # - sphere2500
+    # - sphere2
+    # - w10000
+    # - M3500
+    # - M3500c
+    params:
+        max_iter:           1
+        gen_header:         false
+        vio_lag:            716
+        run_lc:             false
+        lc_period:          8
+        
 # Legacy output directors
 Legacy:
     runs:
@@ -129,7 +213,7 @@ Legacy:
     # - seah_incremental_CAB464
     # - seah_incremental_CAB1_num_threads-1
     # - seah_incremental_CAB1_num_threads-2
-    - seah_incremental_CAB1_num_threads-4
+    # - seah_incremental_CAB1_num_threads-4
     # - seah_RA_CAB7000_num_threads-1
     # - seah_RA_CAB7000_num_threads-1
     # - seah_RA_CAB7000_num_threads-2

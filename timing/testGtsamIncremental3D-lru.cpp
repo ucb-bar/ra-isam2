@@ -333,9 +333,9 @@ int main(int argc, char *argv[]) {
 
             bool datasetgen_mode = (dataset_outdir != "");
 
-            if(!datasetgen_mode) {
+            // if(!datasetgen_mode) {
               isam2.getCholeskyEliminationTree().marginalizeLeaves2(marginalizedKeys);
-            }
+            // }
 
             if(step % print_frequency == 0) {
               if(dataset_outdir != "") {

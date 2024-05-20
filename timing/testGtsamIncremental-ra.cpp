@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
     bool print_pred = false;
     bool print_traj = false;
     bool print_values = false;
+    NoiseFormat noiseFormat = gtsam::NoiseFormatAUTO;
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]) {
         {"print_dataset", no_argument, 0, 150},
         {"print_pred", no_argument, 0, 151},
         {"print_traj", no_argument, 0, 152},
+        {"noise_format", required_argument, 0, 54},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -121,6 +123,28 @@ int main(int argc, char *argv[]) {
             case 53:
                 num_threads_infile = string(optarg);
                 break;
+            case 54: {
+                string noiseFormatString = string(optarg);
+                if(noiseFormatString == "g2o") {
+                  noiseFormat = NoiseFormatG2O;
+                }
+                else if(noiseFormatString == "toro") {
+                  noiseFormat = NoiseFormatTORO;
+                }
+                else if(noiseFormatString == "graph") {
+                  noiseFormat = NoiseFormatGRAPH;
+                }
+                else if(noiseFormatString == "cov") {
+                  noiseFormat = NoiseFormatCOV;
+                }
+                else if(noiseFormatString == "auto") {
+                  noiseFormat = NoiseFormatAUTO;
+                }
+                else {
+                  noiseFormat = NoiseFormatAUTO;
+                }
+                break;
+            }
             case 150:
                 print_dataset = true;
                 break;
@@ -158,7 +182,7 @@ int main(int argc, char *argv[]) {
     string datasetFile = findExampleDataFile(dataset_name);
     // string datasetFile = findExampleDataFile("victoria_park");
     std::pair<NonlinearFactorGraph::shared_ptr, Values::shared_ptr> data =
-        load2D(datasetFile);
+        load2D(datasetFile, SharedNoiseModel(), 0, false, true, noiseFormat);
 
     NonlinearFactorGraph measurements = *data.first;
     Values initial = *data.second;

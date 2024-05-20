@@ -22,17 +22,18 @@ if __name__ == "__main__":
     labels = options.labels.split()
     start_step = options.start_step
 
-    plt.rcParams.update({'font.size': 22})
+    plt.rcParams.update({'font.size': 40, 'axes.titlesize': "large", 'axes.labelsize': 'large'})
+    fontsize = 50
 
     t = []
     rmse = []
     max_error = []
     min_error = []
 
-    plt.figure(figsize=(15, 9))
+    figure = plt.figure(figsize=(20, 15))
 
-    ax1 = plt.subplot(1, 2, 1)
-    ax2 = plt.subplot(1, 2, 2)
+    ax1 = plt.subplot(2, 1, 2)
+    ax2 = plt.subplot(2, 1, 1)
 
     gt_max = []
     gt_rmse = []
@@ -84,18 +85,32 @@ if __name__ == "__main__":
                     e = float(arr[1])
                     rmse[-1].append(e)
 
-        ax1.plot(t[-1], rmse[-1], label=f"{labels[i]} rmse")
-        ax2.plot(t[-1], max_error[-1], label=f"{labels[i]} max")
-    ax1.set_xlabel("step")
-    ax1.set_ylabel("error (m)")
+        ax1.plot(t[-1], rmse[-1], label=f"{labels[i]}", linewidth=5)
+        ax2.plot(t[-1], max_error[-1], label=f"{labels[i]}", linewidth=5)
+    ax1.set_xlabel("Step", fontsize=fontsize)
+    ax1.set_ylabel("Error (m)", fontsize=fontsize)
+    ax1.set_title("RMSE", fontsize=fontsize)
 
-    ax2.set_xlabel("step")
-    ax2.set_ylabel("error (m)")
+    tick_size = 42
+    ax1.tick_params(axis='both', which='major', labelsize=tick_size)
+    # ax1.set_yscale("log")
 
-    ax1.legend()
-    ax2.legend()
+    ax2.set_title("MAX", fontsize=fontsize)
+    # ax2.set_xlabel("Step")
+    ax2.set_ylabel("Error (m)", fontsize=fontsize)
+    # ax2.set_yscale("log")
+    ax2.tick_params(axis='both', which='major', labelsize=tick_size)
 
-    plt.savefig(options.outfile)
+    figure.tight_layout()
+
+
+    if "sphere" in options.outfile:
+        ax2.legend(loc="upper left", fontsize=fontsize)
+    else:
+        # ax1.legend()
+        ax2.legend(loc="upper left", fontsize=fontsize)
+
+    plt.savefig(options.outfile, bbox_inches='tight')
 
 
 
