@@ -71,6 +71,13 @@ dataset:
         start_step:     2
         end_step:       3500    # Inclusive
         period:         1
+    torus: 
+        is3D:           true
+        path:           "ra_datasets/torus3D"
+        relin_thresh:   0.1
+        start_step:     2
+        end_step:       4999    # Inclusive
+        period:         25
 
 # Metadata
 metadata:
@@ -130,10 +137,11 @@ Incremental:
     # - w10000
     # - M3500
     # - M3500c
+    - torus
     params:
-        print_dataset:      false            # Turn this off if not generating header
+        print_dataset:      true            # Turn this off if not generating header
         print_values:       false
-        print_pred:         false
+        print_pred:         true
         print_traj:         true
         
 # LRU:
@@ -191,7 +199,7 @@ VIO:
     # - CAB1
     # - CAB1-smallnoise
     # - CAB7000
-    - CAB7000-smallnoise
+    # - CAB7000-smallnoise
     # - CSAIL
     # - sphere2500
     # - sphere2
