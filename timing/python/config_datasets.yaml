@@ -87,17 +87,17 @@ metadata:
     recompile: true     # True if C++ sources changed
     make_flags: "-j4"
     target_binary:
-        - testGtsamIncremental
-        - testGtsamIncremental3D
-        - testGtsamIncremental-ra
-        - testGtsamIncremental3D-ra
-        - testGtsamIncremental-vio
-        - testGtsamIncremental3D-vio
-        - testGtsamIncremental-treegen
-        - testGtsamIncremental3D-treegen
-        - testGtsamIncremental-datasetgen
+        # - testGtsamIncremental
+        # - testGtsamIncremental3D
+        # - testGtsamIncremental-ra
+        # - testGtsamIncremental3D-ra
+        # - testGtsamIncremental-vio
+        # - testGtsamIncremental3D-vio
+        # - testGtsamIncremental-treegen
+        # - testGtsamIncremental3D-treegen
+        # - testGtsamIncremental-datasetgen
         - testGtsamIncremental3D-datasetgen
-        - testGtsamIncremental3D-lru
+        # - testGtsamIncremental3D-lru
 
 # Resource aware
 RA:
@@ -115,10 +115,11 @@ RA:
     # - w10000
     # - M3500
     # - M3500c
+    # - torus
     params:
-        num_threads:        4
+        num_threads:        1
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
-        print_dataset:      false            # Turn this off if not generating header
+        print_dataset:      true            # Turn this off if not generating header
         print_values:       false
         print_pred:         false
         print_traj:         true
@@ -137,7 +138,7 @@ Incremental:
     # - w10000
     # - M3500
     # - M3500c
-    - torus
+    # - torus
     params:
         print_dataset:      true            # Turn this off if not generating header
         print_values:       false
@@ -223,12 +224,15 @@ Legacy:
     # - seah_incremental_CAB1_num_threads-2
     # - seah_incremental_CAB1_num_threads-4
     # - seah_RA_CAB7000_num_threads-1
-    # - seah_RA_CAB7000_num_threads-1
     # - seah_RA_CAB7000_num_threads-2
     # - seah_RA_CAB7000_num_threads-4
     # - seah_RA_sphere_2500_num_threads-1
     # - seah_RA_sphere_2500_num_threads-2
     # - seah_RA_sphere_2500_num_threads-4
+    # - seah_incremental_torus
+    - seah_RA_torus_num_threads-1
+    - seah_RA_torus_num_threads-2
+    - seah_RA_torus_num_threads-4
     seah_sphere:
         dataset:        sphere2500
         start_step:     2
@@ -385,5 +389,53 @@ Legacy:
         print_delta:    true
         output_dir: "RA_sphere2500_num_threads-4"
         header_dir: "RA_sphere2500_num_threads-4"
+    seah_incremental_torus:
+        dataset:        torus
+        start_step:     2
+        end_step:       4999    # Inclusive
+        period:         25
+        print_dataset:  false            # Turn this off if not generating header
+        print_values:   false
+        print_pred:     false
+        print_traj:     false
+        print_delta:    true
+        output_dir: "incremental_torus_steps-2-4999_period-25"
+        header_dir: "incremental_torus_steps-2-4999_period-25"
+    seah_RA_torus_num_threads-1:
+        dataset:        torus
+        start_step:     2
+        end_step:       4999    # Inclusive
+        period:         25
+        print_dataset:  false            # Turn this off if not generating header
+        print_values:   false
+        print_pred:     false
+        print_traj:     true
+        print_delta:    true
+        output_dir: "RA_torus_num_threads-1"
+        header_dir: "RA_torus_num_threads-1"
+    seah_RA_torus_num_threads-2:
+        dataset:        torus
+        start_step:     2
+        end_step:       4999    # Inclusive
+        period:         25
+        print_dataset:  false            # Turn this off if not generating header
+        print_values:   false
+        print_pred:     false
+        print_traj:     true
+        print_delta:    true
+        output_dir: "RA_torus_num_threads-2"
+        header_dir: "RA_torus_num_threads-2"
+    seah_RA_torus_num_threads-4:
+        dataset:        torus
+        start_step:     2
+        end_step:       4999    # Inclusive
+        period:         25
+        print_dataset:  false            # Turn this off if not generating header
+        print_values:   false
+        print_pred:     false
+        print_traj:     true
+        print_delta:    true
+        output_dir: "RA_torus_num_threads-4"
+        header_dir: "RA_torus_num_threads-4"
     
     
