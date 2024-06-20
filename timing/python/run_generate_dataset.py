@@ -19,7 +19,7 @@ def get_yes_no_input(prompt):
         print("Invalid input. Please enter 'Y' or 'N'.")
 
 def run_system_cmd(cmd):
-    print(cmd)
+    print("Command: ", cmd)
     with Popen(cmd, shell=True, stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         for line in p.stdout:
             print(line, end='') # process line here
@@ -100,7 +100,7 @@ if __name__ == "__main__":
             print_traj = d["print_traj"]
 
             noise_format = "auto"
-            if not is3D:
+            if not is3D and "noise_format" in d.keys():
                 noise_format = d["noise_format"]
 
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-ra" if is3D else "testGtsamIncremental-ra")
@@ -182,7 +182,7 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
-            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen"
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
 
             run_dset = True
             if os.path.isdir(output_dir):
@@ -262,7 +262,7 @@ if __name__ == "__main__":
             print_traj = d["print_traj"]
 
             noise_format = "auto"
-            if not is3D:
+            if not is3D and "noise_format" in d.keys():
                 noise_format = d["noise_format"]
 
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
@@ -348,7 +348,7 @@ if __name__ == "__main__":
             lc_period = d["lc_period"]
 
             noise_format = "auto"
-            if not is3D:
+            if not is3D and "noise_format" in d.keys():
                 noise_format = d["noise_format"]
 
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-vio" if is3D else "testGtsamIncremental-vio")
@@ -439,7 +439,7 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
-            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-lru" if is3D else "testGtsamIncremental-lru"
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-lru" if is3D else "testGtsamIncremental-lru")
 
             run_dset = True
             if os.path.isdir(output_dir):
@@ -520,7 +520,7 @@ if __name__ == "__main__":
             if os.path.isdir(output_dir):
                 run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
-            exe = f"{builddir}/timing/" + "testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen"
+            exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
 
             if run_dset:
                 cmd = f"python3 {scriptdir}/read_relin_keys.py \
