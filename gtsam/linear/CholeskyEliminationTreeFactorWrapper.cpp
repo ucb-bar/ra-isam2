@@ -43,7 +43,7 @@ bool CholeskyEliminationTree::FactorWrapper::marginalizeKeys() {
   }
 
   if(status_ == LINEAR) {
-    cout << "Setting a LINEAR factor " << *this << " LINEAR!" << endl;
+    // cout << "Setting a LINEAR factor " << *this << " LINEAR!" << endl;
   }
 
   setStatusLinear();

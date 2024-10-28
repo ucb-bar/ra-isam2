@@ -117,7 +117,7 @@ RA:
     # - M3500c
     # - torus
     params:
-        num_threads:        1
+        num_threads:        4
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
         print_dataset:      true            # Turn this off if not generating header
         print_values:       false

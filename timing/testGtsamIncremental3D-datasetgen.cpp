@@ -283,11 +283,11 @@ int main(int argc, char *argv[]) {
             Values estimate;
             auto start = chrono::high_resolution_clock::now();
             FastList<RemappedKey> extraRelinKeys = relin_keys_map[step];  // For some reason this is needed
-            cout << "extra relin: " << endl;
-            for(Key k : extraRelinKeys) {
-                cout << k << " ";
-            }
-            cout << endl;
+            // cout << "extra relin: " << endl;
+            // for(Key k : extraRelinKeys) {
+            //     cout << k << " ";
+            // }
+            // cout << endl;
 
             isam2.update(newFactors, newVariables, params, extraRelinKeys);
             auto update_end = chrono::high_resolution_clock::now();
@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
               isam2.update(dummy_nfg, dummy_vals);
               estimate = isam2.calculateEstimate();
               double chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
-              cout << "step = " << step << ", Chi2 = " << chi2 << endl;
+              // cout << "step = " << step << ", Chi2 = " << chi2 << endl;
 
             }
 

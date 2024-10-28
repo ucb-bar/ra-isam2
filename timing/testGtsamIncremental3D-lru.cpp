@@ -314,18 +314,18 @@ int main(int argc, char *argv[]) {
                 allFixedKeys, allMarginalizedKeys,
                 lru_mem_size, &marginalizedKeys, &fixedKeys);
 
-            if(!marginalizedKeys.empty()) {
-              cout << "marginalized keys: ";
-              for(Key k : marginalizedKeys) {
-                cout << k << " ";
-              }
-              cout << endl;
-              cout << "fixed keys: ";
-              for(Key k : fixedKeys) {
-                cout << k << " ";
-              }
-              cout << endl;
-            }
+            // if(!marginalizedKeys.empty()) {
+            //   cout << "marginalized keys: ";
+            //   for(Key k : marginalizedKeys) {
+            //     cout << k << " ";
+            //   }
+            //   cout << endl;
+            //   cout << "fixed keys: ";
+            //   for(Key k : fixedKeys) {
+            //     cout << k << " ";
+            //   }
+            //   cout << endl;
+            // }
 
             allMarginalizedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
             allFixedKeys.insert(fixedKeys.begin(), fixedKeys.end());

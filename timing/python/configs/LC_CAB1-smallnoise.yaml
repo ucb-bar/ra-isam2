@@ -106,7 +106,7 @@ RA:
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    - CAB1-smallnoise
+    # - CAB1-smallnoise
     # - CAB7000
     # - CAB7000-smallnoise
     # - CSAIL
@@ -175,7 +175,7 @@ LC:
     header_format: "LC_{dataset}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    # - CAB1-smallnoise
+    - CAB1-smallnoise
     # - CAB7000
     # - CAB7000-smallnoise
     # - CSAIL

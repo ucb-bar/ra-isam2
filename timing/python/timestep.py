@@ -175,7 +175,7 @@ class Timestep:
         height_needed += 1
 
         self.vio_height_needed = height_needed
-        print(max_key, age_cutoff, height_needed)
+        # print(max_key, age_cutoff, height_needed)
 
         # Construct inverse block indices
 
@@ -448,8 +448,8 @@ class Timestep:
 
     # Go through relin keys and new keys and determine if marked or fixed
     def mark_cliques(self):
-        print(self.relin_keys)
-        print(self.new_keys)
+        # print(self.relin_keys)
+        # print(self.new_keys)
 
         for relin_key in self.relin_keys:
             self.key_to_clique[relin_key].mark_clique_and_ancestors()
@@ -863,14 +863,15 @@ class Timestep:
 
     def write_delta_diff_cliques(self, fout, changed_keys):
         diff_cliques = set()
-        print(changed_keys)
+        # print(changed_keys)
         for key in changed_keys:
             clique = self.key_to_clique[key]
             if not clique.marked and not clique.fixed:
                 diff_cliques.add(clique)
-                print(f"Clique not backsolved {clique}")
+                # print(f"Clique not backsolved {clique}")
             else:
-                print(f"Clique backsolved {clique}")
+                # print(f"Clique backsolved {clique}")
+                pass
 
         fout.write(f"{len(diff_cliques)}\n")
         for clique in diff_cliques:

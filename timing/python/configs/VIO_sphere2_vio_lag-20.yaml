@@ -106,7 +106,7 @@ RA:
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    - CAB1-smallnoise
+    # - CAB1-smallnoise
     # - CAB7000
     # - CAB7000-smallnoise
     # - CSAIL
@@ -156,13 +156,14 @@ LRU:
     # - CAB7000
     # - CAB7000-smallnoise
     # - sphere2500
+    # - sphere2
     # - w10000
     # - M3500
     # - M3500c
     params:
-        num_threads:        2
+        num_threads:        1
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
-        memsize:            2M              # In bytes.
+        memsize:            300K             # In bytes.
         print_dataset:      false            # Turn this off if not generating header
         print_values:       false
         print_pred:         false
@@ -203,14 +204,14 @@ VIO:
     # - CAB7000-smallnoise
     # - CSAIL
     # - sphere2500
-    # - sphere2
+    - sphere2
     # - w10000
     # - M3500
     # - M3500c
     params:
         max_iter:           1
         gen_header:         false
-        vio_lag:            716
+        vio_lag:            20
         run_lc:             false
         lc_period:          8
         

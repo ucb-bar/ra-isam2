@@ -44,6 +44,10 @@ if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("--config", dest="config", 
                       default="config_datasets.yaml", help="The path to the config file")
+    parser.add_option("--no-recompile", dest="recompile", action="store_false", default=True,
+                      help="Do not recompile the code")
+    parser.add_option("-y", "--yes", dest="yes", action="store_true", default=False,
+                      help="Answer yes to all prompts")
     (options, args) = parser.parse_args()
 
     with open(options.config, "r") as config_fin:
@@ -55,7 +59,7 @@ if __name__ == "__main__":
     scriptdir = os.path.abspath(config["metadata"]["scriptdir"])
     headerdir = os.path.abspath(config["metadata"]["headerdir"])
     builddir = os.path.abspath(config["metadata"]["builddir"])
-    recompile = config["metadata"]["recompile"]
+    recompile = options.recompile
     make_flags = config["metadata"]["make_flags"]
 
     binary_str = ""
@@ -63,7 +67,7 @@ if __name__ == "__main__":
         binary_str += f"{binary} "
 
     if recompile:
-        run_system_cmd(f"cd {builddir} && cmake .. && make {make_flags} {binary_str}")
+        run_system_cmd(f"mkdir -p {builddir} && cd {builddir} && cmake .. && make {make_flags} {binary_str}")
 
     #######################################
     # Run RA
@@ -107,7 +111,7 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -139,16 +143,17 @@ if __name__ == "__main__":
             """
 
             # Generate header
-            run_system_cmd(f"mkdir -p {header_dir}")
-            cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {header_dir} \
-                    --start_step {start_step} \
-                    --end_step {end_step - 1} \
-                    --period {period} \
-                    {'--no_values' if not print_values else ''} \
-                    "
-            print(cmd)
-            run_system_cmd(cmd)
+            if print_dataset:
+                run_system_cmd(f"mkdir -p {header_dir}")
+                cmd = f"python3 {scriptdir}/generate_dataset.py \
+                        --indir {output_dir} --outdir {header_dir} \
+                        --start_step {start_step} \
+                        --end_step {end_step - 1} \
+                        --period {period} \
+                        {'--no_values' if not print_values else ''} \
+                        "
+                print(cmd)
+                run_system_cmd(cmd)
 
     #######################################
     # Run Incremental
@@ -186,7 +191,7 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -217,16 +222,17 @@ if __name__ == "__main__":
             """
 
             # Generate header
-            run_system_cmd(f"mkdir -p {header_dir}")
-            cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {header_dir} \
-                    --start_step {start_step} \
-                    --end_step {end_step - 1} \
-                    --period {period} \
-                    {'--no_values' if not print_values else ''} \
-                    "
-            print(cmd)
-            run_system_cmd(cmd)
+            if print_dataset:
+                run_system_cmd(f"mkdir -p {header_dir}")
+                cmd = f"python3 {scriptdir}/generate_dataset.py \
+                        --indir {output_dir} --outdir {header_dir} \
+                        --start_step {start_step} \
+                        --end_step {end_step - 1} \
+                        --period {period} \
+                        {'--no_values' if not print_values else ''} \
+                        "
+                print(cmd)
+                run_system_cmd(cmd)
 
     #######################################
     # Run LC
@@ -269,7 +275,7 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -303,16 +309,17 @@ if __name__ == "__main__":
             """
 
             # Generate header
-            run_system_cmd(f"mkdir -p {header_dir}")
-            cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {header_dir} \
-                    --start_step {start_step} \
-                    --end_step {end_step - 1} \
-                    --period {period} \
-                    {'--no_values' if not print_values else ''} \
-                    "
-            print(cmd)
-            run_system_cmd(cmd)
+            if print_dataset:
+                run_system_cmd(f"mkdir -p {header_dir}")
+                cmd = f"python3 {scriptdir}/generate_dataset.py \
+                        --indir {output_dir} --outdir {header_dir} \
+                        --start_step {start_step} \
+                        --end_step {end_step - 1} \
+                        --period {period} \
+                        {'--no_values' if not print_values else ''} \
+                        "
+                print(cmd)
+                run_system_cmd(cmd)
 
     #######################################
     # Run VIO
@@ -355,7 +362,7 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -389,19 +396,18 @@ if __name__ == "__main__":
             run_system_cmd(cmd)
             """
 
-            """
             # Generate header
-            run_system_cmd(f"mkdir -p {header_dir}")
-            cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {header_dir} \
-                    --start_step {start_step} \
-                    --end_step {end_step - 1} \
-                    --period {period} \
-                    {'--no_values' if not print_values else ''} \
-                    "
-            print(cmd)
-            run_system_cmd(cmd)
-            """
+            if gen_header:
+                run_system_cmd(f"mkdir -p {header_dir}")
+                cmd = f"python3 {scriptdir}/generate_dataset.py \
+                        --indir {output_dir} --outdir {header_dir} \
+                        --start_step {start_step} \
+                        --end_step {end_step - 1} \
+                        --period {period} \
+                        {'--no_values' if not print_values else ''} \
+                        "
+                print(cmd)
+                run_system_cmd(cmd)
 
     #######################################
     # Run LRU
@@ -443,7 +449,7 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -475,16 +481,17 @@ if __name__ == "__main__":
             """
 
             # Generate header
-            run_system_cmd(f"mkdir -p {header_dir}")
-            cmd = f"python3 {scriptdir}/generate_dataset.py \
-                    --indir {output_dir} --outdir {header_dir} \
-                    --start_step {start_step} \
-                    --end_step {end_step - 1} \
-                    --period {period} \
-                    {'--no_values' if not print_values else ''} \
-                    "
-            print(cmd)
-            run_system_cmd(cmd)
+            if print_dataset:
+                run_system_cmd(f"mkdir -p {header_dir}")
+                cmd = f"python3 {scriptdir}/generate_dataset.py \
+                        --indir {output_dir} --outdir {header_dir} \
+                        --start_step {start_step} \
+                        --end_step {end_step - 1} \
+                        --period {period} \
+                        {'--no_values' if not print_values else ''} \
+                        "
+                print(cmd)
+                run_system_cmd(cmd)
 
     #######################################
     # Run Legacy
@@ -518,7 +525,7 @@ if __name__ == "__main__":
             # First rerun dataset if needed
             run_dset = False
             if os.path.isdir(output_dir):
-                run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
 
@@ -549,7 +556,7 @@ if __name__ == "__main__":
 
             run_header = True
             if os.path.isdir(header_dir):
-                run_header = get_yes_no_input(f"Header is already generated at {header_dir}. Do you want to regenerate header? [Y/n] ")
+                run_header = options.yes or get_yes_no_input(f"Header is already generated at {header_dir}. Do you want to regenerate header? [Y/n] ")
 
             # Generate header
             if run_header:
@@ -565,7 +572,7 @@ if __name__ == "__main__":
                 run_system_cmd(cmd)
 
             run_backsolve_diff = False
-            run_backsolve_diff = get_yes_no_input(f"Compute backsolve diff? [Y/n] ")
+            run_backsolve_diff = options.yes or get_yes_no_input(f"Compute backsolve diff? [Y/n] ")
 
             if run_backsolve_diff:
                 cmd = f"python3 generate_backsolve_diff.py \

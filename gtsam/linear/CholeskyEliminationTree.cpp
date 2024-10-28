@@ -383,7 +383,7 @@ void CholeskyEliminationTree::pickRelinKeys(
 
   remainingCycles -= new_factor_cost + backsolve_cost;
 
-  cout << "backsolve cost = " << backsolve_cost << " new_factor_cost = " << new_factor_cost << " remainingCycles = " << remainingCycles << endl;
+  // cout << "backsolve cost = " << backsolve_cost << " new_factor_cost = " << new_factor_cost << " remainingCycles = " << remainingCycles << endl;
 
   if(remainingCycles <= 0) { 
     cout << "no relin possible!" << endl;
@@ -508,20 +508,20 @@ void CholeskyEliminationTree::pickRelinKeys(
     }
   }
 
-  cout << "Remaining cycles: " << remainingCycles 
-       << " Total relin keys: " << newKeyDeltaVec.size() 
-       << " num relin: " << newRelinKeys->size() 
-       << " relin_cost " << total_relin_cost 
-       <<  " highest unpicked delta: " << highestUnpickedDelta 
-       << " force_thresh: " << force_thresh 
-       << " num_min_force_thresh_keys: " << num_min_force_thresh_keys 
-       << " total_cost: " << totalCost << endl;
+  // cout << "Remaining cycles: " << remainingCycles 
+  //      << " Total relin keys: " << newKeyDeltaVec.size() 
+  //      << " num relin: " << newRelinKeys->size() 
+  //      << " relin_cost " << total_relin_cost 
+  //      <<  " highest unpicked delta: " << highestUnpickedDelta 
+  //      << " force_thresh: " << force_thresh 
+  //      << " num_min_force_thresh_keys: " << num_min_force_thresh_keys 
+  //      << " total_cost: " << totalCost << endl;
 
-  cout << "Relin keys: ";
-  for(auto k : *newRelinKeys) {
-    cout << k << " ";
-  }
-  cout << endl;
+  // cout << "Relin keys: ";
+  // for(auto k : *newRelinKeys) {
+  //   cout << k << " ";
+  // }
+  // cout << endl;
 
 }
 
@@ -2129,7 +2129,7 @@ void CholeskyEliminationTree::selectStaleSubtree(
 
   int totalMemSize = root_->memSize;
 
-  cout << "totalMemSize = " << totalMemSize << " targetTreeSize = " << targetTreeSize << endl;
+  // cout << "totalMemSize = " << totalMemSize << " targetTreeSize = " << targetTreeSize << endl;
 
   if(totalMemSize <= targetTreeSize) {
     return;
@@ -2137,7 +2137,7 @@ void CholeskyEliminationTree::selectStaleSubtree(
 
   int discardSize = totalMemSize - targetTreeSize;
   
-  cout << "discardSize = " << discardSize << endl;
+  // cout << "discardSize = " << discardSize << endl;
 
   stack.push_back({root_, false});
 
@@ -2410,7 +2410,7 @@ void CholeskyEliminationTree::marginalizeLeaves2(
   }
 
   for(sharedClique clique : marginalizedCliques) {
-    cout << "deleting clique: " << *clique << endl;
+    // cout << "deleting clique: " << *clique << endl;
     clique->deleteClique();
   }
 
@@ -2467,7 +2467,7 @@ void CholeskyEliminationTree::marginalizeLeaves2(
     }
   }
 
-  cout << "totalMemSize after marginalization: " << total_size << endl;
+  // cout << "totalMemSize after marginalization: " << total_size << endl;
 
 #ifdef DEBUG
   checkInvariant_afterMarginalize();
@@ -2494,7 +2494,7 @@ void CholeskyEliminationTree::marginalizeClique2(
     }
   }
 
-  cout << "Marginalizing clique " << *clique << endl;
+  // cout << "Marginalizing clique " << *clique << endl;
   
   // Set all factors in each node to be LINEAR
   // and remove all keys and data that are marginalized out

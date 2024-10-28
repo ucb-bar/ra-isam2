@@ -215,7 +215,7 @@ if __name__ == "__main__":
         # This is for full dataset eval
         for step in range(start_step, end_step + 1):
             if step % period != 0:
-                print(f"step {step} is set to None")
+                # print(f"step {step} is set to None")
                 timesteps[step] = None
 
         for step, timestep in enumerate(timesteps):

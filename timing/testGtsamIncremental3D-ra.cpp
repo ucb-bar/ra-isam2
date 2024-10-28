@@ -156,6 +156,7 @@ int main(int argc, char *argv[]) {
          << ", max_optimization_iter = " << max_iter 
          << ", opt_stop_cond = " << d_error 
          << ", relinearize_skip = " << relinearize_skip 
+         << ", relin_thresh = " << relin_thresh
          << ", print_frequency = " << print_frequency 
          << endl;
 
@@ -268,7 +269,6 @@ int main(int argc, char *argv[]) {
                 num_threads = step_num_threads[step];
             }
 
-            cout << "num_threads = " << num_threads << endl;
             isam2.update_resource_aware(newFactors, newVariables, params, num_threads);
             auto update_end = chrono::high_resolution_clock::now();
             estimate = isam2.calculateEstimate();

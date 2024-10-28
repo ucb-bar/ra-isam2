@@ -106,7 +106,7 @@ RA:
     header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    - CAB1-smallnoise
+    # - CAB1-smallnoise
     # - CAB7000
     # - CAB7000-smallnoise
     # - CSAIL
@@ -117,7 +117,7 @@ RA:
     # - M3500c
     # - torus
     params:
-        num_threads:        1
+        num_threads:        4
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
         print_dataset:      true            # Turn this off if not generating header
         print_values:       false
@@ -198,7 +198,7 @@ VIO:
     header_format: "VIO{'LC' if run_lc else ''}_{dataset}_vio_lag-{vio_lag}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
-    # - CAB1-smallnoise
+    - CAB1-smallnoise
     # - CAB7000
     # - CAB7000-smallnoise
     # - CSAIL
@@ -210,9 +210,9 @@ VIO:
     params:
         max_iter:           1
         gen_header:         false
-        vio_lag:            716
+        vio_lag:            20
         run_lc:             false
-        lc_period:          8
+        lc_period:          65
         
 # Legacy output directors
 Legacy:

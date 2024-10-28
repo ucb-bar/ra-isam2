@@ -241,16 +241,16 @@ int main(int argc, char *argv[]) {
                   vioNewFactors.push_back(measurement);
                 }
                 else {
-                    cout << "discarding factor " << k1 << " " << k2 << " " << vio_lag << endl;
+                    // cout << "discarding factor " << k1 << " " << k2 << " " << vio_lag << endl;
                 }
 
                 if(k1 - k2 >= loop_size) {
-                    cout << "detected loop" << endl;
+                    // cout << "detected loop" << endl;
                     if(loop_start_step == 0) {
                         loop_start_step = step;
                     }
                     else {
-                        cout << "new loop" << endl;
+                        // cout << "new loop" << endl;
                         new_loop = true;
                     }
                 }
@@ -311,9 +311,9 @@ int main(int argc, char *argv[]) {
         }
 
         bool lc_running = false;
-        cout << "loop_start_step = " << loop_start_step << " " << step << endl;
+        // cout << "loop_start_step = " << loop_start_step << " " << step << endl;
         if(run_lc && loop_start_step != 0 && loop_start_step + lc_period <= step) {
-            cout << "lc_running" << endl;
+            // cout << "lc_running" << endl;
           lc_running = true;
           if(new_loop) {
             loop_start_step = step;
@@ -373,7 +373,7 @@ int main(int argc, char *argv[]) {
 
 
             if(lc_running) {
-              cout << "update lc" << endl;
+              // cout << "update lc" << endl;
               vio_isam2->update(vioNewFactors, vioNewVariables, params);
               Values vio_estimate = vio_isam2->calculateEstimate();
               Values lc_estimate = isam2.calculateEstimate();
@@ -391,10 +391,10 @@ int main(int argc, char *argv[]) {
             
             }
             else {
-              cout << "update vio" << endl;
+              // cout << "update vio" << endl;
               vio_isam2->update(vioNewFactors, vioNewVariables, params);
             }
-              cout << "end vio update" << endl;
+            // cout << "end vio update" << endl;
 
             if(step % print_frequency == 0) {
                 // estimate = isam2.calculateEstimate();
