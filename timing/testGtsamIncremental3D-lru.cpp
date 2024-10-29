@@ -296,46 +296,9 @@ int main(int argc, char *argv[]) {
             auto calc_end = chrono::high_resolution_clock::now();
             d1 += chrono::duration_cast<chrono::microseconds>(update_end - start).count();
             d2 += chrono::duration_cast<chrono::microseconds>(calc_end - update_end).count();
-
-            if(step % print_frequency == 0) {
-                // estimate = isam2.calculateEstimate();
-                // cout << "Theta = " << endl;
-                // estimate.print();
-            }
-            if(step >= num_steps) {
-                break;
-            }
             
             last_chi2 = chi2_red(isam2.getFactorsUnsafe(), estimate);
             cout << "chi2 = " << last_chi2 << endl;
-
-            vector<Key> marginalizedKeys, fixedKeys;
-            isam2.getCholeskyEliminationTree().selectStaleSubtree(
-                allFixedKeys, allMarginalizedKeys,
-                lru_mem_size, &marginalizedKeys, &fixedKeys);
-
-            // if(!marginalizedKeys.empty()) {
-            //   cout << "marginalized keys: ";
-            //   for(Key k : marginalizedKeys) {
-            //     cout << k << " ";
-            //   }
-            //   cout << endl;
-            //   cout << "fixed keys: ";
-            //   for(Key k : fixedKeys) {
-            //     cout << k << " ";
-            //   }
-            //   cout << endl;
-            // }
-
-            allMarginalizedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
-            allFixedKeys.insert(fixedKeys.begin(), fixedKeys.end());
-            allFixedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
-
-            bool datasetgen_mode = (dataset_outdir != "");
-
-            // if(!datasetgen_mode) {
-              isam2.getCholeskyEliminationTree().marginalizeLeaves2(marginalizedKeys);
-            // }
 
             if(step % print_frequency == 0) {
               if(dataset_outdir != "") {
@@ -382,8 +345,46 @@ int main(int argc, char *argv[]) {
               }
             }
 
+            vector<Key> marginalizedKeys, fixedKeys;
+            isam2.getCholeskyEliminationTree().selectStaleSubtree(
+                allFixedKeys, allMarginalizedKeys,
+                lru_mem_size, &marginalizedKeys, &fixedKeys);
+
+            if(!marginalizedKeys.empty()) {
+              cout << "marginalized keys: ";
+              for(Key k : marginalizedKeys) {
+                cout << k << " ";
+              }
+              cout << endl;
+              cout << "fixed keys: ";
+              for(Key k : fixedKeys) {
+                cout << k << " ";
+              }
+              cout << endl;
+            }
+
+            allMarginalizedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
+            allFixedKeys.insert(fixedKeys.begin(), fixedKeys.end());
+            allFixedKeys.insert(marginalizedKeys.begin(), marginalizedKeys.end());
+
+            bool datasetgen_mode = (dataset_outdir != "");
+
+            // if(!datasetgen_mode) {
+              isam2.getCholeskyEliminationTree().marginalizeLeaves2(marginalizedKeys);
+            // }
+
+
             newVariables.clear();
             newFactors = NonlinearFactorGraph();
+
+            if(step % print_frequency == 0) {
+                // estimate = isam2.calculateEstimate();
+                // cout << "Theta = " << endl;
+                // estimate.print();
+            }
+            if(step >= num_steps) {
+                break;
+            }
         }
         K_count++;
         update_times.push_back(d1);

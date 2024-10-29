@@ -3,7 +3,7 @@ dataset:
     CAB1: 
         is3D:           true
         path:           "ra_datasets/CAB_query_val_phone"
-        relin_thresh:   0.01
+        relin_thresh:   0.00
         start_step:     2
         end_step:       463     # Inclusive
         period:         1
@@ -123,6 +123,7 @@ RA:
         print_values:       false
         print_pred:         false
         print_traj:         true
+        cpu_mode:           false
         
 # Incremental:
 Incremental:

@@ -194,6 +194,13 @@ public:
     costReorder = reorder;
   }
 
+  void cpuMode(bool mode) {
+    cpu_mode = mode;
+  }
+
+  bool cpuMode() const {
+    return cpu_mode;
+  }
 
 private:
   // Add new unmapped Key to transform map and return the mapped key, 
@@ -295,12 +302,20 @@ private:
 
   // When we select a key, we need to commit the cost of the cliques that are updated
   // due to this key
+  bool cpu_mode = false;
   int64_t computeCost(
       const RemappedKey remappedKey, 
       const int num_threads,
       std::vector<sharedClique>* updatedCliques);
-
   int64_t computeCostRelin(
+      const RemappedKey remappedKey,
+      int num_threads,
+      const std::vector<CostStatus>& curRelinCostStatus);
+  int64_t computeCostCpu(
+      const RemappedKey remappedKey, 
+      const int num_threads,
+      std::vector<sharedClique>* updatedCliques);
+  int64_t computeCostRelinCpu(
       const RemappedKey remappedKey,
       int num_threads,
       const std::vector<CostStatus>& curRelinCostStatus);

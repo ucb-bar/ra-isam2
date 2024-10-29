@@ -123,7 +123,8 @@ RA:
         print_values:       false
         print_pred:         false
         print_traj:         true
-        
+        cpu_mode:           false
+
 # Incremental:
 Incremental:
     output_format: "incremental_{dataset}"

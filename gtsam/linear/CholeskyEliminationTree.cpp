@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <queue>
+#include <random>
 
 using namespace std;
 
@@ -220,6 +221,143 @@ int64_t CholeskyEliminationTree::computeCost(
   return cost;
 }
 
+#define FACTOR7_3_COST_CPU 1500
+#define FACTOR13_6_COST_CPU 1500
+
+int64_t CholeskyEliminationTree::computeCostRelinCpu(
+    const RemappedKey remappedKey,
+    int num_threads,
+    const vector<CostStatus>& curRelinCostStatus) {
+
+  sharedNode node = nodes_[remappedKey];
+
+  if(!node) {
+    cout << "In computeCostRelinCpu(), node " << remappedKey << " is null" << endl;
+    exit(1);
+  }
+  assert(node);
+
+  int64_t cost = 0;
+  for(sharedFactorWrapper factorWrapper : node->factors) {
+    if(factorWrapper->status() == LINEAR) { continue; }
+    if(factorWrapper->status() != LINEARIZED) {
+      cout << "factor " << *factorWrapper << " status is " << factorWrapper->status() << endl;
+      exit(1);
+    }
+    assert(factorWrapper->status() == LINEARIZED);
+
+    bool addCostFlag = true;
+    for(int i = 0; i < factorWrapper->remappedKeys().size(); i++) {
+      RemappedKey k = factorWrapper->remappedKeys()[i];
+      if(curRelinCostStatus[k] == COST_RELIN) {
+        addCostFlag = false;
+        break;
+      }
+    }
+
+    if(addCostFlag) {
+      int lastIndex = factorWrapper->blockIndices().size() - 1;
+      if(get<BLOCK_INDEX_ROW>(factorWrapper->blockIndices()[lastIndex]) == 12) {
+        cost += FACTOR13_6_COST_CPU;
+      } 
+      else {
+        cost += FACTOR7_3_COST_CPU;
+      }
+    }
+  }
+  return cost / num_threads;
+}
+
+int64_t CholeskyEliminationTree::computeCostCpu(
+    const RemappedKey remappedKey, 
+    const int num_threads,
+    vector<sharedClique>* updatedCliques) {
+  
+  // computeCostCpu(key): (assuming reordering)
+  // 1. First find the lowest-ordered key connected to the key
+  // 2. Go up the tree from the clique
+  //     If clique is marked, stop
+  //     If clique is fixed, upgrade to marked and compute the cost difference
+  //     If clique is unmarked, upgrade to marked and compute cost
+  //
+  //     Go down the tree from each marked clique,
+  //     If descendant is marked, stop (this is an error)
+  //     If descendant is fixed, stop
+  //     If descendant is unmarked, check if need to be fixed and compute cost if fixed
+  //       and propagate to children
+  //
+  //     while clique is not marked, mark the clique and predict cycles
+  //     For each marked clique, find all fixed cliques and predict fixed cost
+  //
+  //     Parallel case: if clique is parallelizable, reduce cost by 1/overhead_const * p (p is the number of threads) (mplier is set to 0.7 for now)
+  //     Root clique is the clique that has root_ as its parent
+
+  sharedClique clique = cliques_[remappedKey];
+
+
+  int64_t cost = 0;
+
+  while(clique != nullptr && clique != root_) {
+    if(clique->costStatus == COST_MARKED || clique->nextCostStatus == COST_MARKED) {
+      break;
+    }
+
+    clique->computeCostMarkedCpu(num_threads);
+
+    if(clique->nextCostStatus == COST_FIXED) { 
+      // This check if probably redundant
+      int64_t additional_cost = clique->markedCost - clique->fixedCost;
+      cost += additional_cost;
+    }
+    else if(clique->nextCostStatus == COST_UNMARKED) {
+      cost += clique->markedCost;
+    }
+
+    clique->nextCostStatus = COST_MARKED;
+    updatedCliques->push_back(clique);
+
+    // Go down unmarked descendants of the marked node
+    vector<sharedClique> stack;
+    for(sharedClique childClique : clique->children) {
+      if(childClique->nextCostStatus == COST_UNMARKED) {
+        stack.push_back(childClique);
+      }
+    }
+
+    while(!stack.empty()) {
+      sharedClique curClique = stack.back();
+      stack.pop_back();
+
+      if(curClique->nextCostStatus == COST_UNMARKED) {
+        // First check if need to be fixed
+        // If second to last key block indices is in this clique
+        // we can just check order(secondToLastKey) <= order(clique first key)
+        RemappedKey secondToLastKey = get<BLOCK_INDEX_KEY>(curClique->blockIndices[curClique->blockIndices.size() - 2]);
+        if(!orderingLess_(secondToLastKey, clique->frontKey())) {
+          cost += curClique->computeCostFixedCpu(num_threads);
+          curClique->nextCostStatus = COST_FIXED;
+          updatedCliques->push_back(curClique);
+
+          stack.insert(stack.end(), curClique->children.begin(), curClique->children.end());
+        }
+      }
+      else if(curClique->nextCostStatus == COST_FIXED) {
+        int64_t oldFixedCost = curClique->fixedCost;
+        cost += curClique->computeCostFixedCpu(num_threads) - oldFixedCost;
+        stack.insert(stack.end(), curClique->children.begin(), curClique->children.end());
+      }
+      else if(curClique->nextCostStatus == COST_MARKED) {
+        cout << "Unexpected cost status for clique: " << *curClique << " status: " << curClique->nextCostStatus << " parent: " << *curClique->parent() << endl;
+        exit(1);
+      }
+
+    }
+    clique = clique->parent();
+  }
+
+  return cost;
+}
+
 void CholeskyEliminationTree::commitCost(vector<sharedClique>& updatedCliques, 
                                          vector<sharedClique>* allUpdatedCliques) {
   for(sharedClique clique : updatedCliques) {
@@ -276,6 +414,14 @@ void CholeskyEliminationTree::pickRelinKeys(
   int num_threads,
   double relinThresh,
   KeySet* newRelinKeys) {
+
+  // Do some random cache eviction. First generate a random int from 0-5
+  random_device rd;
+  mt19937 gen(rd());
+  uniform_int_distribution<int> dis(0, 5);
+  int randint = dis(gen);
+
+  volatile Eigen::MatrixXd m(50 * randint, 50 * randint);
 
   for(sharedClique clique : cliques_) {
     if(!clique) { continue; }
@@ -358,7 +504,8 @@ void CholeskyEliminationTree::pickRelinKeys(
 
   for(RemappedKey remappedKey : affectedOldRemappedKeys) {
     vector<sharedClique> updatedCliques;
-    int64_t cost = computeCost(remappedKey, num_threads, &updatedCliques);
+    int64_t cost = cpu_mode? computeCostCpu(remappedKey, num_threads, &updatedCliques)
+                           : computeCost(remappedKey, num_threads, &updatedCliques);
     new_factor_cost += cost;
 
     commitCost(updatedCliques, &allUpdatedCliques);
@@ -378,7 +525,8 @@ void CholeskyEliminationTree::pickRelinKeys(
     sharedClique clique = node->clique();
     if(clique->frontKey() != node->key) { continue; }
     if(node->key == 0 || clique == root_) { continue; }
-    backsolve_cost += clique->computeCostBacksolve(num_threads);
+    backsolve_cost += cpu_mode? clique->computeCostBacksolveCpu(num_threads)
+                              : clique->computeCostBacksolve(num_threads);
   }
 
   remainingCycles -= new_factor_cost + backsolve_cost;
@@ -449,13 +597,15 @@ void CholeskyEliminationTree::pickRelinKeys(
 
     sharedNode node = nodes_[remappedKey];
 
-    int64_t relin_cost = computeCostRelin(remappedKey, num_threads, curRelinCostStatus);
+    int64_t relin_cost = cpu_mode? computeCostRelinCpu(remappedKey, num_threads, curRelinCostStatus)
+                                 : computeCostRelin(remappedKey, num_threads, curRelinCostStatus);
     // cout << "relin_cost = " << relin_cost << endl;
     int64_t cost = relin_cost;
     vector<sharedClique> updatedCliques;
     for(sharedFactorWrapper factorWrapper : node->factors) {
       RemappedKey lowestKey = factorWrapper->lowestKey();
-      cost += computeCost(lowestKey, num_threads, &updatedCliques);
+      cost += cpu_mode? computeCostCpu(lowestKey, num_threads, &updatedCliques)
+                      : computeCost(lowestKey, num_threads, &updatedCliques);
 
     }
 
@@ -2835,7 +2985,8 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
     sharedNode node = nodes_[k];
     for(sharedFactorWrapper factor : node->factors) {
       RemappedKey lowestKey = factor->lowestKey();
-      total_predicted_cost += computeCost(lowestKey, num_threads, &updatedCliques);
+      total_predicted_cost += cpu_mode? computeCostCpu(lowestKey, num_threads, &updatedCliques)
+                                      : computeCost(lowestKey, num_threads, &updatedCliques);
       commitCost(updatedCliques, &allUpdatedCliques);
     }
   }
@@ -2843,11 +2994,13 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
   vector<CostStatus> curRelinCostStatus(nodes_.size(), COST_UNMARKED);
   for(RemappedKey k : datasetgen_relinKeys) {
     sharedNode node = nodes_[k];
-    relin_cost += computeCostRelin(k, num_threads, curRelinCostStatus);
+    relin_cost += cpu_mode? computeCostRelinCpu(k, num_threads, curRelinCostStatus)
+                          : computeCostRelin(k, num_threads, curRelinCostStatus);
     curRelinCostStatus[k] = COST_RELIN;
     for(sharedFactorWrapper factor : node->factors) {
       RemappedKey lowestKey = factor->lowestKey();
-      total_predicted_cost += computeCost(lowestKey, num_threads, &updatedCliques);
+      total_predicted_cost += cpu_mode? computeCostCpu(lowestKey, num_threads, &updatedCliques)
+                                      : computeCost(lowestKey, num_threads, &updatedCliques);
       commitCost(updatedCliques, &allUpdatedCliques);
     }
   }
@@ -2861,7 +3014,8 @@ void CholeskyEliminationTree::extractPredictedCycles(std::ostream& os, int num_t
     if(clique->frontKey() != remappedKey) { continue; }
     clique_count++;
 
-    total_predicted_cost += clique->computeCostBacksolve(num_threads);
+    total_predicted_cost += cpu_mode? clique->computeCostBacksolveCpu(num_threads)
+                                    : clique->computeCostBacksolve(num_threads);
   }
 
   os << "num threads " << endl 

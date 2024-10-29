@@ -219,7 +219,7 @@ VIO:
     - M3500a
     # - M3500c
     params:
-        max_iter:           1
+        max_iter:           2
         gen_header:         false
         vio_lag:            20
         run_lc:             false

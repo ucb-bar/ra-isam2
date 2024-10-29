@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
     bool print_pred = false;
     bool print_traj = false;
     bool print_values = false;
+    bool cpu_mode = false;
     NoiseFormat noiseFormat = gtsam::NoiseFormatAUTO;
 
     // Get experiment setup
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]) {
         {"print_pred", no_argument, 0, 151},
         {"print_traj", no_argument, 0, 152},
         {"noise_format", required_argument, 0, 54},
+        {"cpu_mode", no_argument, 0, 200},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -154,6 +156,9 @@ int main(int argc, char *argv[]) {
             case 152:
                 print_traj = true;
                 break;
+            case 200:
+                cpu_mode = true;
+                break;
             default:
                 cerr << "Unrecognized option" << endl;
                 exit(1);
@@ -176,6 +181,7 @@ int main(int argc, char *argv[]) {
          << ", max_optimization_iter = " << max_iter 
          << ", opt_stop_cond = " << d_error 
          << ", relinearize_skip = " << relinearize_skip 
+         << ", relin_thresh = " << relin_thresh
          << ", print_frequency = " << print_frequency 
          << endl;
 
@@ -196,6 +202,8 @@ int main(int argc, char *argv[]) {
     isam2params.relinearizeThreshold = relin_thresh;
     isam2params.relinearizeSkip = relinearize_skip;
     ISAM2 isam2(isam2params);
+
+    isam2.getCholeskyEliminationTree().cpuMode(cpu_mode);
 
     vector<int> update_times, calc_times;
 

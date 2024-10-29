@@ -250,6 +250,9 @@ public:
   int64_t computeCostMarked(int num_threads);
   int64_t computeCostFixed(int num_threads);
   int64_t computeCostBacksolve(int num_threads);
+  int64_t computeCostMarkedCpu(int num_threads);
+  int64_t computeCostFixedCpu(int num_threads);
+  int64_t computeCostBacksolveCpu(int num_threads);
 
   int memSize = 0;
   int subdiagSize = 0;

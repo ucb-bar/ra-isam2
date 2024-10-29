@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
     bool print_pred = false;
     bool print_traj = false;
     bool print_values = false;
+    bool cpu_mode = false;
 
     // Get experiment setup
     static struct option long_options[] = {
@@ -78,6 +79,7 @@ int main(int argc, char *argv[]) {
         {"print_dataset", no_argument, 0, 150},
         {"print_pred", no_argument, 0, 151},
         {"print_traj", no_argument, 0, 152},
+        {"cpu_mode", no_argument, 0, 200},
         {0, 0, 0, 0}
     };
     int opt, option_index;
@@ -131,6 +133,9 @@ int main(int argc, char *argv[]) {
             case 152:
                 print_traj = true;
                 break;
+            case 200:
+                cpu_mode = true;
+                break;
             default:
                 cerr << "Unrecognized option" << endl;
                 exit(1);
@@ -177,6 +182,8 @@ int main(int argc, char *argv[]) {
     isam2params.relinearizeThreshold = relin_thresh;
     isam2params.relinearizeSkip = relinearize_skip;
     ISAM2 isam2(isam2params);
+
+    isam2.getCholeskyEliminationTree().cpuMode(cpu_mode);
 
     vector<int> update_times, calc_times;
 

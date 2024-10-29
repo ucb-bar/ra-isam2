@@ -103,6 +103,8 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
+            cpu_mode = d["cpu_mode"]
+
             noise_format = "auto"
             if not is3D and "noise_format" in d.keys():
                 noise_format = d["noise_format"]
@@ -124,6 +126,7 @@ if __name__ == "__main__":
                               {'--print_values' if print_values else ''} \
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
+                              {'--cpu_mode' if cpu_mode else ''} \
                               {'--num_threads {}'.format(num_threads) if not num_threads_file else '--num_threads_infile {}'.format(num_threads_file)} \
                               {'--noise_format {}'.format(noise_format) if not is3D else ''} \
                               --print_frequency 1 \
@@ -186,6 +189,8 @@ if __name__ == "__main__":
             print_values = d["print_values"]
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
+
+            cpu_mode = d["cpu_mode"]
 
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
 
@@ -445,6 +450,10 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
+            noise_format = "auto"
+            if not is3D and "noise_format" in d.keys():
+                noise_format = d["noise_format"]
+
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-lru" if is3D else "testGtsamIncremental-lru")
 
             run_dset = True
@@ -464,6 +473,7 @@ if __name__ == "__main__":
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
                               {'--num_threads {}'.format(num_threads) if not num_threads_file else '--num_threads_infile {}'.format(num_threads_file)} \
+                              {'--noise_format {}'.format(noise_format) if not is3D else ''} \
                               --print_frequency 1 \
                               2>&1 | tee {output_log} \
                               "

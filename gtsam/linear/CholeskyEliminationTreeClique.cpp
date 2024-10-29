@@ -14,6 +14,7 @@
 #include <cassert>
 
 #include <gtsam/linear/model.h>
+#include <gtsam/linear/model_cpu.h>
 
 using namespace std;
 
@@ -886,6 +887,188 @@ int64_t CholeskyEliminationTree::Clique::computeCostBacksolve(int num_threads) {
   }
 
   return backsolveCost * cost_mplier;
+
+}
+
+const double cost_mplier_cpu = 1.10;
+
+int64_t CholeskyEliminationTree::Clique::computeCostMarkedCpu(int num_threads) {
+
+  if(markedCost >= 0) { return markedCost * cost_mplier_cpu; }
+
+  int maxFactorHeight = 0;
+  int maxFactorWidth = 0;
+  int num_factors = 0;
+  for(sharedNode node : nodes) {
+    for(sharedFactorWrapper factorWrapper : node->factors) {
+      int r, c;
+
+      if(node->key != factorWrapper->lowestKey()) { continue; }
+
+      if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
+        r = factorWrapper->getCachedMatrix().rows();
+        c = factorWrapper->getCachedMatrix().cols();
+      }
+      else {
+        r = factorWrapper->nonlinearFactor()->dim();
+        c = get<BLOCK_INDEX_ROW>(factorWrapper->blockIndices().back()) + get<BLOCK_INDEX_HEIGHT>(factorWrapper->blockIndices().back());
+      }
+
+      if(r > maxFactorHeight) { maxFactorHeight = r; }
+      if(c > maxFactorWidth) { maxFactorWidth = c; }
+
+      num_factors++;
+    }
+  }
+
+  int cliqueWidth = this->width();
+  int cliqueHeight = this->height();
+  int chol_tile_len = 8;
+  int gemm_tile_len = 32;
+  bool next_memset;
+  int next_node_height;
+
+  if(this->parent() == nullptr || this->parent() == etree->root_) {
+    next_memset = false;
+    next_node_height = 0;
+  }
+  else {
+    next_memset = true;
+    next_node_height = this->parent()->height();
+  }
+
+  // Factor is transposed
+  int64_t pred_AtA = 0;
+  int64_t pred_chol = predict_cholesky_cpu(cliqueWidth, cliqueHeight, chol_tile_len, gemm_tile_len, next_memset, next_node_height);
+  int64_t pred_add = 0;
+
+  int64_t AtA_overhead = 0;
+  int64_t chol_overhead = 0;
+  int64_t add_overhead = 0;
+
+  // This is used for single node profiling
+  symCost = this->nodes.size() * SYM_COST_REORDER;
+  AtACost = AtA_overhead + pred_AtA;
+  cholCost = chol_overhead + pred_chol;
+  addCost = add_overhead + pred_add;
+
+  if(!this->parallelizable) {
+    markedCost = AtACost + cholCost + addCost;
+  }
+  else {
+    markedCost = (pred_AtA + pred_chol) / num_threads + (symCost + pred_add + AtA_overhead + chol_overhead + add_overhead);
+  }
+
+  // cout << "Clique " << *this << " ata cost = " << markedCost << " markedCost = " << fixedCost << endl;
+
+  return markedCost * cost_mplier_cpu;
+
+}
+
+
+int64_t CholeskyEliminationTree::Clique::computeCostFixedCpu(int num_threads) {
+
+  int maxFactorHeight = 0;
+  int maxFactorWidth = 0;
+  int num_factors = 0;
+
+  for(sharedNode node : nodes) {
+    for(sharedFactorWrapper factorWrapper : node->factors) {
+
+      if(node->key != factorWrapper->lowestKey()) { continue; }
+
+      // Only consider factor if a key in it is marked
+      bool flag = false;
+      for(RemappedKey remappedKey : factorWrapper->remappedKeys()) {
+        if(etree->cliques_[remappedKey]->nextCostStatus == COST_MARKED) {
+          flag = true;
+          break;
+        }
+      }
+
+      // if(!flag) { continue; }
+
+      int r, c;
+
+      if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
+        r = factorWrapper->getCachedMatrix().rows();
+        c = factorWrapper->getCachedMatrix().cols();
+      }
+      else {
+        r = factorWrapper->nonlinearFactor()->dim();
+        c = get<BLOCK_INDEX_ROW>(factorWrapper->blockIndices().back()) + get<BLOCK_INDEX_HEIGHT>(factorWrapper->blockIndices().back());
+      }
+
+      if(r > maxFactorHeight) { maxFactorHeight = r; }
+      if(c > maxFactorWidth) { maxFactorWidth = c; }
+
+      num_factors++;
+    }
+  }
+
+  int cliqueWidth = this->width();
+  int cliqueHeight = this->height();
+  int chol_tile_len = 8;
+  int gemm_tile_len = 32;
+  bool next_memset;
+  int next_node_height;
+
+  if(this->parent() == nullptr || this->parent() == etree->root_) {
+    next_memset = false;
+    next_node_height = 0;
+  }
+  else {
+    next_memset = true;
+    next_node_height = this->parent()->height();
+  }
+
+  // Factor is transposed
+  int64_t pred_AtA = 0;
+  int64_t pred_syrk = predict_syrk_cpu(cliqueWidth, cliqueHeight, 0, 0);
+  int64_t pred_add = 0;
+
+  int64_t AtA_min = 0;
+  int64_t AtA_overhead = pred_AtA < AtA_min? AtA_min : 0;
+  int64_t syrk_min = 0;
+  int64_t chol_overhead = pred_syrk < syrk_min? syrk_min : 0;
+  int64_t add_overhead = 0;
+
+  // This is used for single node profiling
+  symCost = this->nodes.size() * SYM_COST_REORDER;
+  AtACost = AtA_overhead + pred_AtA;
+  syrkCost = chol_overhead + pred_syrk;
+  addCost = add_overhead + pred_add;
+
+  if(!this->parallelizable) {
+    fixedCost = AtACost + syrkCost + addCost + symCost;
+  }
+  else {
+    fixedCost = (pred_AtA + pred_syrk) / num_threads + (symCost + pred_add + AtA_overhead + chol_overhead + add_overhead);
+  }
+
+  // cout << "Clique " << *this << " ata cost = " << AtACost << " fixedCost = " << fixedCost << endl;
+
+  return fixedCost * cost_mplier_cpu;
+
+}
+
+int64_t CholeskyEliminationTree::Clique::computeCostBacksolveCpu(int num_threads) {
+
+  int cliqueWidth = this->width();
+  int cliqueHeight = this->height();
+  int backsolve_block_len = 4;
+
+  int64_t backsolve_overhead = 0;
+  int64_t pred_backsolve = predict_backsolve_cpu(cliqueWidth, cliqueHeight, backsolve_block_len);
+
+  if(!this->parallelizable) {
+    backsolveCost = backsolve_overhead + pred_backsolve;
+  }
+  else {
+    backsolveCost = (pred_backsolve) / num_threads + backsolve_overhead;
+  }
+
+  return backsolveCost * cost_mplier_cpu;
 
 }
 
