@@ -102,8 +102,8 @@ metadata:
 # Resource aware
 RA:
     # Runs that share the same output_format will use the same dataset run
-    output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}"
-    header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
+    output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}{'_cpu' if cpu_mode else ''}"
+    header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}{'_cpu' if cpu_mode else ''}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
     # - CAB1-smallnoise
@@ -123,7 +123,7 @@ RA:
         print_values:       false
         print_pred:         false
         print_traj:         true
-        cpu_mode:           false
+        cpu_mode:           true
         
 # Incremental:
 Incremental:
@@ -149,8 +149,8 @@ Incremental:
 # LRU:
 LRU:
     # Runs that share the same output_format will use the same dataset run
-    output_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}"
-    header_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}_steps-{start_step}-{end_step}_period-{period}"
+    output_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}{'_cpu' if cpu_mode else ''}"
+    header_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}{'_cpu' if cpu_mode else ''}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
     # - CAB1-smallnoise
@@ -164,7 +164,7 @@ LRU:
         num_threads:        1
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
         memsize:            500K             # In bytes.
-        print_dataset:      false            # Turn this off if not generating header
+        print_dataset:      true            # Turn this off if not generating header
         print_values:       false
         print_pred:         false
         print_traj:         true

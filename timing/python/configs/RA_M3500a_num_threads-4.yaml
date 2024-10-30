@@ -62,21 +62,21 @@ dataset:
         path:           "ra_datasets/M3500"
         relin_thresh:   0.1
         start_step:     2
-        end_step:       3500    # Inclusive
+        end_step:       3499    # Inclusive
         period:         1
     M3500a: 
         is3D:           false
         path:           "ra_datasets/M3500a"
         relin_thresh:   0.01
         start_step:     2
-        end_step:       3500    # Inclusive
+        end_step:       3499    # Inclusive
         period:         25
     M3500c: 
         is3D:           false
         path:           "ra_datasets/M3500c"
         relin_thresh:   0.1
         start_step:     2
-        end_step:       3500    # Inclusive
+        end_step:       3499    # Inclusive
         period:         1
     torus: 
         is3D:           true
@@ -109,8 +109,8 @@ metadata:
 # Resource aware
 RA:
     # Runs that share the same output_format will use the same dataset run
-    output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}"
-    header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_steps-{start_step}-{end_step}_period-{period}"
+    output_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}{'_cpu' if cpu_mode else ''}"
+    header_format: "RA_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}{'_cpu' if cpu_mode else ''}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
     # - CAB1-smallnoise

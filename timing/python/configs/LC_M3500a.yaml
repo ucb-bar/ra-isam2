@@ -62,21 +62,21 @@ dataset:
         path:           "ra_datasets/M3500"
         relin_thresh:   0.1
         start_step:     2
-        end_step:       3500    # Inclusive
+        end_step:       3499    # Inclusive
         period:         1
     M3500a: 
         is3D:           false
         path:           "ra_datasets/M3500a"
         relin_thresh:   0.01
         start_step:     2
-        end_step:       3500    # Inclusive
+        end_step:       3499    # Inclusive
         period:         25
     M3500c: 
         is3D:           false
         path:           "ra_datasets/M3500c"
         relin_thresh:   0.1
         start_step:     2
-        end_step:       3500    # Inclusive
+        end_step:       3499    # Inclusive
         period:         1
     torus: 
         is3D:           true

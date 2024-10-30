@@ -48,6 +48,8 @@ if __name__ == "__main__":
                       help="Do not recompile the code")
     parser.add_option("-y", "--yes", dest="yes", action="store_true", default=False,
                       help="Answer yes to all prompts")
+    parser.add_option("-n", "--no", dest="no", action="store_true", default=False,
+                      help="Answer no to all prompts")
     (options, args) = parser.parse_args()
 
     with open(options.config, "r") as config_fin:
@@ -103,7 +105,7 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
-            cpu_mode = d["cpu_mode"]
+            cpu_mode = False if "cpu_mode" not in d.keys() else d["cpu_mode"]
 
             noise_format = "auto"
             if not is3D and "noise_format" in d.keys():
@@ -113,7 +115,12 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                if options.no:
+                    run_dset = False
+                elif options.yes:
+                    run_dset = True
+                else:
+                    run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -190,13 +197,16 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
-            cpu_mode = d["cpu_mode"]
-
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                if options.no:
+                    run_dset = False
+                elif options.yes:
+                    run_dset = True
+                else:
+                    run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -280,7 +290,12 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                if options.no:
+                    run_dset = False
+                elif options.yes:
+                    run_dset = True
+                else:
+                    run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -367,7 +382,12 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                if options.no:
+                    run_dset = False
+                elif options.yes:
+                    run_dset = True
+                else:
+                    run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -450,6 +470,8 @@ if __name__ == "__main__":
             print_pred = d["print_pred"]
             print_traj = d["print_traj"]
 
+            cpu_mode = False if "cpu_mode" not in d.keys() else d["cpu_mode"]
+
             noise_format = "auto"
             if not is3D and "noise_format" in d.keys():
                 noise_format = d["noise_format"]
@@ -458,7 +480,12 @@ if __name__ == "__main__":
 
             run_dset = True
             if os.path.isdir(output_dir):
-                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                if options.no:
+                    run_dset = False
+                elif options.yes:
+                    run_dset = True
+                else:
+                    run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             if run_dset:
                 print(f"Running dataset {dataset} and write output to {output_dir}")
@@ -472,6 +499,7 @@ if __name__ == "__main__":
                               {'--print_values' if print_values else ''} \
                               {'--print_pred' if print_pred else ''} \
                               {'--print_traj' if print_traj else ''} \
+                              {'--cpu_mode' if cpu_mode else ''} \
                               {'--num_threads {}'.format(num_threads) if not num_threads_file else '--num_threads_infile {}'.format(num_threads_file)} \
                               {'--noise_format {}'.format(noise_format) if not is3D else ''} \
                               --print_frequency 1 \
@@ -535,7 +563,12 @@ if __name__ == "__main__":
             # First rerun dataset if needed
             run_dset = False
             if os.path.isdir(output_dir):
-                run_dset = options.yes or get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
+                if options.no:
+                    run_dset = False
+                elif options.yes:
+                    run_dset = True
+                else:
+                    run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             exe = f"{builddir}/timing/" + ("testGtsamIncremental3D-datasetgen" if is3D else "testGtsamIncremental-datasetgen")
 
@@ -566,7 +599,12 @@ if __name__ == "__main__":
 
             run_header = True
             if os.path.isdir(header_dir):
-                run_header = options.yes or get_yes_no_input(f"Header is already generated at {header_dir}. Do you want to regenerate header? [Y/n] ")
+                if options.no:
+                    run_dset = False
+                elif options.yes:
+                    run_dset = True
+                else:
+                    run_dset = get_yes_no_input(f"Dataset is already run and has output at {output_dir}. Do you want to rerun dataset? [Y/n] ")
 
             # Generate header
             if run_header:
@@ -582,7 +620,12 @@ if __name__ == "__main__":
                 run_system_cmd(cmd)
 
             run_backsolve_diff = False
-            run_backsolve_diff = options.yes or get_yes_no_input(f"Compute backsolve diff? [Y/n] ")
+            if options.no:
+                run_backsolve_diff = False
+            elif options.yes:
+                run_backsolve_diff = True
+            else:
+                run_backsolve_diff = get_yes_no_input(f"Compute backsolve diff? [Y/n] ")
 
             if run_backsolve_diff:
                 cmd = f"python3 generate_backsolve_diff.py \
