@@ -10,7 +10,7 @@ CONFIG_DIR="$PYTHON_DIR/configs"
 cd $PYTHON_DIR
 no_recompile=''
 
-configs=$(ls $CONFIG_DIR/incremental*.yaml)
+configs=$(ls $CONFIG_DIR/*.yaml)
 for config in $configs
 do
     python run_generate_dataset.py --config $config -n $no_recompile

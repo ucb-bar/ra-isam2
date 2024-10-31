@@ -149,7 +149,7 @@ Incremental:
 # LRU:
 LRU:
     # Runs that share the same output_format will use the same dataset run
-    output_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}"
+    output_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}{'_cpu' if cpu_mode else ''}_memsize-{memsize}"
     header_format: "LRU_{dataset}_{'num_threads-{}'.format(num_threads) if not num_threads_file else 'var-threads'}_memsize-{memsize}_steps-{start_step}-{end_step}_period-{period}"
     dataset:    # Comment out the datasets that will be skipped
     # - CAB1
@@ -169,6 +169,7 @@ LRU:
         print_values:       false
         print_pred:         false
         print_traj:         true
+        cpu_mode:           true
         gen_header:         false
         
 # LC:
