@@ -163,11 +163,12 @@ LRU:
     params:
         num_threads:        1
         num_threads_file:   ""              # Specify the path to a num threads file or leave empty
-        memsize:            500K             # In bytes.
+        memsize:            1M             # In bytes.
         print_dataset:      true            # Turn this off if not generating header
         print_values:       false
         print_pred:         false
         print_traj:         true
+        cpu_mode:           false
         gen_header:         false
         
 # LC:
