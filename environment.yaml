@@ -1,4 +1,4 @@
-name: supernova_ae
+name: ra-isam2
 channels:
   - conda-forge
   - ucb-bar
