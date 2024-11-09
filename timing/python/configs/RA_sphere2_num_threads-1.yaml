@@ -111,7 +111,7 @@ RA:
     # - CAB7000-smallnoise
     # - CSAIL
     # - sphere2500
-    # - sphere2
+    - sphere2
     # - w10000
     # - M3500
     # - M3500c

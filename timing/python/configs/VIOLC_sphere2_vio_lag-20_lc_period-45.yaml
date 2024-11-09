@@ -213,7 +213,7 @@ VIO:
         gen_header:         false
         vio_lag:            20
         run_lc:             true
-        lc_period:          65
+        lc_period:          45
         
 # Legacy output directors
 Legacy:

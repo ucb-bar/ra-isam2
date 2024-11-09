@@ -531,7 +531,7 @@ void CholeskyEliminationTree::pickRelinKeys(
 
   remainingCycles -= new_factor_cost + backsolve_cost;
 
-  // cout << "backsolve cost = " << backsolve_cost << " new_factor_cost = " << new_factor_cost << " remainingCycles = " << remainingCycles << endl;
+  cout << "backsolve cost = " << backsolve_cost << " new_factor_cost = " << new_factor_cost << " remainingCycles = " << remainingCycles << endl;
 
   if(remainingCycles <= 0) { 
     cout << "no relin possible!" << endl;
@@ -658,14 +658,14 @@ void CholeskyEliminationTree::pickRelinKeys(
     }
   }
 
-  // cout << "Remaining cycles: " << remainingCycles 
-  //      << " Total relin keys: " << newKeyDeltaVec.size() 
-  //      << " num relin: " << newRelinKeys->size() 
-  //      << " relin_cost " << total_relin_cost 
-  //      <<  " highest unpicked delta: " << highestUnpickedDelta 
-  //      << " force_thresh: " << force_thresh 
-  //      << " num_min_force_thresh_keys: " << num_min_force_thresh_keys 
-  //      << " total_cost: " << totalCost << endl;
+  cout << "Remaining cycles: " << remainingCycles 
+       << " Total relin keys: " << newKeyDeltaVec.size() 
+       << " num relin: " << newRelinKeys->size() 
+       << " relin_cost " << total_relin_cost 
+       <<  " highest unpicked delta: " << highestUnpickedDelta 
+       << " force_thresh: " << force_thresh 
+       << " num_min_force_thresh_keys: " << num_min_force_thresh_keys 
+       << " total_cost: " << totalCost << endl;
 
   // cout << "Relin keys: ";
   // for(auto k : *newRelinKeys) {

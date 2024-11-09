@@ -67,7 +67,7 @@ dataset:
     M3500a: 
         is3D:           false
         path:           "ra_datasets/M3500a"
-        relin_thresh:   0.01
+        relin_thresh:   0.001
         start_step:     2
         end_step:       3499    # Inclusive
         period:         25

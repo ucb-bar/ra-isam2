@@ -241,11 +241,12 @@ int main(int argc, char *argv[]) {
                   vioNewFactors.push_back(measurement);
                 }
                 else {
-                    // cout << "discarding factor " << k1 << " " << k2 << " " << vio_lag << endl;
+                    cout << "discarding factor " << k1 << " " << k2 << " " << vio_lag << endl;
                 }
 
+                // cout << "step = " << step << ", k1 = " << k1 << ", k2 = " << k2 << endl;
                 if(k1 - k2 >= loop_size) {
-                    // cout << "detected loop" << endl;
+                    cout << "detected loop" << endl;
                     if(loop_start_step == 0) {
                         loop_start_step = step;
                     }
@@ -311,9 +312,9 @@ int main(int argc, char *argv[]) {
         }
 
         bool lc_running = false;
-        // cout << "loop_start_step = " << loop_start_step << " " << step << endl;
+        cout << "loop_start_step = " << loop_start_step << " " << step << endl;
         if(run_lc && loop_start_step != 0 && loop_start_step + lc_period <= step) {
-            // cout << "lc_running" << endl;
+          cout << "lc_running" << endl;
           lc_running = true;
           if(new_loop) {
             loop_start_step = step;
