@@ -9,9 +9,15 @@ if __name__ == "__main__":
                       default=None, help="input file paths")
     parser.add_option("--start_step", dest="start_step", type="int",
                       default=2, help="input file path")
+    parser.add_option("--dataset", dest="dataset", type="string",
+                      default="", help="dataset name")
+    parser.add_option("--names", dest="names", type="string",
+                      default=None, help="names of the datasets")
     (options, args) = parser.parse_args()
 
     infiles = options.infiles.split()
+    dataset = options.dataset
+    names = infiles if options.names is None else options.names.split()
     start_step = options.start_step
 
     t = []
@@ -45,6 +51,7 @@ if __name__ == "__main__":
                     e = float(arr[1])
                     rmse[-1].append(e)
 
+    print("Dataset: ", dataset)
     
     for i, infile in enumerate(infiles):
         sum_steps = sum(t[i])
@@ -55,6 +62,8 @@ if __name__ == "__main__":
             irmse += step * rmse[i][j]
         irmse /= sum_steps
 
-        print(f"{infile}: max = {max_e}, irmse = {irmse}")
+        print(f"{names[i]}: max = {max_e}, irmse = {irmse}")
+
+    print("\n======================================\n")
             
 

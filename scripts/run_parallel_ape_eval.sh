@@ -13,11 +13,12 @@ for d in $dataset
 do
     echo "Processing $d"
     logs="$(ls $BUILD_DIR/*$d*.log)"
+    echo "Logs: $logs"
     lc_run=""
     for log in $logs
     do
-        # Check if "LC_" is in the log file name
-        if [[ $log == *"LC_"* ]]; then
+        # Check if "LC_" is in the log file name and *VIO* is not
+        if [[ $log == *LC_* && $log != *VIO* ]]; then
             lc_run=$(basename $log .log)
             break
         fi
@@ -30,10 +31,11 @@ do
     fi
     for log in $logs
     do
-        if [[ $log == *"$lc_run"* ]]; then
+        if [[ $log == "$lc_run" ]]; then
             continue
         fi
         run=$(basename $log .log)
+        echo "Processing $run"
         ./plot_evo_ape_with_ref.sh $BUILD_DIR/$run $BUILD_DIR/$lc_run &
     done
     wait
