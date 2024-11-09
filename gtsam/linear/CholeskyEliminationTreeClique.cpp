@@ -719,13 +719,17 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarked(int num_threads) {
   int num_factors = 0;
   for(sharedNode node : nodes) {
     for(sharedFactorWrapper factorWrapper : node->factors) {
-      int r, c;
+      int r = 0, c = 0;
 
       if(node->key != factorWrapper->lowestKey()) { continue; }
 
+      // if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
+      // Should not consider LINEAR factors for max factor height and width
       if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
-        r = factorWrapper->getCachedMatrix().rows();
-        c = factorWrapper->getCachedMatrix().cols();
+        if(factorWrapper->status() == LINEARIZED) {
+          r = factorWrapper->getCachedMatrix().rows();
+          c = factorWrapper->getCachedMatrix().cols();
+        }
       }
       else {
         r = factorWrapper->nonlinearFactor()->dim();
@@ -806,11 +810,13 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
 
       // if(!flag) { continue; }
 
-      int r, c;
+      int r = 0, c = 0;
 
       if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
-        r = factorWrapper->getCachedMatrix().rows();
-        c = factorWrapper->getCachedMatrix().cols();
+        if(factorWrapper->status() == LINEARIZED) {
+          r = factorWrapper->getCachedMatrix().rows();
+          c = factorWrapper->getCachedMatrix().cols();
+        }
       }
       else {
         r = factorWrapper->nonlinearFactor()->dim();
@@ -864,7 +870,7 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixed(int num_threads) {
     fixedCost = (pred_AtA + pred_syrk) / num_threads + (symCost + pred_add + AtA_overhead + chol_overhead + add_overhead);
   }
 
-  // cout << "Clique " << *this << " ata cost = " << AtACost << " fixedCost = " << fixedCost << endl;
+  // cout << "Clique " << *this << " ata cost = " << AtACost << " fixedCost = " << fixedCost << " num_factors = " << num_factors << " maxFactorHeight = " << maxFactorHeight << " maxFactorWidth = " << maxFactorWidth << endl;
 
   return fixedCost * cost_mplier;
 
@@ -901,13 +907,15 @@ int64_t CholeskyEliminationTree::Clique::computeCostMarkedCpu(int num_threads) {
   int num_factors = 0;
   for(sharedNode node : nodes) {
     for(sharedFactorWrapper factorWrapper : node->factors) {
-      int r, c;
+      int r = 0, c = 0;
 
       if(node->key != factorWrapper->lowestKey()) { continue; }
 
       if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
-        r = factorWrapper->getCachedMatrix().rows();
-        c = factorWrapper->getCachedMatrix().cols();
+        if(factorWrapper->status() == LINEARIZED) {
+          r = factorWrapper->getCachedMatrix().rows();
+          c = factorWrapper->getCachedMatrix().cols();
+        }
       }
       else {
         r = factorWrapper->nonlinearFactor()->dim();
@@ -988,11 +996,13 @@ int64_t CholeskyEliminationTree::Clique::computeCostFixedCpu(int num_threads) {
 
       // if(!flag) { continue; }
 
-      int r, c;
+      int r = 0, c = 0;
 
       if(factorWrapper->status() == LINEARIZED || factorWrapper->status() == LINEAR) {
-        r = factorWrapper->getCachedMatrix().rows();
-        c = factorWrapper->getCachedMatrix().cols();
+        if(factorWrapper->status() == LINEARIZED) {
+          r = factorWrapper->getCachedMatrix().rows();
+          c = factorWrapper->getCachedMatrix().cols();
+        }
       }
       else {
         r = factorWrapper->nonlinearFactor()->dim();

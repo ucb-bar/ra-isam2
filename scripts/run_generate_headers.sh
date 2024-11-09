@@ -13,6 +13,6 @@ no_recompile=''
 configs=$(ls $CONFIG_DIR/*.yaml)
 for config in $configs
 do
-    python run_generate_dataset.py --config $config -n $no_recompile
+    python run_generate_dataset.py --config $config -y $no_recompile
     no_recompile='--no-recompile'
 done
