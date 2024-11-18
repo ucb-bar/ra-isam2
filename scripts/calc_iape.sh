@@ -47,7 +47,7 @@ python3 calc_iape.py --infiles "
 python3 calc_iape.py --infiles "
     VIO_CAB7000-smallnoise_vio_lag-20-LC_CAB7000-smallnoise_ape.out
     VIOLC_CAB7000-smallnoise_vio_lag-20_lc_period-65-LC_CAB7000-smallnoise_ape.out
-    RA_CAB7000-smallnoise_num_threads-1_cpu-LC_CAB7000-smallnoise_ape.out
+    LRU_CAB7000-smallnoise_num_threads-1_cpu_memsize-1M-LC_CAB7000-smallnoise_ape.out
     RA_CAB7000-smallnoise_num_threads-1-LC_CAB7000-smallnoise_ape.out
     RA_CAB7000-smallnoise_num_threads-2-LC_CAB7000-smallnoise_ape.out
     RA_CAB7000-smallnoise_num_threads-4-LC_CAB7000-smallnoise_ape.out

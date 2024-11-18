@@ -155,7 +155,7 @@ LRU:
     # - CAB1
     # - CAB1-smallnoise
     # - CAB7000
-    # - CAB7000-smallnoise
+    - CAB7000-smallnoise
     # - sphere2500
     # - w10000
     # - M3500
