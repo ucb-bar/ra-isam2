@@ -5,6 +5,8 @@ PROJECT_DIR=$SCRIPT_DIR/..
 BUILD_DIR=$PROJECT_DIR/build
 EVAL_DIR=$PROJECT_DIR/examples/Data/ra_datasets/groundtruths
 
+evo_config set --config $PROJECT_DIR/evo_config.yaml
+
 cd $EVAL_DIR
 
 dataset="sphere2 CAB1-smallnoise M3500a CAB7000-smallnoise"
