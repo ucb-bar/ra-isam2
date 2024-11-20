@@ -1,5 +1,6 @@
 /build*
 /debug*
+/outputs*
 .idea
 *.pyc
 *.DS_Store

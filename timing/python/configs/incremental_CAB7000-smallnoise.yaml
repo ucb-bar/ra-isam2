@@ -24,7 +24,7 @@ dataset:
     CAB7000-smallnoise: 
         is3D:           true
         path:           "ra_datasets/CAB7000-2"
-        relin_thresh:   0.001
+        relin_thresh:   0.002
         start_step:     2
         end_step:       3000    # Inclusive
         period:         25
