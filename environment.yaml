@@ -75,4 +75,3 @@ dependencies:
       - six==1.16.0
       - zipp==3.20.2
       - zstandard==0.23.0
-prefix: /nscratch/roger_hsiao/miniforge3/envs/ra-isam2
