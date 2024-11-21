@@ -35,7 +35,6 @@ dependencies:
   - libxcrypt=4.4.36=hd590300_1
   - libzlib=1.2.13=h4ab18f5_6
   - ncurses=6.5=he02047a_1
-  - numpy=1.24.4=py38h59b608b_0
   - openssl=3.3.2=hb9d3cd8_0
   - packaging=24.1=pyhd8ed1ab_0
   - pip=24.3.1=pyh8b19718_0
@@ -68,6 +67,7 @@ dependencies:
       - kiwisolver==1.4.7
       - lz4==4.3.3
       - matplotlib==3.7.5
+      - numpy==1.24.4
       - numexpr==2.8.6
       - pillow==10.4.0
       - pyparsing==3.1.4
